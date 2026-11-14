@@ -157,3 +157,66 @@ def test_command_line_end_to_end_and_no_overwrite(tmp_path, capsys):
     with pytest.raises(SystemExit, match='only contains points'):
         main([str(point_file), '--label-column', 'OBJECTID', '--year', '2024', '--map', 'a=silage',
               '--country', 'US', '--out', str(tmp_path / 'p')])
+
+
+def utm_square(x, y, side=200.0):
+    return box(x, y, x + side, y + side)
+
+
+def test_unlabelled_where_rename_and_metric_crs():
+    # CSB-like table in UTM 18N: filter to county 021 and corn (CDL2022 == 1), no labels, id without year
+    frame = gpd.GeoDataFrame({
+        'CSBID': ['241825000000001', '241825000000002', '241825000000003', '241825000000004'],
+        'CNTYFIPS': ['021', '021', '021', '013'],
+        'CDL2022': [1, 5, 1.0, 1],
+        'CSBACRES': [10, 10, 20, 10],
+    }, geometry=[utm_square(290000 + 1000 * i, 4360000) for i in range(4)], crs='EPSG:32618')
+    features, report = convert(frame, label_map={}, country='US', source='nass-csb', prefix='csb', id_column='CSBID',
+                               year=2022, unlabelled=True, year_in_id=False, metric_crs='EPSG:32618',
+                               where={'CNTYFIPS': ['021'], 'CDL2022': ['1']}, keep=['CSBACRES=acres_reported'],
+                               set_props={'county_fips': '24021'})
+    assert [f['properties']['field_id'] for f in features] == ['csb-241825000000001', 'csb-241825000000003']
+    assert report['where'] == {'conditions': {'CNTYFIPS': ['021'], 'CDL2022': ['1']},
+                               'rows_matching': 2, 'rows_not_matching': 2}
+    assert report['grid_crs'] == 'EPSG:32618'
+    for f in features:
+        p = f['properties']
+        assert p['label'] is None and p['year'] == 2022 and p['county_fips'] == '24021'
+        assert p['area_ha'] == pytest.approx(4.0, rel=1e-9)            # exact in the metric CRS itself
+        assert p['block_id'] == 'US-E290N4360'                          # 10 km cells of the metric CRS
+        assert 'CSBACRES' not in p
+    assert [f['properties']['acres_reported'] for f in features] == [10, 20]
+
+
+def test_unlabelled_argument_checks():
+    frame = gpd.GeoDataFrame({'ID': [1, 1], 'L': ['a', 'b'], 'K': [1, 2]},
+                             geometry=[box(15, 48, 15.003, 48.003), box(15.01, 48, 15.013, 48.003)], crs=4326)
+    with pytest.raises(InputError, match='needs one --year'):
+        run(frame, label_map={}, unlabelled=True, year_column='K')
+    with pytest.raises(InputError, match='cannot be combined'):
+        run(frame, unlabelled=True, year=2022)                          # MAP given
+    with pytest.raises(InputError, match='No row matches'):
+        run(frame, label_map={}, unlabelled=True, year=2022, where={'K': ['3']})
+    with pytest.raises(InputError, match='contract names'):
+        run(frame, label_map={}, unlabelled=True, year=2022, keep=['K=label'])
+    with pytest.raises(InputError, match='Duplicate field_id'):
+        run(frame, label_map={}, unlabelled=True, year=2022, year_in_id=False)
+
+
+def test_command_line_unlabelled(tmp_path):
+    frame = gpd.GeoDataFrame({'CSBID': ['a1', 'a2'], 'CDL2022': [1, 1], 'CSBACRES': [10, 10]},
+                             geometry=[utm_square(290000, 4360000), utm_square(291000, 4360000)], crs='EPSG:32618')
+    path = tmp_path / 'csb.parquet'
+    frame.to_parquet(path)
+    out = tmp_path / 'out'
+    main([str(path), '--where', 'CDL2022=1', '--unlabelled', '--year', '2022', '--id-column', 'CSBID', '--no-year-in-id',
+          '--prefix', 'csb', '--country', 'US', '--source', 'nass-csb', '--metric-crs', 'EPSG:32618',
+          '--keep', 'CSBACRES=acres_reported', '--set', 'county_fips=24021', '--out', str(out)])
+    data = json.loads((out / 'fields.geojson').read_text(encoding='utf-8'))
+    props = [f['properties'] for f in data['features']]
+    assert [p['field_id'] for p in props] == ['csb-a1', 'csb-a2']
+    assert all(p['label'] is None and p['county_fips'] == '24021' and p['acres_reported'] == 10 for p in props)
+    summary = json.loads((out / 'summary.json').read_text(encoding='utf-8'))
+    assert summary['counts_per_class'] == {'unlabelled': 2}
+    assert summary['area_ha_total'] == pytest.approx(8.0)
+    assert summary['input']['where']['rows_matching'] == 2

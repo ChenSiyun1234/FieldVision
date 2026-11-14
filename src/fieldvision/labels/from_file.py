@@ -5,6 +5,15 @@ Three layouts are understood:
 * one label column and one year for the whole file          --label-column L --year 2024
 * one label column and a column holding each row's year      --label-column L --year-column Y
 * one label column per year ("wide" table)                   --year-columns Corn_2021=2021 Corn_2022=2022
+* no labels at all (fields to classify), one year            --unlabelled --year 2022
+
+Rows can be filtered on attributes first (--where COL=V1,V2, repeatable, all must hold).
+
+Example for unlabelled fields (USDA Crop Sequence Boundaries: corn in 2022 in one county):
+
+    python -m fieldvision.labels.from_file md_csb.parquet --where CNTYFIPS=021 --where CDL2022=1 \\
+        --unlabelled --year 2022 --id-column CSBID --no-year-in-id --prefix csb --country US \\
+        --source nass-csb --metric-crs EPSG:32618 --keep CSBACRES=acres_reported --set county_fips=24021 --out <folder>
 
 Example (the organisers' evaluation file, see docs/data-handoff.md):
 
@@ -126,6 +135,24 @@ def parse_map(items):
     return mapping_
 
 
+def parse_pairs(items, option):
+    """['A=1,2', 'B=x'] -> {'A': ['1', '2'], 'B': ['x']} for --where; values stay strings."""
+    out = {}
+    for item in items or []:
+        if '=' not in item:
+            raise InputError(f'{option} expects NAME=VALUE, got "{item}"')
+        key, value = item.split('=', 1)
+        out[key.strip()] = [v.strip() for v in value.split(',')]
+    return out
+
+
+def as_text(value):
+    """Attribute value compared as text: 1, 1.0 and '1' all become '1'."""
+    if isinstance(value, (float, np.floating)) and not math.isnan(value) and float(value).is_integer():
+        return str(int(value))
+    return clean_text(value)
+
+
 def parse_year_columns(items):
     out = []
     for item in items:
@@ -161,27 +188,53 @@ def json_value(value):
 
 def convert(frame, *, label_map, country, source, prefix, id_column=None, label_column=None, year=None,
             year_column=None, year_columns=None, split=None, keep=(), block_const=None, block_column=None,
-            crop_code_column=None, min_area_ha=0.0, assume_crs=None):
-    """GeoDataFrame in, (features, report) out. No file access, so it can be tested offline."""
-    keep = list(keep or [])
+            crop_code_column=None, min_area_ha=0.0, assume_crs=None, where=None, unlabelled=False,
+            year_in_id=True, metric_crs=None, set_props=None, crop_name=None):
+    """GeoDataFrame in, (features, report) out. No file access, so it can be tested offline.
+
+    `keep` items are column names or COLUMN=NEW_NAME. `where` maps column -> allowed values (text).
+    `unlabelled` writes label null for every row (fields to be classified); needs `year`.
+    `metric_crs` replaces the default equal-area CRS for area_ha, centroids and the 10 km grid.
+    """
+    keep = [k.split('=', 1) if '=' in k else [k, k] for k in (keep or [])]
+    set_props = dict(set_props or {})
     modes = [year is not None, year_column is not None, bool(year_columns)]
     if sum(modes) != 1:
         raise InputError('Give exactly one of --year, --year-column or --year-columns')
-    if year_columns:
+    if unlabelled:
+        if year is None:
+            raise InputError('--unlabelled needs one --year for the whole file')
+        if label_column or label_map:
+            raise InputError('--unlabelled cannot be combined with --label-column or --map')
+        needed = []
+    elif year_columns:
         needed = [c for c, _ in year_columns]
     else:
         if not label_column:
             raise InputError('--label-column is needed with --year or --year-column')
         needed = [label_column] + ([year_column] if year_column else [])
-    clash = [c for c in keep if c in CONTRACT + ['split', 'geometry']]
+    clash = [new for _, new in keep if new in CONTRACT + ['split', 'geometry']]
+    clash += [k for k in set_props if k in CONTRACT + ['split', 'geometry']]
     if clash:
-        raise InputError(f'--keep cannot use contract names: {", ".join(clash)}')
-    for col in needed + keep + [c for c in (id_column, block_column, crop_code_column) if c]:
+        raise InputError(f'--keep / --set cannot use contract names: {", ".join(clash)}')
+    names = [new for _, new in keep] + list(set_props)
+    if len(names) != len(set(names)):
+        raise InputError(f'--keep / --set write the same property twice: {names}')
+    for col in needed + [old for old, _ in keep] + list(where or {}) + [c for c in (id_column, block_column, crop_code_column) if c]:
         if col not in frame.columns:
             raise InputError(f'Column "{col}" not found. Columns in the file: {", ".join(map(str, frame.columns))}')
 
     frame = frame.reset_index(drop=True)
     report = {'input_rows': int(len(frame)), 'dropped': Counter(), 'unmapped_values': Counter()}
+    if where:
+        keep_rows = np.ones(len(frame), dtype=bool)
+        for col, allowed in where.items():
+            keep_rows &= frame[col].map(as_text).isin(allowed).to_numpy()
+        report['where'] = {'conditions': {c: list(v) for c, v in where.items()},
+                           'rows_matching': int(keep_rows.sum()), 'rows_not_matching': int((~keep_rows).sum())}
+        frame = frame[keep_rows].reset_index(drop=True)
+        if frame.empty:
+            raise InputError(f'No row matches --where {report["where"]["conditions"]}')
     geom_types = frame.geometry.geom_type.fillna('None')
     report['input_geometry_types'] = dict(Counter(geom_types))
     polygons = geom_types.isin(['Polygon', 'MultiPolygon', 'GeometryCollection']).sum()
@@ -222,6 +275,9 @@ def convert(frame, *, label_map, country, source, prefix, id_column=None, label_
     records = []
     mapped = {}
     plan = [(c, y) for c, y in (year_columns or [])] if year_columns else [(label_column, None)]
+    if unlabelled:
+        records = [(idx, year, None, crop_name) for idx in frame.index if usable[idx]]
+        plan = []
     for col, fixed_year in plan:
         for idx, raw in frame[col].items():
             if not usable[idx]:
@@ -247,7 +303,7 @@ def convert(frame, *, label_map, country, source, prefix, id_column=None, label_
         raise InputError('No row has a label that maps to silage or grain. Unmapped values seen: '
                          f'{dict(report["unmapped_values"]) or "none (all labels blank)"}')
 
-    grid = grid_crs_for(frame[usable])
+    grid = CRS.from_user_input(metric_crs) if metric_crs else grid_crs_for(frame[usable])
     report['grid_crs'] = grid.to_string() if grid.to_epsg() is None else f'EPSG:{grid.to_epsg()}'
     metric = frame.geometry.to_crs(grid)
     to_lonlat = Transformer.from_crs(grid, 4326, always_xy=True).transform
@@ -266,11 +322,12 @@ def convert(frame, *, label_map, country, source, prefix, id_column=None, label_
             continue
         if id_column and isinstance(frame.at[idx, id_column], (float, np.floating)) and float(pid).is_integer():
             pid = str(int(float(pid)))
-        fid = f'{prefix}-{quote(pid, safe="-._")}-{row_year}'
+        fid = f'{prefix}-{quote(pid, safe="-._")}' + (f'-{row_year}' if year_in_id else '')
         if fid in seen:
             raise InputError(f'Duplicate field_id "{fid}" (rows {seen[fid]} and {idx}). '
                              f'Every field needs a unique value in --id-column{"" if id_column else " (no id column given: row numbers were used)"}, '
-                             'and in a long layout the same field may appear only once per year.')
+                             'and in a long layout the same field may appear only once per year'
+                             f'{"" if year_in_id else " (with --no-year-in-id an id may appear only once)"}.')
         seen[fid] = idx
         block = (block_const if block_const else
                  clean_text(frame.at[idx, block_column]) if block_column else
@@ -281,8 +338,9 @@ def convert(frame, *, label_map, country, source, prefix, id_column=None, label_
                  'centroid_lon': lon, 'centroid_lat': lat}
         if split:
             props['split'] = split
-        for col in keep:
-            props[col] = json_value(frame.at[idx, col])
+        for col, new in keep:
+            props[new] = json_value(frame.at[idx, col])
+        props.update(set_props)
         features.append({'type': 'Feature', 'id': fid, 'geometry': mapping(geom), 'properties': props})
     if not features:
         raise InputError('Every labelled field was dropped; see the dropped counts: ' + json.dumps(dict(counters)))
@@ -297,7 +355,8 @@ def verify_geojson(path, features):
     data = json.loads(Path(path).read_text(encoding='utf-8'))
     frame = gpd.GeoDataFrame.from_features(data['features'], crs=4326)
     assert len(frame) == len(features) and frame.field_id.is_unique
-    assert set(frame.label) <= set(LABELS)
+    assert set(frame.label.dropna()) <= set(LABELS)
+    assert frame.label.isna().all() or frame.label.notna().all(), 'mix of labelled and unlabelled fields'
     assert all(c in frame.columns for c in CONTRACT)
     assert frame.geometry.is_valid.all() and frame.geometry.geom_type.isin(['Polygon', 'MultiPolygon']).all()
     assert frame.centroid_lon.between(-180, 180).all() and frame.centroid_lat.between(-90, 90).all()
@@ -306,6 +365,7 @@ def verify_geojson(path, features):
 
 
 def summarise(frame, report, args_dict, started):
+    frame = frame.assign(label=frame.label.fillna('unlabelled'))
     by_year_class = frame.groupby(['year', 'label']).size().unstack(fill_value=0)
     summary = {
         'fetch_started': started, 'fetch_finished': now(),
@@ -316,12 +376,14 @@ def summarise(frame, report, args_dict, started):
         'counts_per_block': {b: {k: int(v) for k, v in row.items()}
                              for b, row in frame.groupby(['block_id', 'label']).size().unstack(fill_value=0).iterrows()},
         'area_ha': frame.groupby('label').area_ha.describe().to_dict(),
+        'area_ha_total': float(frame.area_ha.sum()),
         'fields_below_third_hectare': int((frame.area_ha < SMALL_HA).sum()),
-        'input': {k: report[k] for k in ('input_rows', 'input_geometry_types', 'input_crs', 'input_crs_name', 'rows_with_polygon')},
+        'input': {k: report[k] for k in ('input_rows', 'where', 'input_geometry_types', 'input_crs', 'input_crs_name',
+                                         'rows_with_polygon') if k in report},
         'grid_crs': report['grid_crs'], 'grid_size_m': 10000,
         'repair': report['repair'], 'dropped': report['dropped'], 'unmapped_values': report['unmapped_values'],
         'parameters': args_dict,
-        'verification': 'GeoJSON re-read: unique ids, labels in {silage, grain}, contract columns, valid polygonal geometry, positive area; GeoParquet re-read: ids and CRS',
+        'verification': 'GeoJSON re-read: unique ids, labels in {silage, grain} or all null, contract columns, valid polygonal geometry, positive area; GeoParquet re-read: ids and CRS',
     }
     return summary
 
@@ -370,7 +432,13 @@ def main(argv=None):
     p.add_argument('--source', help='source name written to every feature (default: file name)')
     p.add_argument('--prefix', help='prefix of field_id (default: lower-case country)')
     p.add_argument('--split', help='value of an extra "split" property, e.g. external_eval')
-    p.add_argument('--keep', nargs='+', default=[], help='extra input columns to copy into properties')
+    p.add_argument('--keep', nargs='+', default=[], metavar='COL[=NAME]', help='extra input columns to copy into properties, optionally renamed')
+    p.add_argument('--set', nargs='+', default=[], metavar='NAME=VALUE', help='constant text properties written to every feature')
+    p.add_argument('--where', action='append', metavar='COL=V1,V2', help='keep only rows whose COL (as text) is one of the values; repeat to AND')
+    p.add_argument('--unlabelled', action='store_true', help='no label column: write label null for every field (needs --year)')
+    p.add_argument('--crop-name', help='crop_name written with --unlabelled (default: null)')
+    p.add_argument('--no-year-in-id', action='store_true', help='field_id is prefix-<id> without the year suffix')
+    p.add_argument('--metric-crs', help='CRS for area_ha, centroids and the 10 km grid (default: EPSG:3035 in Europe, else local equal-area)')
     p.add_argument('--block-id', help='give every field this one block_id instead of the 10 km grid')
     p.add_argument('--block-column', help='take block_id from this column instead of the 10 km grid')
     p.add_argument('--crop-code-column', help='column copied to crop_code (default: null)')
@@ -387,7 +455,8 @@ def main(argv=None):
         p.error(f'{out / "fields.geojson"} already exists; choose another --out or pass --overwrite')
     started = now()
     try:
-        label_map = parse_map(a.map)
+        label_map = {} if a.unlabelled and not a.map else parse_map(a.map)
+        set_props = {k: ','.join(v) for k, v in parse_pairs(a.set, '--set').items()}
         year_columns = parse_year_columns(a.year_columns) if a.year_columns else None
         frame = read_input(a.input, a.layer)
         features, report = convert(
@@ -395,7 +464,9 @@ def main(argv=None):
             prefix=a.prefix or a.country.lower(), id_column=a.id_column, label_column=a.label_column,
             year=a.year, year_column=a.year_column, year_columns=year_columns, split=a.split,
             keep=a.keep, block_const=a.block_id, block_column=a.block_column,
-            crop_code_column=a.crop_code_column, min_area_ha=a.min_area_ha, assume_crs=a.crs)
+            crop_code_column=a.crop_code_column, min_area_ha=a.min_area_ha, assume_crs=a.crs,
+            where=parse_pairs(a.where, '--where'), unlabelled=a.unlabelled, year_in_id=not a.no_year_in_id,
+            metric_crs=a.metric_crs, set_props=set_props, crop_name=a.crop_name)
     except InputError as e:
         raise SystemExit(f'Cannot convert: {e}')
     args_dict = {k: str(v) if isinstance(v, Path) else v for k, v in vars(a).items()}
