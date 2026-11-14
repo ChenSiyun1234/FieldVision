@@ -20,7 +20,8 @@ from rasterio.features import rasterize
 from rasterio.vrt import WarpedVRT
 from shapely.geometry import shape
 
-from .catalog import ASSETS, PRIMARY, LEGACY, calibration, check_vegetation, find_scenes, scale_reflectance
+from .catalog import (LEGACY, PLANETARY, PRIMARY, SOURCES, asset_for, asset_href, calibration, check_vegetation,
+                      find_scenes, scale_reflectance)
 from .core import BANDS, COLUMNS, coverage_table, interior_geometry, polygon_mask, resolve_duplicates, scl_clear, zonal_medians
 from .geometry import load_fields, make_blocks, scene_grid
 
@@ -60,25 +61,32 @@ def write_parquet(path, table):
     os.replace(temporary, path)
 
 
-def read_band(item, name, grid, retries=3):
-    """One COG read per (scene, band, block), with a private dataset per thread."""
-    asset = item["assets"]["scl" if name == "SCL" else ASSETS[name]]
+def read_raw(item, name, grid, retries=3):
+    """Raw digital numbers of one band on the block grid; nodata becomes 0."""
+    asset = asset_for(item, name)
     nodata = asset.get("raster:bands", [{}])[0].get("nodata", 0)
-    if name != "SCL":
-        calibration(item, asset)  # Fail before networking if metadata is ambiguous.
     crs, affine, dimensions = grid[:3]
     for attempt in range(retries):
         try:
+            # Planetary Computer URLs carry a short-lived token; re-sign per attempt.
             with rasterio.Env(**GDAL_OPTIONS):
-                with rasterio.open(asset["href"]) as source:
+                with rasterio.open(asset_href(item, name)) as source:
                     with WarpedVRT(source, crs=crs, transform=affine, width=dimensions[1], height=dimensions[0],
                                    src_nodata=nodata, nodata=0, resampling=Resampling.nearest) as vrt:
-                        raw = vrt.read(1, out_dtype="float32")
-            return raw if name == "SCL" else scale_reflectance(raw, item, asset)
+                        return vrt.read(1, out_dtype="float32")
         except (rasterio.errors.RasterioError, OSError):
             if attempt + 1 == retries:
                 raise
             time.sleep(2 ** attempt)
+
+
+def read_band(item, name, grid, retries=3):
+    """One COG read per (scene, band, block), with a private dataset per thread."""
+    if name == "SCL":
+        return read_raw(item, name, grid, retries)
+    asset = asset_for(item, name)
+    calibration(item, asset)  # Fail before networking if metadata is ambiguous.
+    return scale_reflectance(read_raw(item, name, grid, retries), item, asset)
 
 
 def aggregate_scene(block, item, grid, arrays):
@@ -126,7 +134,7 @@ def process_block(block, args, pool):
         items, counts = cached["items"], cached["counts"]
     else:
         items, counts = find_scenes(block["bbox"], args.start_date, args.end_date, args.max_cloud,
-                                   args.collection, not args.no_fallback)
+                                   args.collection, None if args.no_fallback else args.fallback_source)
         # STAC query intersects the block bbox; only actual polygon footprints count.
         items = [item for item in items if any(shape(item["geometry"]).intersects(f["geometry"]) for f in block["fields"])]
         atomic_json(cache_path, {"items": items, "counts": counts})
@@ -257,7 +265,9 @@ def main():
     parser.add_argument("--scene-batch", type=int, default=3)
     parser.add_argument("--block-size", type=float, default=6000)
     parser.add_argument("--max-cloud", type=float, default=80)
-    parser.add_argument("--collection", choices=(PRIMARY, LEGACY), default=PRIMARY)
+    parser.add_argument("--collection", choices=SOURCES, default=PRIMARY)
+    parser.add_argument("--fallback-source", choices=(LEGACY, PLANETARY), default=PLANETARY,
+                        help="Source for acquisitions missing from Collection 1 (years <= 2022)")
     parser.add_argument("--no-fallback", action="store_true")
     parser.add_argument("--min-clear-pixels", type=int, default=1)
     parser.add_argument("--min-clear-fraction", type=float, default=0.2)

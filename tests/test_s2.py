@@ -8,7 +8,7 @@ from rasterio.transform import from_origin
 from shapely.geometry import box, mapping
 
 from fieldvision.s2 import indices
-from fieldvision.s2.catalog import LEGACY, PRIMARY, calibration, check_vegetation, scale_reflectance
+from fieldvision.s2.catalog import LEGACY, PLANETARY, PRIMARY, calibration, check_vegetation, scale_reflectance
 from fieldvision.s2.core import BANDS, COLUMNS, coverage_table, interior_geometry, resolve_duplicates, scl_clear, zonal_medians
 from fieldvision.s2.geometry import load_fields, make_blocks, scene_grid
 
@@ -117,11 +117,34 @@ def test_2022_fallback_fills_partial_c1_catalog(monkeypatch):
     old_duplicate = item("old-duplicate", "01")
     old_missing = item("old-missing", "06")
     old_other_tile = item("old-tile", "01", "33UWN")
-    monkeypatch.setattr(catalog, "search", lambda collection, *args: [current] if collection == PRIMARY
+    monkeypatch.setattr(catalog, "search", lambda collection, *args, **kwargs: [current] if collection == PRIMARY
                         else [old_duplicate, old_missing, old_other_tile])
-    items, counts = catalog.find_scenes([15, 48, 16, 49], "2022-04-01", "2022-11-30")
+    items, counts = catalog.find_scenes([15, 48, 16, 49], "2022-04-01", "2022-11-30", fallback=LEGACY)
     assert {item["id"] for item in items} == {"current", "old-missing", "old-tile"}
-    assert counts == {"primary_scenes": 1, "fallback_scenes": 2}
+    assert counts == {"primary_scenes": 1, "fallback_scenes": 2, "fallback_source": LEGACY}
+    assert {item["collection"] for item in items} == {PRIMARY, LEGACY}
+
+
+def test_planetary_keeps_newest_baseline_and_platform_case(monkeypatch):
+    from fieldvision.s2 import catalog
+    def item(scene_id, baseline_value, platform="Sentinel-2A"):
+        return {"id": scene_id, "properties": {"datetime": "2022-07-01T15:58:31Z", "s2:mgrs_tile": "18SUJ",
+                                               "platform": platform, "s2:processing_baseline": baseline_value}}
+    monkeypatch.setattr(catalog, "search", lambda *args, **kwargs: [item("n0400", "04.00"), item("n0510", "05.10")])
+    items = catalog.search_source(PLANETARY, [0, 0, 1, 1], "2022-04-01", "2022-11-30")
+    assert [i["id"] for i in items] == ["n0510"] and items[0]["collection"] == PLANETARY
+    # Same acquisition in Earth Search and Planetary Computer must share a key.
+    earth = {"id": "S2A_18SUJ_20220701_0_L2A", "properties": {"datetime": "2022-07-01T16:12:22Z",
+             "mgrs:utm_zone": 18, "mgrs:latitude_band": "S", "mgrs:grid_square": "UJ", "platform": "sentinel-2a"}}
+    assert catalog.acquisition_key(earth) == catalog.acquisition_key(items[0])
+
+
+@pytest.mark.parametrize("baseline_value,expected", [("05.10", 0.05), ("04.00", 0.05), ("03.01", 0.15)])
+def test_planetary_offset_follows_processing_baseline(baseline_value, expected):
+    item = {"collection": PLANETARY, "properties": {"s2:processing_baseline": baseline_value}}
+    assert scale_reflectance(np.array([1500.0]), item, {})[0] == pytest.approx(expected)
+    with pytest.raises(ValueError, match="baseline"):
+        calibration({"collection": PLANETARY, "properties": {}}, {})
 
 
 def test_local_raster_pipeline_partial_resume_and_overlap(tmp_path, monkeypatch):
@@ -166,7 +189,7 @@ def test_local_raster_pipeline_partial_resume_and_overlap(tmp_path, monkeypatch)
     monkeypatch.setattr(extract, "read_band", read)
     args = Namespace(fields=fields, out=tmp_path / "run", year=2024, start="04-01", end="11-30",
                      workers=4, scene_batch=2, block_size=6000, max_cloud=80, collection=PRIMARY,
-                     no_fallback=False, min_clear_pixels=1, min_clear_fraction=0.2)
+                     no_fallback=False, fallback_source=PLANETARY, min_clear_pixels=1, min_clear_fraction=0.2)
     assert extract.run(args) == 2
     first = pd.read_parquet(args.out / "timeseries.parquet")
     assert len(first) == 2 and set(first.field_id) == {"a", "b"}

@@ -1,4 +1,6 @@
-"""Public Earth Search queries and guarded reflectance calibration."""
+"""Public STAC queries (Earth Search, Planetary Computer) and guarded calibration."""
+from datetime import datetime
+import threading
 import time
 import numpy as np
 import requests
@@ -6,8 +8,14 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 URL = "https://earth-search.aws.element84.com/v1"
+PC_URL = "https://planetarycomputer.microsoft.com/api/stac/v1"
+PC_TOKEN_URL = "https://planetarycomputer.microsoft.com/api/sas/v1/token/sentinel-2-l2a"
 PRIMARY = "sentinel-2-c1-l2a"
 LEGACY = "sentinel-2-l2a"
+# Planetary Computer serves the unmodified ESA products under the same collection
+# name as the Earth Search legacy archive, so its rows get a prefixed source name.
+PLANETARY = "planetary:sentinel-2-l2a"
+SOURCES = (PRIMARY, LEGACY, PLANETARY)
 ASSETS = dict(zip(("B02", "B03", "B04", "B05", "B06", "B07", "B08", "B8A", "B11", "B12"),
                   ("blue", "green", "red", "rededge1", "rededge2", "rededge3", "nir", "nir08", "swir16", "swir22")))
 
@@ -20,11 +28,11 @@ def http_session():
     return session
 
 
-def search(collection, bbox, start, end, max_cloud=80, session=None):
+def search(collection, bbox, start, end, max_cloud=80, session=None, url=URL):
     session = session or http_session()
     params = {"collections": collection, "bbox": ",".join(map(str, bbox)),
               "datetime": f"{start}T00:00:00Z/{end}T23:59:59Z", "limit": 200}
-    url = URL + "/search"
+    url = url + "/search"
     items = {}
     seen = set()
     method, body = "GET", None
@@ -54,24 +62,96 @@ def acquisition_key(item):
     if not tile:
         # Earth Search IDs encode the MGRS tile in the second component.
         tile = item["id"].split("_")[1].removeprefix("T")
-    return tile, p["datetime"][:10], p.get("platform", item["id"][:3])
+    # Planetary Computer says "Sentinel-2A", Earth Search "sentinel-2a".
+    platform = str(p.get("platform", item["id"][:3])).lower().replace("sentinel-", "s")
+    return tile.removeprefix("T"), p["datetime"][:10], platform[:3]
 
 
-def find_scenes(bbox, start, end, max_cloud=80, collection=PRIMARY, fallback=True):
+def baseline(item):
+    try:
+        return float(item["properties"].get("s2:processing_baseline"))
+    except (TypeError, ValueError):
+        return None
+
+
+def search_source(source, bbox, start, end, max_cloud=80, session=None):
+    """Search one source; every item gets ``collection`` set to the source name."""
+    if source not in SOURCES:
+        raise ValueError(f"Unknown source {source!r}")
+    if source == PLANETARY:
+        items = search(LEGACY, bbox, start, end, max_cloud, session, url=PC_URL)
+        # Planetary Computer keeps the original product and, for some dates, ESA's
+        # reprocessed one. Keep one item per acquisition, newest baseline first.
+        best = {}
+        for item in items:
+            item["collection"] = PLANETARY
+            key = acquisition_key(item)
+            if key not in best or (baseline(item) or 0) > (baseline(best[key]) or 0):
+                best[key] = item
+        return list(best.values())
+    items = search(source, bbox, start, end, max_cloud, session)
+    for item in items:
+        item["collection"] = source
+    return items
+
+
+def find_scenes(bbox, start, end, max_cloud=80, collection=PRIMARY, fallback=PLANETARY):
+    """Scenes from ``collection`` plus acquisitions it lacks from ``fallback`` (None disables)."""
     with http_session() as session:
-        primary = search(collection, bbox, start, end, max_cloud, session)
+        primary = search_source(collection, bbox, start, end, max_cloud, session)
         added = []
         # The 2022 growing season is almost entirely absent from Collection 1.
-        # Query legacy even when a handful of Collection 1 scenes exist.
-        if fallback and collection == PRIMARY and (int(start[:4]) <= 2022 or not primary):
+        # Query the fallback even when a handful of Collection 1 scenes exist.
+        if fallback and fallback != collection and collection == PRIMARY and (int(start[:4]) <= 2022 or not primary):
             known = {acquisition_key(item) for item in primary}
-            added = [item for item in search(LEGACY, bbox, start, end, max_cloud, session)
+            added = [item for item in search_source(fallback, bbox, start, end, max_cloud, session)
                      if acquisition_key(item) not in known]
     items = sorted(primary + added, key=lambda item: (item["properties"]["datetime"], item["id"]))
-    return items, {"primary_scenes": len(primary), "fallback_scenes": len(added)}
+    return items, {"primary_scenes": len(primary), "fallback_scenes": len(added), "fallback_source": fallback}
+
+
+_PC_TOKEN = {"token": None, "expires": 0.0}
+_PC_LOCK = threading.Lock()
+
+
+def pc_token():
+    """Anonymous read token for the Planetary Computer Sentinel-2 container (no account)."""
+    with _PC_LOCK:
+        if _PC_TOKEN["token"] is None or time.time() > _PC_TOKEN["expires"] - 300:
+            with http_session() as session:
+                response = session.get(PC_TOKEN_URL, timeout=(15, 60))
+                response.raise_for_status()
+                data = response.json()
+            try:
+                expires = datetime.fromisoformat(data["msft:expiry"].replace("Z", "+00:00")).timestamp()
+            except (KeyError, ValueError):
+                expires = time.time() + 1800
+            _PC_TOKEN.update(token=data["token"], expires=expires)
+        return _PC_TOKEN["token"]
+
+
+def asset_for(item, name):
+    """Asset for a band name (``B04``) or ``SCL`` in any supported source."""
+    if item["collection"] == PLANETARY:
+        return item["assets"][name]
+    return item["assets"]["scl" if name == "SCL" else ASSETS[name]]
+
+
+def asset_href(item, name):
+    href = asset_for(item, name)["href"]
+    if item["collection"] == PLANETARY:
+        href = href.split("?")[0] + "?" + pc_token()
+    return href
 
 
 def calibration(item, asset):
+    if item["collection"] == PLANETARY:
+        # Unmodified ESA products: from processing baseline 04.00 on, L2A digital
+        # numbers carry BOA_ADD_OFFSET = -1000 with quantification value 10000.
+        value = baseline(item)
+        if value is None:
+            raise ValueError("Planetary Computer item lacks s2:processing_baseline")
+        return 1e-4, (-0.1 if value >= 4.0 else 0.0), 0
     metadata = asset.get("raster:bands", [{}])[0]
     if "scale" not in metadata or "offset" not in metadata:
         raise ValueError("Reflectance asset lacks explicit raster:bands scale/offset")
