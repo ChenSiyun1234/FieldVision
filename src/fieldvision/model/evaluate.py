@@ -322,7 +322,7 @@ def metric_rows(results, order, subset="all"):
 
 def write_report(out, metrics, results, st, miss, shift, title, intro, extra="", main_rows=None):
     meta = st["meta"]
-    main_rows = main_rows or ["majority", "timing_rule", st["name"]]
+    main_rows = main_rows or ["majority", "always_grain", "timing_rule", st["name"]]
     others = [m for m in ("timing_rule", "rule", "logistic", "gbm") if m not in main_rows]
     L = [f"# {title}\n"]
     if meta.get("synthetic"):
