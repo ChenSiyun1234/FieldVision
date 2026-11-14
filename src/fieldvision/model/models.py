@@ -471,7 +471,24 @@ class CompositeModel(_Base):
             f"{n} [{m.describe()}]" for n, m in self.members_.items())
 
 
-MODEL_ORDER = ["majority", "always_grain", "timing_rule", "rule", "logistic", "gbm", "composite"]
+MODEL_ORDER = ["majority", "always_grain", "timing_rule", "rule", "logistic", "gbm", "composite",
+               "gbm_pre"]
+
+
+def is_pre_harvest_feature(name):
+    """Pre-harvest state, the drop itself and timing; nothing measured after the cut.
+
+    Keeps peak/season shape, harv_* timing, pre_* state, sen_* slopes, drop_* sizes and rates,
+    and the greenness integral up to the field's own peak window; drops post_* (residue,
+    moisture, regrowth after the cut), the relative and calendar time bins (which run past
+    the harvest) and the calendar greenness integral.
+    """
+    if name.startswith(("post_", "rel_", "cal_", "soil_", "q_")):
+        return False
+    if name in ("gi_ndvi_aug_oct", "gi_rel_after_peak"):
+        return False
+    return name.startswith(("peak_", "base_", "amplitude", "plateau_", "harv_", "pre_", "sen_",
+                            "drop_"))
 
 
 def make_factories(columns, variant="relative", exclude=(), use_quality=False, seed=0,
@@ -490,6 +507,7 @@ def make_factories(columns, variant="relative", exclude=(), use_quality=False, s
     if use_quality:
         gbm_cols += [c for c in columns if c.startswith("q_")]
     logit_cols = [c for c in LOGISTIC_FEATURES[variant] if c in columns and c not in exclude]
+    pre_cols = [c for c in gbm_cols if is_pre_harvest_feature(c)]
     timing = RULE_TIMING[variant]
     # partials, not lambdas: the calibrated wrapper keeps its base factory and must pickle
     base = {
@@ -500,6 +518,9 @@ def make_factories(columns, variant="relative", exclude=(), use_quality=False, s
         "rule": partial(RuleModel, timing=timing),
         "logistic": partial(LogisticModel, logit_cols),
         "gbm": partial(GBMModel, gbm_cols, seed=seed),
+        # investigation only, not an Evaluation 2 candidate: does LightGBM transfer better
+        # without what the ground looks like after the cut?
+        "gbm_pre": partial(GBMModel, pre_cols, seed=seed),
     }
     out = {"majority": MajorityModel, "always_grain": AlwaysGrainModel}
     for name, make in base.items():
