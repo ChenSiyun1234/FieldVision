@@ -173,10 +173,20 @@ def load_inputs(fields_paths, ts_paths):
     return fields, X, y, years, unit
 
 
-EXPORT_NAME = "barc_logistic_v1"
 CARD_SENTENCE = ("44 field-years cannot separate models that differ by one or two fields: each "
                  "field-year is about 2.3 points of accuracy and each silage field-year about 8.3 "
                  "points of silage recall.")
+
+# what gets frozen: registry name -> (candidate in the comparison, description)
+EXPORTS = {
+    "barc_logistic_v1": ("logistic_barc",
+                         "Six-feature logistic regression fitted on the 44 Beltsville field-years "
+                         "only (the team's plan: train on Beltsville, test on held-out Beltsville)."),
+    "eu_barc_logistic_v1": ("logistic_at_barc",
+                            "Six-feature logistic regression fitted on the Austria 2024 registry "
+                            "fields together with the 44 Beltsville field-years, the two sources "
+                            "weighted equally. This is what the toolbox's in_site policy uses."),
+}
 
 
 def table_markdown(tab, references):
@@ -197,36 +207,77 @@ REFERENCES = [("always grain", "32"), ("timing_rule_v1 (leave-one-year-out)", "4
               ("European logistic, zero-shot (Evaluation 1, secondary result)", "42")]
 
 
-def export(X, y, at, registry, fields_paths, ts_paths, git_commit, tab):
-    """Fit logistic_at_barc on all 44 field-years plus Austria and freeze it."""
+def permutation_test(makers, X, y, groups, names, n=200, seed=20261114):
+    """Correct-of-n when the training labels are shuffled within each fold."""
+    rng = np.random.default_rng(seed)
+    out = {}
+    for name in names:
+        mk = makers[name]
+        scores = []
+        for _ in range(n):
+            correct = 0
+            for g in np.unique(groups):
+                te = groups == g
+                ytr = rng.permutation(y[~te])
+                if len(np.unique(ytr)) < 2:
+                    continue
+                m = mk().fit(X[~te], ytr)
+                correct += int(((m.predict_proba(X[te]) >= m.threshold).astype(int) == y[te]).sum())
+            scores.append(correct)
+        s = np.array(scores)
+        out[name] = {"n_shuffles": n, "median": float(np.median(s)),
+                     "p95": float(np.percentile(s, 95)), "max": int(s.max()),
+                     "reaching_43": int((s >= 43).sum()), "reaching_40": int((s >= 40).sum())}
+    return out
+
+
+def permutation_markdown(perm):
+    rows = ["| model | median correct of 44 | 95th percentile | max | shuffles reaching 43 | "
+            "shuffles reaching 40 |", "|---|---|---|---|---|---|"]
+    for name, r in perm.items():
+        rows.append(f"| {name} | {r['median']:.0f} | {r['p95']:.0f} | {r['max']} | "
+                    f"{r['reaching_43']} of {r['n_shuffles']} | {r['reaching_40']} of {r['n_shuffles']} |")
+    return "\n".join(rows)
+
+
+def export(name, X, y, at, registry, fields_paths, ts_paths, git_commit, tab, perm):
+    """Fit one candidate on all 44 field-years (plus Austria where it uses it) and freeze it."""
     import datetime as dt
     import joblib
     from ..model.registry import feature_unit, file_sha256, portable, portable_text
-    folder = Path(registry) / EXPORT_NAME
+    candidate, description = EXPORTS[name]
+    folder = Path(registry) / name
     if folder.exists():
         raise SystemExit(f"{folder} exists; frozen folders are written once")
-    # build the class through the package path, so the frozen object does not refer to
+    # build classes through the package path, so the frozen object does not refer to
     # __main__ when this module is run with python -m
     from . import in_site as _module
-    model = _module.PooledLogistic(at, at["y"].to_numpy(int)).fit(X, y)
-    model.X_at = model.y_at = None          # keep the fitted pipeline, not the training rows
+    from ..model.models import LogisticModel as _Logistic
+    if candidate == "logistic_at_barc":
+        model = _module.PooledLogistic(at, at["y"].to_numpy(int)).fit(X, y)
+        model.X_at = model.y_at = None      # keep the fitted pipeline, not the training rows
+        uses_austria = True
+    else:
+        model = _Logistic(FEATURES).fit(X, y)
+        uses_austria = False
     tmp = folder.with_name(folder.name + ".partial")
+    if tmp.exists():
+        import shutil
+        shutil.rmtree(tmp)
     tmp.mkdir(parents=True)
     joblib.dump(model, tmp / "model.joblib")
     write_json(tmp / "model.json", {
-        "name": EXPORT_NAME, "class": "PooledLogistic", "positive_class": "silage",
+        "name": name, "class": type(model).__name__, "positive_class": "silage",
         "decision": "silage if p_silage >= 0.5", "threshold": 0.5, "features": FEATURES,
-        "description": model.describe(),
-        "training": "six-feature logistic on Austria 2024 registry fields plus the 44 Beltsville "
-                    "field-years, Beltsville rows weighted so both sources carry the same total "
-                    "weight, class-balanced"})
+        "description": model.describe(), "training": description,
+        "comparison_name": candidate})
     write_json(tmp / "feature_schema.json", {
         "computed_by": "fieldvision.features.build.build_features",
         "feature_config": FeatureConfig().to_dict(),
         "features": [{"name": c, "unit": feature_unit(c)} for c in FEATURES],
         "gaps": "missing values replaced by the training median, then standardised"})
     write_json(tmp / "applicability.json", {
-        "model": EXPORT_NAME,
+        "model": name,
         "requires": {"sensors": ["Sentinel-2 L2A surface reflectance, bands B02-B12"],
                      "clear_obs_before_and_after_drop": True},
         "use_only_for": "Beltsville (FIPS 24033); fitted on these fields, untested elsewhere",
@@ -234,32 +285,47 @@ def export(X, y, at, registry, fields_paths, ts_paths, git_commit, tab):
                           "no or unconfirmed drop"],
         "confidence_tier": "in-site",
         "validated_on": "Beltsville 2021-2023, leave-one-year-out and leave-one-field-out"})
+    data = list(fields_paths) + list(ts_paths)
     write_json(tmp / "provenance.json", portable({
-        "name": EXPORT_NAME, "created": dt.datetime.now().isoformat(timespec="seconds"),
+        "name": name, "created": dt.datetime.now().isoformat(timespec="seconds"),
         "git_commit_of_code": git_commit,
-        "training_data": [{"path": str(p), "sha256": file_sha256(p)}
-                          for p in list(fields_paths) + list(ts_paths)],
-        "note": "fitted on Beltsville labels (in-site) plus Austria 2024; kept separate from the "
-                "European models and from the second evaluation"}))
-    card = [f"# {EXPORT_NAME}\n",
-            "Six-feature logistic regression (harvest timing, dry-down, greenness and moisture just "
-            "before the cut, senescence slope, residue after) trained on the Austria 2024 registry "
-            "fields together with the 44 Beltsville field-years, the two sources weighted equally. "
+        "training_data": [{"path": str(p), "sha256": file_sha256(p)} for p in data],
+        "austria_training_rows": int(len(at)) if uses_austria else 0,
+        "note": "fitted on Beltsville labels (in-site)" + (" plus Austria 2024" if uses_austria else "")
+                + "; kept separate from the European models and from the second evaluation"}))
+    perm_text = permutation_markdown(perm)
+    if uses_austria:
+        reading = ("With the Beltsville training labels shuffled, this model still reaches up to 42 "
+                   "of 44 (median 34), because the Austrian rows carry the signal: the Beltsville "
+                   "labels add about one field over the European logistic's zero-shot 42. Present "
+                   "its 43 as the European model nudged by Beltsville, not as a model learned at "
+                   "Beltsville.")
+    else:
+        reading = ("With the training labels shuffled it reaches at most 40 of 44 (median 23); the "
+                   "real 43 is far in the tail of that distribution.")
+    card = [f"# {name}\n", description + "\n",
             "**In-site model: it is fitted on the Beltsville labels, so it applies to Beltsville "
             "only and its numbers come from cross-validation on the same 44 field-years.**\n",
             f"Fitted model: {model.describe()}\n",
+            f"In the comparison below it is `{candidate}`.\n",
             "## Cross-validation on Beltsville (exact Clopper-Pearson intervals)\n",
             table_markdown(tab, REFERENCES),
             "\nLeave-one-field-out (all seasons of a polygon held out together) is the honest "
             "number for a new field; leave-one-year-out is a new season on fields already seen. "
-            "Three variants tie at 43 of 44 under both designs; the single miss is barc-327-2021, a "
-            "declared silage field that was dry before the cut and looks like grain on every "
-            "measure. The out-of-fold rows in `results/MD_<year>.jsonl` come from "
-            "leave-one-field-out.\n", CARD_SENTENCE + "\n",
+            "Three logistic variants tie at 43 of 44 under both designs; the single miss in every "
+            "case is barc-327-2021 (2021 fold: 17 of 18; 2022: 7 of 7; 2023: 19 of 19), a declared "
+            "silage field that was dry before the cut and looks like grain on every measure. The "
+            "8 abstained field-years still get a call and are counted in the 43. Everything fitted "
+            "(imputation, scaling, the logistic) is fitted inside the training fold; the threshold "
+            "is a fixed 0.5 and the abstain flag uses only each field's own data quality.\n",
+            CARD_SENTENCE + "\n",
+            "## Label-permutation check (leave-one-year-out, 200 seeded shuffles of the training "
+            "labels within each fold)\n", perm_text, "\n" + reading + "\n",
+            "The out-of-fold rows in `results/MD_<year>.jsonl` come from leave-one-field-out.\n",
             "## Known limits\n",
-            "- Fitted on one farm; do not apply it to other counties (the toolbox only allows it "
-            "for FIPS 24033).\n- 12 silage field-years in total; the intervals above are wide.\n"
-            "- Probabilities are class-balanced, not calibrated to Beltsville's silage share.\n"]
+            "- Fitted on one farm; do not apply it to other counties (the toolbox's in_site policy "
+            "is limited to FIPS 24033).\n- 12 silage field-years in total; the intervals above are "
+            "wide.\n- Probabilities are class-balanced, not calibrated to Beltsville's silage share.\n"]
     (tmp / "model_card.md").write_text(portable_text("\n".join(card)), encoding="utf-8")
     tmp.rename(folder)
     return folder
@@ -274,7 +340,8 @@ def main(argv=None):
     ap.add_argument("--registry", default=None)
     ap.add_argument("--out", required=True)
     ap.add_argument("--designs", nargs="*", default=["leave-one-year-out", "leave-one-field-out"])
-    ap.add_argument("--export-to", default=None, help="registry folder to export barc_logistic_v1 to")
+    ap.add_argument("--export-to", default=None,
+                    help="registry folder to export barc_logistic_v1 and eu_barc_logistic_v1 to")
     ap.add_argument("--git-commit", default=None)
     a = ap.parse_args(argv)
     out = Path(a.out)
@@ -305,9 +372,14 @@ def main(argv=None):
               f"(not abstained {r['correct_not_abstained']}/{r['n_not_abstained']})")
     (out / "in_site_table.md").write_text(table_markdown(tab, REFERENCES) + "\n\n" + CARD_SENTENCE + "\n",
                                           encoding="utf-8")
+    perm = permutation_test(makers, X, y, years, ["logistic_barc", "logistic_at_barc"])
+    write_json(out / "permutation_test.json", perm)
+    print(permutation_markdown(perm))
     if a.export_to:
-        folder = export(X, y, at, a.export_to, a.fields, a.timeseries, a.git_commit, tab)
-        print(f"exported -> {folder}")
+        for name in EXPORTS:
+            folder = export(name, X, y, at, a.export_to, a.fields, a.timeseries, a.git_commit,
+                            tab, perm)
+            print(f"exported -> {folder}")
     return tab, oof
 
 

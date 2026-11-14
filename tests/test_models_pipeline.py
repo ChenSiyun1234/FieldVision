@@ -372,7 +372,7 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     assert s["fields_with_cloud_gap_radar_ok"] == 0
     r = tb.route_options("24033", 2023)
     assert set(r) == STUB_KEYS["route_options"] | {"notes"}
-    assert set(r["options"]) == {"standard", "radar_first", "regional_threshold"}
+    assert set(r["options"]) == {"standard", "radar_first", "regional_threshold", "in_site"}
     for o in r["options"].values():
         assert {"models_used", "n_abstain"} <= set(o)
     assert r["options"]["radar_first"]["models_used"] == r["options"]["standard"]["models_used"]
@@ -441,3 +441,35 @@ def test_toolbox_says_how_to_install_a_parquet_engine(monkeypatch):
                         lambda name, *a: None if name in ("pyarrow", "fastparquet") else real(name, *a))
     with pytest.raises(ImportError, match="pip install --target /workspace/FieldVision/.deps pyarrow"):
         toolbox.Toolbox()
+
+
+def test_in_site_cross_validation_and_policy_scope(tmp_path):
+    from synthetic import make_dataset
+    from fieldvision.beltsville import in_site
+    from fieldvision.features.build import build_features
+    from fieldvision.model.models import LogisticModel
+    from fieldvision.toolbox import Toolbox
+    frames = [make_dataset(n_fields=16, seed=s, countries=("NL",), year=yr, blocks_per_country=2)
+              for s, yr in ((1, 2021), (2, 2022), (3, 2023))]
+    f = pd.concat([a.assign(field_id=a["field_id"].str[-3:].radd("barc-") + "-" + str(yr))
+                   for (a, _), yr in zip(frames, (2021, 2022, 2023))], ignore_index=True)
+    ts = pd.concat([b.assign(field_id=b["field_id"].str[-3:].radd("barc-") + "-" + str(yr))
+                    for (_, b), yr in zip(frames, (2021, 2022, 2023))], ignore_index=True)
+    X, _ = build_features(ts, f)
+    y = (f["label"] == "silage").astype(int).to_numpy()
+    at_X, at_ts = make_dataset(n_fields=90, seed=9, countries=("AT",), blocks_per_country=3)
+    at, _ = build_features(at_ts, at_X)
+    at["y"] = (at_X["label"] == "silage").astype(int).to_numpy()
+    eu = LogisticModel(in_site.FEATURES).fit(at, at["y"].to_numpy())
+    makers = in_site.candidates(eu, at, at["y"].to_numpy())
+    unit = f["field_id"].str.replace(r"-(19|20)\d\d$", "", regex=True).to_numpy()
+    for groups in (f["year"].to_numpy(), unit):
+        oof = in_site.cross_validate(X, y, groups, makers)
+        assert set(oof["model"]) == set(makers) and oof.groupby("model").size().eq(len(f)).all()
+        for g in np.unique(groups):        # no field is predicted by a model that saw it
+            assert (oof[oof["fold"] == str(g)]["field_id"].isin(f["field_id"][groups == g])).all()
+    tab = in_site.summary_table(oof, "leave-one-field-out")
+    assert {"correct", "silage_found", "grain_called_silage", "abstain_rate"} <= set(tab.columns)
+    tb = Toolbox(data_root=tmp_path, registry=tmp_path / "noreg", out_root=tmp_path / "o")
+    with pytest.raises(ValueError, match="only for FIPS"):
+        tb._policy_predictions("24021", 2022, "in_site")

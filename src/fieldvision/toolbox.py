@@ -45,7 +45,9 @@ def _require_parquet_engine():
     import importlib.util
     if not any(importlib.util.find_spec(m) for m in ("pyarrow", "fastparquet")):
         raise ImportError(PARQUET_HINT)
-POLICIES = ("standard", "radar_first", "regional_threshold")
+POLICIES = ("standard", "radar_first", "regional_threshold", "in_site")
+IN_SITE_MODEL = "eu_barc_logistic_v1"   # Austria + Beltsville, fitted on these fields (fieldvision.beltsville)
+IN_SITE_FIPS = {"24033"}
 STATE_BY_FIPS = {"01": "AL", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT", "10": "DE",
                  "12": "FL", "13": "GA", "16": "ID", "17": "IL", "18": "IN", "19": "IA", "20": "KS",
                  "21": "KY", "22": "LA", "23": "ME", "24": "MD", "25": "MA", "26": "MI", "27": "MN",
@@ -157,8 +159,17 @@ class Toolbox:
     def _policy_predictions(self, fips, year, policy):
         if policy not in POLICIES:
             raise ValueError(f"unknown policy {policy!r}; expected one of {POLICIES}")
+        if policy == "in_site" and str(fips) not in IN_SITE_FIPS:
+            raise ValueError(f"policy 'in_site' exists only for FIPS {sorted(IN_SITE_FIPS)}: "
+                             f"{IN_SITE_MODEL} was fitted on those fields and is untested elsewhere")
         fields, ts, X, cfg = self._data(fips, year)
-        if policy in ("standard", "radar_first"):
+        if policy == "in_site":
+            model, mj, _ = load_model(self.registry, IN_SITE_MODEL)
+            rows, _ = classify_rows(fields, ts, model, IN_SITE_MODEL, cfg, mj["threshold"])
+            name = IN_SITE_MODEL
+            note = (f"every field to {IN_SITE_MODEL}, fitted on these same Beltsville fields: these "
+                    "calls are in-sample; its out-of-fold accuracy is in its model card")
+        elif policy in ("standard", "radar_first"):
             model, mj, _ = load_model(self.registry, self.standard_model)
             rows, _ = classify_rows(fields, ts, model, self.standard_model, cfg, mj["threshold"])
             name = self.standard_model
@@ -177,6 +188,13 @@ class Toolbox:
     def route_options(self, fips, year):
         options, lines = {}, []
         for pol in POLICIES:
+            missing = not (self.registry / IN_SITE_MODEL / "model.json").exists()
+            if pol == "in_site" and (str(fips) not in IN_SITE_FIPS or missing):
+                note = (f"not available: {IN_SITE_MODEL} is not in the registry" if missing else
+                        f"not available: the in-site model exists only for FIPS {sorted(IN_SITE_FIPS)}")
+                options[pol] = {"models_used": {}, "n_abstain": 0, "note": note}
+                lines.append(f"{pol}: {note}")
+                continue
             rows, name, note = self._policy_predictions(fips, year, pol)
             n_abs = int(sum(r["abstain"] for r in rows))
             options[pol] = {"models_used": {name: len(rows)}, "n_abstain": n_abs, "note": note}
