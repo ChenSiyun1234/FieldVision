@@ -517,7 +517,18 @@ def signal_features(columns, variant="relative"):
         raise ValueError(f"unknown variant {variant!r}")
     keep = {"relative": ("relative", "neutral"), "calendar": ("calendar", "neutral"),
             "all": ("relative", "calendar", "neutral")}[variant]
-    return [c for c in columns if feature_kind(c) in keep]
+    return [c for c in columns if is_feature_column(c) and feature_kind(c) in keep]
+
+
+def is_feature_column(name):
+    """True for numeric feature columns produced by field_features.
+
+    Keeps ids, labels, the low-evidence flag and any metadata merged into
+    the table out of the models.
+    """
+    if name.startswith(("rel_", "cal_")):
+        return True
+    return name in set(numeric_feature_names(FeatureConfig()))
 
 
 def evidence_flags(q_n_usable_season, harv_mid_doy, q_harv_width_days, q_harv_confirmed,

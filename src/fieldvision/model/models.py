@@ -40,7 +40,7 @@ GBM_PARAMS = dict(n_estimators=300, learning_rate=0.05, num_leaves=15, subsample
 
 
 def _matrix(X, names):
-    a = X[names].to_numpy(dtype=float)
+    a = np.array(X[names].to_numpy(dtype=float), dtype=float, copy=True)
     a[~np.isfinite(a)] = np.nan
     return a
 

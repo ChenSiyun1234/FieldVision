@@ -40,23 +40,91 @@ def expand_paths(paths, suffixes):
     return out
 
 
-def load_fields(paths):
-    """Field properties from one or more GeoJSON files (geometry is not needed here).
+VECTOR_SUFFIXES = (".geojson", ".json", ".gpkg", ".shp", ".fgb")
 
-    Adds `y`: 1.0 silage, 0.0 grain, NaN for unlabelled or unknown labels.
-    """
-    rows = []
-    for path in expand_paths(paths, (".geojson", ".json")):
+
+def _read_vector(path):
+    """Properties of one vector file as a frame, plus centroid and area when missing."""
+    suffix = Path(path).suffix.lower()
+    if suffix in (".geojson", ".json"):
         with open(path, encoding="utf-8") as fh:
             gj = json.load(fh)
+        rows = []
         for feat in gj.get("features", []):
-            props = feat.get("properties") or {}
-            row = {k: props.get(k) for k in FIELD_PROPS}
-            row["fields_file"] = Path(path).name
-            rows.append(row)
-    if not rows:
+            props = dict(feat.get("properties") or {})
+            props["__geometry"] = feat.get("geometry")
+            rows.append(props)
+        df = pd.DataFrame(rows)
+        need_geom = any(c not in df.columns or df[c].isna().any()
+                        for c in ("centroid_lon", "centroid_lat", "area_ha"))
+        if len(df) and need_geom and df["__geometry"].notna().any():
+            import geopandas as gpd
+            from shapely.geometry import shape
+            geoms = [shape(g) if g else None for g in df["__geometry"]]
+            gdf = gpd.GeoDataFrame(df.drop(columns="__geometry"), geometry=geoms, crs="EPSG:4326")
+            return _fill_geometry_props(gdf)
+        return df.drop(columns="__geometry", errors="ignore")
+    import geopandas as gpd
+    return _fill_geometry_props(gpd.read_file(path))
+
+
+def _fill_geometry_props(gdf):
+    """centroid_lon/lat and area_ha from geometry where the attributes are missing."""
+    import geopandas as gpd
+    if gdf.crs is None:
+        warnings.warn("field file has no CRS; assuming EPSG:4326")
+        gdf = gdf.set_crs("EPSG:4326")
+    df = pd.DataFrame(gdf.drop(columns=gdf.geometry.name))
+    valid = (gdf.geometry.notna() & ~gdf.geometry.is_empty).to_numpy()
+    for col in ("centroid_lon", "centroid_lat", "area_ha"):
+        df[col] = pd.to_numeric(df[col], errors="coerce") if col in df.columns else np.nan
+    if valid.any():
+        sub = gdf.loc[valid]
+        metric = sub.to_crs(sub.estimate_utm_crs())
+        cent = gpd.GeoSeries(metric.geometry.centroid, crs=metric.crs).to_crs("EPSG:4326")
+        idx = df.index[valid]
+        for col, vals in (("centroid_lon", cent.x.to_numpy()), ("centroid_lat", cent.y.to_numpy()),
+                          ("area_ha", metric.geometry.area.to_numpy() / 10000.0)):
+            df.loc[idx, col] = df.loc[idx, col].fillna(pd.Series(vals, index=idx))
+    return df
+
+
+def load_fields(paths, rename=None, label_map=None, keep_columns=()):
+    """Field properties from one or more vector files (GeoJSON, GeoPackage, ...).
+
+    rename        {our_name: their_name}, e.g. {"label": "harvest", "field_id": "FID"},
+                  for files that do not follow the contract
+    label_map     {their_value: "silage" | "grain"} applied before validation
+    keep_columns  extra columns to carry along (e.g. a county code)
+
+    Missing centroid/area are computed from geometry. A missing block_id
+    becomes a rough 10 km grid cell so grouped evaluation still works.
+    Adds `y`: 1.0 silage, 0.0 grain, NaN for unlabelled or unknown labels.
+    """
+    from ..model.splits import grid_block_id
+    frames = []
+    for path in expand_paths(paths, VECTOR_SUFFIXES):
+        part = _read_vector(path)
+        if rename:
+            part = part.rename(columns={v: k for k, v in rename.items() if v in part.columns})
+        if label_map and "label" in part.columns:
+            part["label"] = part["label"].map(lambda v: label_map.get(str(v), v))
+        sub = pd.DataFrame({k: part[k] if k in part.columns else None for k in FIELD_PROPS},
+                           index=part.index)
+        for c in keep_columns:
+            sub[c] = part[c] if c in part.columns else None
+        sub["fields_file"] = Path(path).name
+        frames.append(sub)
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    if df.empty:
         raise ValueError("the field files contain no features")
-    df = pd.DataFrame(rows)
+    no_block = df["block_id"].isna() | (df["block_id"].astype(str).str.len() == 0)
+    if no_block.any():
+        warnings.warn(f"{int(no_block.sum())} fields have no block_id; using a 10 km grid cell "
+                      "from the centroid")
+        df.loc[no_block, "block_id"] = grid_block_id(
+            pd.to_numeric(df.loc[no_block, "centroid_lon"], errors="coerce"),
+            pd.to_numeric(df.loc[no_block, "centroid_lat"], errors="coerce"))
     if df["field_id"].isna().any():
         raise ValueError("some features have no field_id")
     df["field_id"] = df["field_id"].astype(str)
