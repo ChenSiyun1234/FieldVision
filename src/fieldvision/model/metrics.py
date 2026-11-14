@@ -13,15 +13,23 @@ SCORE_METRICS = ["roc_auc", "pr_auc"]
 ALL_METRICS = COUNT_METRICS + SCORE_METRICS
 
 
-def confusion_counts(y_true, y_pred):
-    """tp, fp, fn, tn with 1 = silage."""
+def confusion_counts(y_true, y_pred, weights=None):
+    """tp, fp, fn, tn with 1 = silage (weighted sums if weights are given)."""
     y_true = np.asarray(y_true).astype(int)
     y_pred = np.asarray(y_pred).astype(int)
+    if weights is None:
+        return {
+            "tp": int(((y_true == 1) & (y_pred == 1)).sum()),
+            "fp": int(((y_true == 0) & (y_pred == 1)).sum()),
+            "fn": int(((y_true == 1) & (y_pred == 0)).sum()),
+            "tn": int(((y_true == 0) & (y_pred == 0)).sum()),
+        }
+    w = np.asarray(weights, dtype=float)
     return {
-        "tp": int(((y_true == 1) & (y_pred == 1)).sum()),
-        "fp": int(((y_true == 0) & (y_pred == 1)).sum()),
-        "fn": int(((y_true == 1) & (y_pred == 0)).sum()),
-        "tn": int(((y_true == 0) & (y_pred == 0)).sum()),
+        "tp": float(w[(y_true == 1) & (y_pred == 1)].sum()),
+        "fp": float(w[(y_true == 0) & (y_pred == 1)].sum()),
+        "fn": float(w[(y_true == 1) & (y_pred == 0)].sum()),
+        "tn": float(w[(y_true == 0) & (y_pred == 0)].sum()),
     }
 
 
@@ -91,13 +99,16 @@ def weighted_auc(y_true, score, weights=None):
     return roc, ap
 
 
-def classification_metrics(y_true, y_pred, y_score=None):
-    """All metrics for one set of predictions, as plain floats and ints."""
+def classification_metrics(y_true, y_pred, y_score=None, weights=None):
+    """All metrics for one set of predictions, as plain floats and ints.
+
+    weights: optional row weights, e.g. from prevalence_weights().
+    """
     y_true = np.asarray(y_true).astype(int)
-    counts = confusion_counts(y_true, y_pred)
+    counts = confusion_counts(y_true, y_pred, weights)
     out = {k: float(v) for k, v in metrics_from_counts(**counts).items()}
     if y_score is not None and len(y_true):
-        out["roc_auc"], out["pr_auc"] = weighted_auc(y_true, y_score)
+        out["roc_auc"], out["pr_auc"] = weighted_auc(y_true, y_score, weights)
     else:
         out["roc_auc"], out["pr_auc"] = float("nan"), float("nan")
     out["confusion"] = counts
@@ -117,18 +128,19 @@ def _block_weights(blocks, n_boot, seed):
     return mult, inverse
 
 
-def _boot_metrics(y, pred, score, mult, inverse, chunk=200):
+def _boot_metrics(y, pred, score, mult, inverse, chunk=200, weights=None):
     k = mult.shape[1]
+    w = np.ones(len(y)) if weights is None else np.asarray(weights, dtype=float)
     counts = np.zeros((k, 4))
     for j, m in enumerate(((y == 1) & (pred == 1), (y == 0) & (pred == 1),
                            (y == 1) & (pred == 0), (y == 0) & (pred == 0))):
-        counts[:, j] = np.bincount(inverse, weights=m.astype(float), minlength=k)
+        counts[:, j] = np.bincount(inverse, weights=m.astype(float) * w, minlength=k)
     boot = mult @ counts
     out = metrics_from_counts(boot[:, 0], boot[:, 1], boot[:, 2], boot[:, 3])
     if score is not None:
         roc, ap = [], []
         for a in range(0, mult.shape[0], chunk):
-            r, p = weighted_auc(y, score, mult[a:a + chunk][:, inverse])
+            r, p = weighted_auc(y, score, mult[a:a + chunk][:, inverse] * w[None, :])
             roc.append(r)
             ap.append(p)
         out["roc_auc"] = np.concatenate(roc)
@@ -144,7 +156,8 @@ def _interval(samples, alpha):
     return [float(lo), float(hi)]
 
 
-def block_bootstrap_ci(y_true, y_pred, y_score, blocks, n_boot=1000, seed=0, alpha=0.05):
+def block_bootstrap_ci(y_true, y_pred, y_score, blocks, n_boot=1000, seed=0, alpha=0.05,
+                       weights=None):
     """Percentile confidence intervals from resampling blocks, not fields.
 
     Fields in one 10 km block share weather and satellite passes, so they
@@ -155,7 +168,7 @@ def block_bootstrap_ci(y_true, y_pred, y_score, blocks, n_boot=1000, seed=0, alp
     pred = np.asarray(y_pred).astype(int)
     score = None if y_score is None else np.asarray(y_score, dtype=float)
     mult, inverse = _block_weights(blocks, n_boot, seed)
-    boot = _boot_metrics(y, pred, score, mult, inverse)
+    boot = _boot_metrics(y, pred, score, mult, inverse, weights=weights)
     ci = {name: _interval(vals, alpha) for name, vals in boot.items()}
     ci["n_blocks"] = int(mult.shape[1])
     ci["n_boot"] = int(n_boot)
@@ -179,3 +192,55 @@ def paired_bootstrap_diff(y_true, pred_a, score_a, pred_b, score_b, blocks,
         out[name] = {"diff": float(point_a[name] - point_b[name]),
                      "ci": _interval(a[name] - b[name], alpha)}
     return out
+
+
+# --------------------------------------------------------------------------
+# realistic class shares and calibration
+# --------------------------------------------------------------------------
+
+def prevalence_weights(y_true, prevalence):
+    """Row weights that make silage `prevalence` of the total weight.
+
+    Our training sets are balanced by design; in the US about 6-8 % of corn
+    is silage. Recall and FPR do not change under these weights; precision,
+    F1, accuracy and PR-AUC do.
+    """
+    y = np.asarray(y_true).astype(int)
+    p_obs = y.mean() if len(y) else np.nan
+    if not (0 < p_obs < 1):
+        return np.ones(len(y))
+    return np.where(y == 1, prevalence / p_obs, (1 - prevalence) / (1 - p_obs))
+
+
+def prior_shift(p, prevalence, train_prevalence):
+    """Move a probability calibrated at `train_prevalence` to another class share (Bayes)."""
+    p = np.clip(np.asarray(p, dtype=float), 1e-9, 1 - 1e-9)
+    a = p * prevalence / train_prevalence
+    b = (1 - p) * (1 - prevalence) / (1 - train_prevalence)
+    return a / (a + b)
+
+
+def shifted_threshold(prevalence, train_prevalence, threshold=0.5):
+    """Score threshold equivalent to `threshold` on prior-shifted probabilities."""
+    r = (prevalence / train_prevalence) / ((1 - prevalence) / (1 - train_prevalence))
+    t = threshold / (1 - threshold)
+    return float(t / (t + r))
+
+
+def calibration_summary(y_true, p, n_bins=10):
+    """Brier score, expected calibration error and a reliability table (equal-width bins)."""
+    y = np.asarray(y_true).astype(float)
+    p = np.asarray(p, dtype=float)
+    edges = np.linspace(0, 1, n_bins + 1)
+    idx = np.clip(np.digitize(p, edges[1:-1]), 0, n_bins - 1)
+    rows = []
+    ece = 0.0
+    for b in range(n_bins):
+        m = idx == b
+        if not m.any():
+            continue
+        rows.append({"bin": f"{edges[b]:.1f}-{edges[b + 1]:.1f}", "n": int(m.sum()),
+                     "mean_p": float(p[m].mean()), "share_silage": float(y[m].mean())})
+        ece += m.mean() * abs(p[m].mean() - y[m].mean())
+    return {"brier": float(np.mean((p - y) ** 2)) if len(y) else float("nan"),
+            "ece": float(ece), "reliability": rows}

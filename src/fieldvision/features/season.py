@@ -57,7 +57,7 @@ class FeatureConfig:
     min_clear_fraction: float = 0.6
     min_clear_pixels: int = 1
     # peak search window (day of year) and sanity limits
-    peak_window: tuple = (160, 280)
+    peak_window: tuple = (160, 280)       # set per region for early harvests (e.g. Texas)
     min_peak_ndvi: float = 0.5
     min_amplitude: float = 0.25
     # harvest = first sustained fall below base + drop_fraction * amplitude
@@ -121,6 +121,7 @@ def numeric_feature_names(cfg=FeatureConfig()):
         "q_n_rows", "q_n_usable", "q_n_usable_season", "q_first_usable_doy",
         "q_last_usable_doy", "q_max_gap_days", "q_mean_clear_fraction",
         "q_harv_width_days", "q_harv_confirmed", "q_sen_n_obs", "q_post_n_obs",
+        "q_n_green_cycles", "q_green_cycle_days",
     ]
     return names
 
@@ -157,20 +158,73 @@ def usable_mask(clear_fraction, bands, cfg=FeatureConfig(), n_clear=None):
     return ok
 
 
-def find_peak(t, ndvi, cfg=FeatureConfig()):
-    """Peak greenness inside the search window.
+def green_cycles(t, ndvi, level, ndmi=None, bare_soil_ndmi=0.05):
+    """Runs of observations with NDVI at or above `level` (start index, end index).
+
+    A single low observation inside a run is tolerated (residual haze or a
+    shadow) unless it looks like bare soil, which means the crop was cut.
+    """
+    n = len(t)
+    high = np.isfinite(ndvi) & (ndvi >= level)
+    runs = []
+    i = 0
+    while i < n:
+        if not high[i]:
+            i += 1
+            continue
+        a = b = i
+        j = i + 1
+        while j < n:
+            if high[j]:
+                b = j
+                j += 1
+                continue
+            soil = ndmi is not None and np.isfinite(ndmi[j]) and ndmi[j] <= bare_soil_ndmi
+            if j + 1 < n and high[j + 1] and not soil:
+                b = j + 1
+                j += 2
+                continue
+            break
+        runs.append((a, b))
+        i = b + 1
+    return runs
+
+
+def find_peak(t, ndvi, cfg=FeatureConfig(), ndmi=None):
+    """Peak greenness of the main green cycle inside the search window.
+
+    The main cycle is the longest run of observations above half of the
+    in-window range, not simply the greenest date: a cover crop in spring, a
+    catch crop after harvest or a second crop (double cropping) can be as
+    green as the corn but do not last as long. Ties go to the greener run.
 
     Returns (values, index of the peak observation or None, reason).
     """
-    vals = {"peak_ndvi": NAN, "peak_doy": NAN, "base_ndvi": NAN, "amplitude": NAN}
+    vals = {"peak_ndvi": NAN, "peak_doy": NAN, "base_ndvi": NAN, "amplitude": NAN,
+            "q_n_green_cycles": NAN, "q_green_cycle_days": NAN}
     finite = np.isfinite(ndvi)
     in_win = finite & (t >= cfg.peak_window[0]) & (t <= cfg.peak_window[1])
     if not in_win.any():
         return vals, None, "no_obs_in_peak_window"
-    i = int(np.argmax(np.where(in_win, ndvi, -np.inf)))
-    peak = float(ndvi[i])
     base = float(np.clip(np.percentile(ndvi[finite], 5), 0.05, 0.35))
-    vals.update(peak_ndvi=peak, peak_doy=float(t[i]), base_ndvi=base, amplitude=peak - base)
+    top = float(np.max(ndvi[in_win]))
+    # only runs whose greenest observation falls inside the window compete, so a
+    # spring cover crop or an autumn catch crop that merely touches it cannot win
+    runs = [(a, b) for a, b in green_cycles(t, ndvi, base + 0.5 * (top - base), ndmi,
+                                            cfg.bare_soil_ndmi)
+            if in_win[a + int(np.nanargmax(ndvi[a:b + 1]))]]
+    if not runs:                       # cannot happen: the top observation is in a run
+        runs = [(int(np.argmax(np.where(in_win, ndvi, -np.inf))),) * 2]
+    best = max(runs, key=lambda r: (t[r[1]] - t[r[0]],
+                                    np.nanmax(np.where(in_win[r[0]:r[1] + 1],
+                                                       ndvi[r[0]:r[1] + 1], -np.inf))))
+    a, b = best
+    seg = np.where(in_win[a:b + 1], ndvi[a:b + 1], -np.inf)
+    i = a + int(np.argmax(seg))
+    peak = float(ndvi[i])
+    vals.update(peak_ndvi=peak, peak_doy=float(t[i]), base_ndvi=base, amplitude=peak - base,
+                q_n_green_cycles=float(sum(1 for r in runs if t[r[1]] - t[r[0]] >= 15)),
+                q_green_cycle_days=float(t[b] - t[a]))
     if peak < cfg.min_peak_ndvi:
         return vals, None, "peak_too_low"
     if peak - base < cfg.min_amplitude:
@@ -372,7 +426,7 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
         t, ndvi, cfg.integral_window[0], cfg.integral_window[1], cfg.integral_edge_tolerance)
 
     # ---- peak
-    peak_vals, i_peak, reason = find_peak(t, ndvi, cfg)
+    peak_vals, i_peak, reason = find_peak(t, ndvi, cfg, idx["ndmi"])
     out.update(peak_vals)
     reasons["reason_peak"] = reason
     if i_peak is None:
@@ -384,7 +438,7 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
     peak, base, amp = out["peak_ndvi"], out["base_ndvi"], out["amplitude"]
     t_peak = float(t[i_peak])
     plateau = np.isfinite(ndvi) & (ndvi >= base + 0.9 * amp) \
-        & (t >= cfg.peak_window[0]) & (t <= cfg.peak_window[1])
+        & (t >= cfg.peak_window[0]) & (t <= cfg.peak_window[1]) & (np.abs(t - t_peak) <= 60)
     out["peak_ndmi"] = float(np.nanmedian(idx["ndmi"][plateau]))
     out["peak_ndre"] = float(np.nanmedian(idx["ndre"][plateau]))
     out["peak_b11"] = float(np.nanmedian(B[plateau, col["B11"]]))

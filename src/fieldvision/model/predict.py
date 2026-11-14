@@ -29,6 +29,9 @@ def add_input_args(ap):
                     help="map label values, e.g. Silage=silage 'Grain corn'=grain")
     ap.add_argument("--keep-columns", nargs="*", default=[],
                     help="extra field columns to copy into the output (e.g. a county code)")
+    ap.add_argument("--peak-window", nargs=2, type=float, default=None, metavar=("START", "END"),
+                    help="day-of-year window for the corn peak, overriding the run's; set it from "
+                         "the regional crop calendar (e.g. Texas), never tuned on labels")
 
 
 def parse_pairs(items):
@@ -43,6 +46,9 @@ def parse_pairs(items):
 
 def load_inputs(args, cfg):
     """fields, time series, features and timing, using the run's feature config."""
+    if getattr(args, "peak_window", None):
+        from dataclasses import replace
+        cfg = replace(cfg, peak_window=tuple(args.peak_window))
     fields = load_fields(args.fields, rename=parse_pairs(args.rename) or None,
                          label_map=parse_pairs(args.label_map) or None,
                          keep_columns=args.keep_columns)

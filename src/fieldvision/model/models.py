@@ -13,7 +13,10 @@ fit() and nowhere else.
 """
 from __future__ import annotations
 
+from functools import partial
+
 import numpy as np
+import pandas as pd
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import make_pipeline
@@ -49,6 +52,9 @@ class _Base:
     name = "base"
     threshold = 0.5
     feature_names: list = []
+
+    def explain(self, X):
+        return None
 
     def predict(self, X):
         return (self.predict_proba(X) >= self.threshold).astype(int)
@@ -174,6 +180,17 @@ class RuleModel(_Base):
             p = 1.0 / (1.0 + np.exp(-2.0 * margin))
         return np.where(np.isfinite(d), p, self.p_missing_)
 
+    def explain(self, X):
+        """Signed margins of the two tests (positive = towards silage), in robust-scale units."""
+        if self.mode_ == "constant":
+            return None
+        d = _matrix(X, [self.timing])[:, 0]
+        m = _matrix(X, [self.moisture])[:, 0]
+        out = pd.DataFrame({self.timing: (self.t_time_ - d) / self.scale_time_}, index=X.index)
+        if self.mode_ in ("and", "or"):
+            out[self.moisture] = (m - self.t_moist_) / self.scale_moist_
+        return out
+
     def describe(self):
         if self.mode_ == "constant":
             return "no usable timing in training data; constant prediction"
@@ -222,6 +239,14 @@ class LogisticModel(_Base):
             return self.est_.predict_proba(X)[:, 1]
         return self.est_.predict_proba(_matrix(X, self.feature_names))[:, 1]
 
+    def explain(self, X):
+        """Per-field contribution of each feature to the log-odds (coef * standardised value)."""
+        if isinstance(self.est_, _Constant):
+            return None
+        a = self.est_[:-1].transform(_matrix(X, self.feature_names))
+        return pd.DataFrame(a * self.est_[-1].coef_[0][None, :], columns=self.feature_names,
+                            index=X.index)
+
     def describe(self):
         if isinstance(self.est_, _Constant):
             return "single class in training data; constant prediction"
@@ -259,14 +284,93 @@ class GBMModel(_Base):
             return self.est_.predict_proba(X)[:, 1]
         return self.est_.predict_proba(_matrix(X, self.feature_names))[:, 1]
 
+    def explain(self, X):
+        """Per-field SHAP-style contributions to the log-odds from LightGBM itself."""
+        if isinstance(self.est_, _Constant):
+            return None
+        c = self.est_.predict(_matrix(X, self.feature_names), pred_contrib=True)
+        return pd.DataFrame(np.asarray(c)[:, :-1], columns=self.feature_names, index=X.index)
+
     def describe(self):
         return f"LightGBM, {len(self.feature_names)} features, {self.params['n_estimators']} trees"
+
+
+class CalibratedModel(_Base):
+    """Platt scaling of another model, learned inside the training data only.
+
+    fit(): an inner cross-validation over the training fields (grouped by
+    `block_id` when that column is present, so neighbours stay together)
+    gives out-of-fold scores; a one-feature logistic regression on their
+    logit maps scores to probabilities; then the base model is refit on all
+    training fields. Probabilities are calibrated for the class share of
+    the training data (balanced by design); see metrics.prior_shift for
+    other shares.
+    """
+
+    def __init__(self, make_base, n_inner=3, seed=0):
+        self.make_base = make_base
+        self.n_inner = n_inner
+        self.seed = seed
+        self.base_ = make_base()
+        self.name = self.base_.name
+        self.feature_names = self.base_.feature_names
+
+    @staticmethod
+    def _logit(p):
+        p = np.clip(np.asarray(p, dtype=float), 1e-6, 1 - 1e-6)
+        return np.log(p / (1 - p))
+
+    def fit(self, X, y):
+        from sklearn.model_selection import StratifiedGroupKFold, StratifiedKFold
+        y = np.asarray(y).astype(int)
+        self.train_prevalence_ = float(y.mean())
+        self.platt_ = None
+        n_min = int(min(y.sum(), len(y) - y.sum()))
+        if n_min >= self.n_inner * 2:
+            oof = np.full(len(y), np.nan)
+            groups = X["block_id"].astype(str).to_numpy() if "block_id" in X.columns else None
+            if groups is not None and len(np.unique(groups)) >= self.n_inner:
+                cv = StratifiedGroupKFold(self.n_inner, shuffle=True, random_state=self.seed)
+                splits = cv.split(np.zeros(len(y)), y, groups)
+            else:
+                cv = StratifiedKFold(self.n_inner, shuffle=True, random_state=self.seed)
+                splits = cv.split(np.zeros(len(y)), y)
+            for tr, te in splits:
+                if len(np.unique(y[tr])) < 2:
+                    continue
+                oof[te] = self.make_base().fit(X.iloc[tr], y[tr]).predict_proba(X.iloc[te])
+            ok = np.isfinite(oof)
+            if ok.sum() > 10 and len(np.unique(y[ok])) == 2:
+                self.platt_ = LogisticRegression(C=1e4, max_iter=1000)
+                self.platt_.fit(self._logit(oof[ok])[:, None], y[ok])
+        self.base_ = self.make_base().fit(X, y)
+        return self
+
+    def raw_proba(self, X):
+        return self.base_.predict_proba(X)
+
+    def predict_proba(self, X):
+        raw = self.base_.predict_proba(X)
+        if self.platt_ is None:
+            return raw
+        return self.platt_.predict_proba(self._logit(raw)[:, None])[:, 1]
+
+    def explain(self, X):
+        return self.base_.explain(X)
+
+    def describe(self):
+        text = self.base_.describe()
+        if self.platt_ is None:
+            return text + " (calibration skipped: too few training fields)"
+        a, b = float(self.platt_.coef_[0][0]), float(self.platt_.intercept_[0])
+        return text + f"; Platt calibration p = sigmoid({a:.2f}*logit(score) {b:+.2f})"
 
 
 MODEL_ORDER = ["majority", "rule", "logistic", "gbm"]
 
 
-def make_factories(columns, variant="relative", exclude=(), use_quality=False, seed=0):
+def make_factories(columns, variant="relative", exclude=(), use_quality=False, seed=0,
+                   calibrate=True):
     """name -> zero-argument constructor, for the given feature variant.
 
     variant      'relative', 'calendar' or 'all' (see features.season.feature_kind)
@@ -282,9 +386,13 @@ def make_factories(columns, variant="relative", exclude=(), use_quality=False, s
         gbm_cols += [c for c in columns if c.startswith("q_")]
     logit_cols = [c for c in LOGISTIC_FEATURES[variant] if c in columns and c not in exclude]
     timing = RULE_TIMING[variant]
-    return {
-        "majority": MajorityModel,
-        "rule": lambda: RuleModel(timing=timing),
-        "logistic": lambda: LogisticModel(logit_cols),
-        "gbm": lambda: GBMModel(gbm_cols, seed=seed),
+    # partials, not lambdas: the calibrated wrapper keeps its base factory and must pickle
+    base = {
+        "rule": partial(RuleModel, timing=timing),
+        "logistic": partial(LogisticModel, logit_cols),
+        "gbm": partial(GBMModel, gbm_cols, seed=seed),
     }
+    out = {"majority": MajorityModel}
+    for name, make in base.items():
+        out[name] = (lambda m=make: CalibratedModel(m, seed=seed)) if calibrate else make
+    return out

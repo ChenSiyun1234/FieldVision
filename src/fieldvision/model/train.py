@@ -70,6 +70,8 @@ def parse_args(argv=None):
     ap.add_argument("--min-clear-fraction", type=float, default=None)
     ap.add_argument("--max-harvest-interval", type=float, default=None,
                     help="low-evidence limit on the harvest interval width (days)")
+    ap.add_argument("--peak-window", nargs=2, type=float, default=None, metavar=("START", "END"),
+                    help="day-of-year window for the corn peak (default 160 280)")
     ap.add_argument("--allow-repeat", action="store_true",
                     help="allow evaluating the same holdout twice with the same run id")
     return ap.parse_args(argv)
@@ -81,6 +83,8 @@ def _cfg(args):
         over["min_clear_fraction"] = args.min_clear_fraction
     if args.max_harvest_interval is not None:
         over["low_evidence_max_interval_days"] = args.max_harvest_interval
+    if args.peak_window is not None:
+        over["peak_window"] = tuple(args.peak_window)
     return FeatureConfig(**over)
 
 
@@ -136,6 +140,7 @@ def main(argv=None):
 
     Xd = X[dev].reset_index(drop=True)
     md = meta[dev].reset_index(drop=True)
+    Xd["block_id"] = md["block_id"].to_numpy()     # only for grouping the inner calibration CV
     yd = y_all[dev].astype(int)
 
     variants = [args.variant] + [v for v in args.compare_variants if v != args.variant]

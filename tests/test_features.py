@@ -99,3 +99,15 @@ def test_single_bare_soil_drop_followed_by_catch_crop_is_unconfirmed_harvest():
     ndmi_wet = ndmi.copy()
     ndmi_wet[5] = 0.3
     assert detect_harvest(t, ndvi, 3, base, amp, FeatureConfig(), ndmi_wet)[3] == "no_sustained_drop"
+
+
+def test_double_crop_picks_the_longer_green_cycle():
+    from fieldvision.features.season import find_peak
+    t = np.arange(150, 300, 5.0)
+    # a short early forage crop (green 160-180), bare soil, then a long corn season (205-270)
+    ndvi = np.where((t >= 160) & (t <= 180), 0.88, 0.15)
+    ndvi = np.where((t >= 205) & (t <= 270), 0.85, ndvi)
+    ndmi = np.where(ndvi > 0.5, 0.35, -0.05)
+    vals, i, reason = find_peak(t, ndvi, FeatureConfig(), ndmi)
+    assert reason == "ok" and 205 <= vals["peak_doy"] <= 270
+    assert vals["q_n_green_cycles"] == 2
