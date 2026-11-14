@@ -188,3 +188,35 @@ def test_transfer_table_pairs_on_held_out_fields():
     assert r.loc["raw-gbm", "auc_diff_vs_ref"] < 0
     lo, hi = r.loc["raw-gbm", "auc_diff_vs_ref_ci"]
     assert lo <= r.loc["raw-gbm", "auc_diff_vs_ref"] <= hi
+
+
+def test_compare_end_to_end_two_countries(tmp_path):
+    """Synthetic AT + FR data through compare.main: spatial, LOCO and country-year pairs."""
+    pytest.importorskip("torch")
+    pytest.importorskip("lightgbm")
+    import json
+    from synthetic import make_dataset
+    from fieldvision.foundation.compare import main
+    fields, ts = make_dataset(n_fields=240, seed=5, countries=("AT", "FR"), blocks_per_country=5)
+    fields = fields.drop(columns=["true_class", "true_harvest_doy"], errors="ignore")
+    if "centroid_lat" not in fields or fields["centroid_lat"].isna().any():
+        pytest.skip("synthetic fields carry no centroids")
+    feats = [{"type": "Feature", "geometry": None,
+              "properties": {k: (None if pd.isna(v) else (v.item() if hasattr(v, "item") else v))
+                             for k, v in r.items()}} for r in fields.to_dict(orient="records")]
+    fpath = tmp_path / "fields.geojson"
+    fpath.write_text(json.dumps({"type": "FeatureCollection", "features": feats}))
+    tpath = tmp_path / "ts.parquet"
+    ts.to_parquet(tpath, index=False)
+    from fieldvision.foundation.presto_encoder import Encoder
+    import torch
+    wpath = tmp_path / "w.pt"
+    torch.save({"encoder." + k: v for k, v in Encoder().state_dict().items()}, wpath)
+    res = main(["--timeseries", str(tpath), "--fields", str(fpath), "--out", str(tmp_path / "out"),
+                "--weights", str(wpath), "--n-boot", "20"])
+    schemes = {r["scheme"] for r in res["transfer"]}
+    assert {"loco:AT", "loco:FR"} <= schemes
+    assert any(s.startswith("pair:AT") and s.endswith("FR2023") for s in schemes)
+    models = {r["model"] for r in res["transfer"]}
+    assert {"phys-logistic", "timing-rule", "phys-rule", "phys-gbm", "emb-logistic"} <= models
+    assert (tmp_path / "out" / "transfer_table.csv").exists()

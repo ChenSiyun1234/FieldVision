@@ -60,7 +60,8 @@ def make_comparison_factories(columns, inputs, combos=None, seed=0):
     def cal(make):
         return lambda m=make: CalibratedModel(m, seed=seed)
 
-    out = {"majority": MajorityModel, "phys-rule": main["rule"],
+    out = {"majority": MajorityModel, "always-grain": main["always_grain"],
+           "timing-rule": main["timing_rule"], "phys-rule": main["rule"],
            "phys-logistic": main["logistic"], "phys-gbm": main["gbm"]}
     for tag, cols in inputs.items():
         out[f"{tag}-logistic"] = cal(partial(LogisticModel, list(cols)))
@@ -131,9 +132,9 @@ def paired_fold_diffs(preds, a, b, scheme="spatial", metric="roc_auc"):
 
 
 TRANSFER_REF = "phys-logistic"     # the 6-feature logistic regression of the main line
-TRANSFER_MODELS = ["phys-logistic", "phys-rule", "phys-gbm", "emb-logistic", "emb-gbm",
+TRANSFER_MODELS = ["phys-logistic", "timing-rule", "phys-rule", "phys-gbm", "emb-logistic", "emb-gbm",
                    "raw-logistic", "raw-gbm", "both-logistic", "both-gbm", "physraw-logistic",
-                   "physraw-gbm", "majority"]
+                   "physraw-gbm", "always-grain"]
 
 
 def transfer_table(preds, scheme, models=TRANSFER_MODELS, ref=TRANSFER_REF, n_boot=1000, seed=0):
@@ -302,6 +303,21 @@ def main(argv=None):
             preds.append(p)
             info += inf
             schemes.append(f"{key}:{g}")
+    # one country-year to another country-year, e.g. AT 2022 -> FR 2022 (same imagery source)
+    cy = (meta["country"].astype(str) + meta["year"].astype(str)).to_numpy()
+    country = meta["country"].astype(str).to_numpy()
+    for a in sorted(set(cy)):
+        for b in sorted(set(cy)):
+            ca, cb = country[cy == a][0], country[cy == b][0]
+            if ca == cb:
+                continue
+            (name, tr2, te2), = restrict([(f"{a}->{b}", np.flatnonzero(cy == a),
+                                           np.flatnonzero(cy == b))], keep)
+            p, inf, _ = run_splits(Xall, meta, y, facs, [(name, tr2, te2)], f"pair:{a}->{b}",
+                                   "relative", seed=args.seed)
+            preds.append(p)
+            info += inf
+            schemes.append(f"pair:{a}->{b}")
     preds = pd.concat(preds, ignore_index=True)
     preds.to_parquet(out / "predictions.parquet", index=False)
 
