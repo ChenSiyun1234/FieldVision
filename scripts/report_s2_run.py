@@ -84,9 +84,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--append", type=Path, help="READY.txt to append to")
+    parser.add_argument("--note", default="", help="free text appended to the line, e.g. where it ran")
     args = parser.parse_args()
     summary = summarize(args.run)
-    text = line(summary)
+    text = line(summary) + (f" NOTE: {args.note}" if args.note else "")
     print(text)
     if args.append:
         if not usable_for_modelling(summary):
