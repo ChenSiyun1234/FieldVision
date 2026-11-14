@@ -205,7 +205,10 @@ def export(X, y, at, registry, fields_paths, ts_paths, git_commit, tab):
     folder = Path(registry) / EXPORT_NAME
     if folder.exists():
         raise SystemExit(f"{folder} exists; frozen folders are written once")
-    model = PooledLogistic(at, at["y"].to_numpy(int)).fit(X, y)
+    # build the class through the package path, so the frozen object does not refer to
+    # __main__ when this module is run with python -m
+    from . import in_site as _module
+    model = _module.PooledLogistic(at, at["y"].to_numpy(int)).fit(X, y)
     model.X_at = model.y_at = None          # keep the fitted pipeline, not the training rows
     tmp = folder.with_name(folder.name + ".partial")
     tmp.mkdir(parents=True)
