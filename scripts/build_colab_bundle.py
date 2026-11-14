@@ -88,6 +88,8 @@ with ThreadPoolExecutor(max_workers=workers) as pool:
             if status["status"] == "complete" or not all("RasterioIOError" in e or "CPLE_" in e for e in errors.values()):
                 break
             print(f"{block_id}: {len(errors)} scene reads failed (network), retry {attempt + 1}", flush=True)
+            import time
+            time.sleep(30 * (attempt + 1))
         old = pd.read_parquet(d / "reference.parquet").set_index(["field_id", "date"]).sort_index()
         new = pd.read_parquet(out / "blocks" / f"{block_id}.parquet").set_index(["field_id", "date"]).sort_index()
         problems = []
