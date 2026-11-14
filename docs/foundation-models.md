@@ -36,7 +36,8 @@ Downloaded: the Presto GitHub repo (shallow clone, 84 MB incl. sample data;
 the weights file `data/default_model.pt` is 3.3 MB, SHA-256 in each run's
 summary.json), the openmapflow 0.2.4 source archive (84 kB, only read to
 check Presto's Sentinel-2 product), and a CPU-only PyTorch 2.15 wheel plus
-LightGBM/scikit-learn into `C:\t\fv\venv-fm` (about 0.5 GB on disk).
+LightGBM/scikit-learn into `C:\t\fv\venv-fm` (1.3 GB on disk after
+installation; the CUDA build of PyTorch, about 3 GB, was not needed).
 
 ## Method
 
