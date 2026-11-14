@@ -38,6 +38,19 @@ def test_duplicate_dates_prefer_clear_pixel_count_then_collection():
     assert resolve_duplicates(table).scene_id.tolist() == ["s1", "s4"]
 
 
+def test_bright_row_guard_is_off_by_default_and_masks_when_set():
+    from fieldvision.s2.core import mask_bright_rows
+    table = pd.DataFrame({"field_id": ["fog", "soil"], "n_pixels": [50, 50], "n_clear": [50, 40],
+                          "clear_fraction": [1.0, 0.8], **{b: [0.46, 0.08] for b in BANDS}})
+    same, count = mask_bright_rows(table, None)
+    assert count == 0 and same.equals(table)
+    masked, count = mask_bright_rows(table, 0.25)
+    assert count == 1
+    assert masked.loc[0, list(BANDS)].isna().all() and masked.loc[0, "n_clear"] == 0
+    assert masked.loc[1, "B02"] == pytest.approx(0.08) and masked.loc[1, "n_clear"] == 40
+    assert table.loc[0, "B02"] == pytest.approx(0.46)  # input not modified
+
+
 def test_small_field_fallback_counts_actual_grid_centers():
     affine = from_origin(0, 100, 10, 10)
     small = box(1, 1, 19, 19)

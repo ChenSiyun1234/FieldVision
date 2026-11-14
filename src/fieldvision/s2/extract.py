@@ -22,7 +22,8 @@ from shapely.geometry import shape
 
 from .catalog import (LEGACY, PLANETARY, PRIMARY, SOURCES, asset_for, asset_href, calibration, check_vegetation,
                       find_scenes, scale_reflectance)
-from .core import BANDS, COLUMNS, coverage_table, interior_geometry, polygon_mask, resolve_duplicates, scl_clear, zonal_medians
+from .core import (BANDS, COLUMNS, coverage_table, interior_geometry, mask_bright_rows, polygon_mask,
+                   resolve_duplicates, scl_clear, zonal_medians)
 from .geometry import load_fields, make_blocks, scene_grid
 
 LOG = logging.getLogger("fieldvision.s2")
@@ -109,7 +110,7 @@ def read_band(item, name, grid, retries=3):
     return scale_reflectance(read_raw(item, name, grid, retries), item, asset)
 
 
-def aggregate_scene(block, item, grid, arrays):
+def aggregate_scene(block, item, grid, arrays, max_blue=None):
     _, affine, dimensions, geometries = grid
     selected = [interior_geometry(geom, affine, dimensions) for geom in geometries]
     labels = rasterize([(geom, index + 1) for index, (geom, _) in enumerate(selected)],
@@ -135,8 +136,11 @@ def aggregate_scene(block, item, grid, arrays):
     result["date"] = item["properties"]["datetime"][:10]
     result["scene_id"] = item["id"]
     result["collection"] = item["collection"]
+    result, bright_rows = mask_bright_rows(result, max_blue)
     sanity.update({"inset_fields": sum(inset for _, inset in selected), "overlap_fields": overlap_fields,
                    "zero_coverage_fields": int((result.n_clear == 0).sum())})
+    if max_blue is not None:
+        sanity["bright_rows_masked"] = bright_rows
     return result[COLUMNS], sanity
 
 
@@ -194,7 +198,7 @@ def process_block(block, args, pool):
             try:
                 if failure is not None:
                     raise failure
-                rows, diagnostic = aggregate_scene(block, item, grid, arrays)
+                rows, diagnostic = aggregate_scene(block, item, grid, arrays, getattr(args, "max_blue", None))
                 frames.append(rows)
                 diagnostics[item["id"]] = diagnostic
                 completed.add(item["id"])
@@ -300,6 +304,9 @@ def main():
     parser.add_argument("--no-fallback", action="store_true")
     parser.add_argument("--min-clear-pixels", type=int, default=1)
     parser.add_argument("--min-clear-fraction", type=float, default=0.2)
+    parser.add_argument("--max-blue", type=float, default=None,
+                        help="Off by default. Treat a field/date whose median B02 exceeds this as no clear "
+                             "pixels (fog/cloud that SCL calls bare soil); 0.25 is the documented value")
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     try:

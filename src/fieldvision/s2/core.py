@@ -45,6 +45,23 @@ def zonal_medians(labels, bands, clear, count):
     return pd.DataFrame(result)
 
 
+def mask_bright_rows(table, max_blue):
+    """Optional fog/cloud guard, off unless ``max_blue`` is given.
+
+    SCL sometimes labels fog or low cloud as bare soil (class 5); those field
+    medians are bright in every band (B02 ~0.45). A row whose median B02 exceeds
+    ``max_blue`` is turned into a no-clear-pixel observation: bands NaN, n_clear 0.
+    Returns the table and the number of rows masked.
+    """
+    if max_blue is None:
+        return table, 0
+    bright = table["B02"] > max_blue
+    table = table.copy()
+    table.loc[bright, list(BANDS)] = np.nan
+    table.loc[bright, ["n_clear", "clear_fraction"]] = 0
+    return table, int(bright.sum())
+
+
 def resolve_duplicates(table):
     if table.empty:
         return table.copy()

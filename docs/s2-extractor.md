@@ -123,17 +123,39 @@ NIR > red + 0.02, and NIR < 1 before writing. A failed check records the scene e
 After that check, out-of-range reflectance is marked missing rather than clipped.
 This conservative test may reject unusual vegetation/illumination; inspect errors.
 
-### Known gap: fog and cloud that SCL calls clear
+### Known issue: fog and low cloud that SCL calls bare soil
 
-SCL sometimes labels low stratus/fog as class 5 (not vegetated), so it survives the
-mask. Example: S2A_MSIL2A_20221128T095341_R079_T33TWM (Graz basin fog): 5613 field
-pixels in SCL 5 with median B02 0.46 and B11 0.48. It happens in both sources and
-all years, mostly October-November in Austria. A row with median B02 > 0.25 is
-almost certainly such a case (B11 ~0.47, so not snow): 0.67% of usable rows in
-at_2022, 0.83% in at_2024, ~0 elsewhere. Thresholds of 0.15-0.18 would also remove
-spring bare-soil/haze rows, so 0.25 is the suggested floor. The extractor does not
-drop these rows; `scripts/report_s2_run.py` counts them in each READY line, and the
-filter belongs in feature building where it stays reversible.
+**What.** SCL sometimes labels low stratus/fog as class 5 (not vegetated), so it
+passes the SCL 4/5/6/7 mask and the field median is cloud, not ground.
+
+**Worst example.** `S2A_MSIL2A_20221128T095341_R079_T33TWM_20221130T034013`
+(Planetary Computer, processing baseline 04.00, scene cloud cover 76%), fog over
+the Graz basin. On block `32633_AT-E4720N2640_3`, pixels inside the fields were SCL 5:
+5,613, SCL 8: 360, SCL 9: 1,070; the SCL-5 pixels had median B02 0.464 and B11 0.478.
+In `at_2022` this scene gives 106 rows on 106 fields with clear_fraction ~1 and
+median B02 0.458, B04 0.466, B08 0.499, B11 0.469, B12 0.431. Quicklook:
+`C:\t\fv\data\timeseries\qa\at2022_20221128_preview.png`. Bright SWIR rules out snow.
+
+**How widespread** (usable rows with median B02 > 0.25, i.e. the same signature):
+
+| Run | Usable rows | Bright rows | Fields touched | Scenes | Months |
+|---|---:|---:|---:|---:|---|
+| at_2024 (Collection 1) | 58,148 | 485 (0.83%) | 460 of 2,400 | 20 | 383 Oct, 95 Nov, 7 May-Jul |
+| at_2022 (PC) | 34,493 | 230 (0.67%) | 172 of 1,200 | 18 | 189 Nov, 31 Oct, 10 Apr-Sep |
+| at_2023 (Collection 1) | 35,447 | 5 | 5 | 4 | May, Sep |
+| barc_2021 / 2022 / 2023 | 736 / 279 / 676 | 0 / 0 / 2 | 0 / 0 / 2 | 0 / 0 / 1 | Sep (2023) |
+
+So it is not specific to 2022 or to one source; it is an SCL limitation that
+mostly hits autumn fog in Austria. Lower thresholds (0.15-0.18) also remove 140-600
+spring rows that are probably bright seedbeds or light haze, so 0.25 is the floor.
+
+**Option, off by default.** `--max-blue 0.25` turns a field/date row whose median
+B02 exceeds 0.25 into a no-clear-pixel observation (bands NaN, `n_clear` 0) and
+records `bright_rows_masked` in the block diagnostics. Without the flag nothing
+changes. All runs so far (Austria, Beltsville, France, Netherlands) are extracted
+without it, by decision, so every country uses identical settings; the counts above
+are what turning it on would remove. Every READY line reports the count
+(`bright_rows_B02gt0.25`).
 
 ### Difference from the organisers' starter notebook
 
