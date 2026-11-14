@@ -155,6 +155,34 @@ def check_frozen(run_dir, name, meta):
             "note": "sha256 of the model file and its training configuration (first 16 hex)"}
 
 
+def access_log_rows(path):
+    """The table rows of the team's access log for the evaluation set (markdown lines)."""
+    if not path or not Path(path).exists():
+        return None
+    lines = Path(path).read_text(encoding="utf-8").splitlines()
+    return [ln for ln in lines if ln.startswith("|")]
+
+
+def append_access_log(path, frozen_id, kind, out):
+    """Add this evaluation as a row of the access log (after the report is written)."""
+    if not path:
+        return
+    import sys
+    p = Path(path)
+    text = p.read_text(encoding="utf-8") if p.exists() else ""
+    module = "fieldvision.model.evaluate" if kind == "zero-shot" else "fieldvision.model.evaluate_adapted"
+    command = f"python -m {module} " + " ".join(sys.argv[1:])
+    row = (f"| {dt.datetime.now():%H:%M} | modelling worker | {kind} evaluation, run once with "
+           f"frozen model `{frozen_id}`: `{command}`; output `{out}` | This is the evaluation |")
+    lines = text.splitlines()
+    last = max((i for i, ln in enumerate(lines) if ln.startswith("|")), default=None)
+    if last is None:
+        lines.append(row)
+    else:
+        lines.insert(last + 1, row)
+    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def counts_table(fields):
     """Evaluated field(-year)s per year and class, plus unlabelled ones that are not scored."""
     f = fields.copy()
@@ -218,6 +246,9 @@ def main(argv=None):
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--allow-repeat", action="store_true")
+    ap.add_argument("--access-log", default=None,
+                    help="team log of looks at the evaluation set; quoted in the report and "
+                         "this run is appended to it")
     args = ap.parse_args(argv)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -264,6 +295,7 @@ def main(argv=None):
         "counts_by_year": counts_table(fields).to_dict("records"),
         "calibration": calibration_summary(prim["y"], prim["p"], n_bins=5),
         "transfer_evidence_from_training": transfer_evidence(args.model),
+        "access_log": access_log_rows(args.access_log),
     }
     write_json(out / "metrics.json", metrics)
     write_report(out, metrics, results, st, miss, shift, title="External evaluation: ZERO-SHOT",
@@ -271,6 +303,7 @@ def main(argv=None):
                         "the low-evidence rule all come from the training run. Evaluated once "
                         "(ledger entry written)."))
     ledger_check_and_record(*ledger, record=True)
+    append_access_log(args.access_log, frozen["id"], "zero-shot", out)
     print(f"zero-shot on {prim.shape[0]} labelled fields -> {out}")
     return metrics
 
@@ -322,6 +355,15 @@ def write_report(out, metrics, results, st, miss, shift, title, intro, extra="",
              "This set was not used for any fitting, tuning or feature choice and is scored once. "
              "With this few fields it confirms or contradicts the European transfer results "
              "below; it cannot replace them.\n")
+    log = metrics.get("access_log")
+    L.append("### What was seen of this set before the freeze\n")
+    if log:
+        L.append("Quoted from the team's access log (kept by the coordinating session; the row "
+                 "for this evaluation is added after this report is written):\n")
+        L.append("\n".join(log) + "\n")
+    else:
+        L.append("No access log was given to this command (`--access-log`), so this report cannot "
+                 "state who looked at the set before the freeze.\n")
     L.append("### Fields evaluated, by year and class\n")
     ct = metrics.get("counts_by_year") or []
     if ct:

@@ -258,3 +258,17 @@ def test_frozen_model_id_recorded_and_reported(run_dir):
     assert meta["frozen_model_ids"]["gbm"] == frozen_model_id(out, "gbm")
     rep = (root / "zs" / "REPORT.md").read_text(encoding="utf-8")
     assert meta["frozen_model_ids"]["gbm"] in rep
+
+
+def test_access_log_quoted_and_appended(tmp_path):
+    from fieldvision.model.evaluate import access_log_rows, append_access_log
+    log = tmp_path / "ACCESS_LOG.md"
+    log.write_text("# log\n\n| Time | Who | What | Changed? |\n|---|---|---|---|\n"
+                   "| 11:29 | coordinator | counts | No |\n\nRule text.\n", encoding="utf-8")
+    rows = access_log_rows(log)
+    assert len(rows) == 3 and "coordinator" in rows[2]
+    append_access_log(log, "abc123", "zero-shot", tmp_path / "out")
+    lines = log.read_text(encoding="utf-8").splitlines()
+    i = next(k for k, ln in enumerate(lines) if "abc123" in ln)
+    assert lines[i - 1].startswith("| 11:29") and lines[-1] == "Rule text."
+    assert access_log_rows(None) is None

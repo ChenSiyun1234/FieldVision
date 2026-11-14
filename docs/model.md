@@ -39,7 +39,7 @@ same GeoJSON is what the extractor should use, so the time-series `field_id`s ma
 ```
 python -m fieldvision.model.barc --gpkg BARC_Corn.2021-2023.gpkg --out barc_field_years.geojson
 python -m fieldvision.model.evaluate --model <run dir> --timeseries <barc series> \
-    --fields barc_field_years.geojson --keep-columns OBJECTID --out <dir>
+    --fields barc_field_years.geojson --keep-columns OBJECTID --out <dir> \n    --access-log C:	vdataevalACCESS_LOG.md
 ```
 
 Separate, clearly labelled variant that refits only the decision threshold on

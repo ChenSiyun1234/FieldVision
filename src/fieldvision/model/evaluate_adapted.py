@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 from .artifacts import fingerprint, ledger_check_and_record, ledger_path, write_json
-from .evaluate import check_frozen, choose_groups, evaluate_frame, prepare, write_report, misclassified
+from .evaluate import append_access_log, check_frozen, choose_groups, evaluate_frame, prepare, write_report, misclassified
 from .metrics import metrics_from_counts
 from .predict import add_input_args
 from .report import fmt
@@ -72,6 +72,7 @@ def main(argv=None):
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--n-boot", type=int, default=1000)
     ap.add_argument("--allow-repeat", action="store_true")
+    ap.add_argument("--access-log", default=None)
     args = ap.parse_args(argv)
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -107,6 +108,7 @@ def main(argv=None):
     miss.to_csv(out / "misclassified.csv", index=False)
     metrics = {
         "mode": "threshold_recalibrated", "NOT_ZERO_SHOT": True, "frozen_model": frozen,
+        "access_log": None,
         "fit_on_evaluation_set": f"decision threshold only, on {len(cal)} fields",
         "run_id": meta["run_id"], "model": st["name"],
         "original_threshold": st["model"].threshold, "adapted_threshold": thr,
@@ -134,6 +136,7 @@ def main(argv=None):
                        "set. Report it next to, never instead of, the zero-shot result.",
                  extra=extra, main_rows=["majority", st["name"], adapted_name])
     ledger_check_and_record(*ledger, record=True)
+    append_access_log(args.access_log, frozen["id"], "threshold-adapted (not zero-shot)", out)
     print(f"adapted threshold {thr:.3f} (was {st['model'].threshold:.3f}) from {len(cal)} fields; "
           f"reported on {adapted.shape[0]} -> {out}")
     return metrics
