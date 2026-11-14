@@ -119,3 +119,27 @@ def test_county_shares_area_weighted():
     assert ref.set_index("county").loc["A", "reference_silage_share"] == pytest.approx(0.25)
     merged, summ = compare_county_shares(out.reset_index(), ref, "county")
     assert summ["n_counties"] == 1 and summ["mean_abs_error"] == pytest.approx(0.0)
+
+
+def test_prevalence_weights_and_prior_shift():
+    from fieldvision.model.metrics import (calibration_summary, prevalence_weights, prior_shift,
+                                           shifted_threshold)
+    y = np.array([1] * 50 + [0] * 50)
+    pred = np.array([1] * 45 + [0] * 5 + [1] * 5 + [0] * 45)       # recall 0.9, fpr 0.1
+    w = prevalence_weights(y, 0.07)
+    assert w[y == 1].sum() / w.sum() == pytest.approx(0.07)
+    m = classification_metrics(y, pred, weights=w)
+    assert m["recall"] == pytest.approx(0.9) and m["fpr"] == pytest.approx(0.1)
+    assert m["precision"] == pytest.approx(precision_at_prevalence(0.9, 0.1, 0.07))
+    assert prior_shift(0.5, 0.07, 0.5) == pytest.approx(0.07)
+    t = shifted_threshold(0.07, 0.5)
+    assert prior_shift(t, 0.07, 0.5) == pytest.approx(0.5)
+    c = calibration_summary([0, 0, 1, 1], [0.05, 0.05, 0.95, 0.95])
+    assert c["ece"] == pytest.approx(0.05) and c["brier"] == pytest.approx(0.0025)
+
+
+def test_adjusted_classify_and_count():
+    from fieldvision.model.county import adjusted_share
+    # true share 7 %, recall 0.9, fpr 0.05 -> raw 0.9*0.07 + 0.05*0.93 = 0.1095
+    assert adjusted_share(0.1095, 0.9, 0.05) == pytest.approx(0.07)
+    assert np.isnan(adjusted_share(0.3, 0.5, 0.45))

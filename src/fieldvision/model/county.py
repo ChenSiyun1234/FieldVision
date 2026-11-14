@@ -85,3 +85,33 @@ def compare_county_shares(predicted, reference, county_col,
         summary["spearman_r"] = float(spearmanr(a, b).statistic)
     m["error"] = m[pred_col] - m[ref_col]
     return m, summary
+
+
+def adjusted_share(raw_share, tpr, fpr):
+    """Adjusted classify-and-count: (raw - FPR) / (TPR - FPR), clipped to [0, 1].
+
+    With 93 % grain, even a 3 % false positive rate adds almost 3 points of
+    'silage' area; this removes that bias using recall (TPR) and FPR
+    measured on held-out data (spatial CV or, better for a new region,
+    leave-one-country-out). NaN when TPR - FPR is too small to divide by.
+    """
+    raw = np.asarray(raw_share, dtype=float)
+    den = tpr - fpr
+    if not np.isfinite(den) or den < 0.1:
+        return np.full(raw.shape, np.nan)
+    return np.clip((raw - fpr) / den, 0.0, 1.0)
+
+
+def add_adjusted_shares(shares, tpr, fpr, tpr_conf=None, fpr_conf=None):
+    """Add adjusted columns to the output of county_silage_share.
+
+    tpr/fpr apply to silage_share_all; tpr_conf/fpr_conf (from the confident
+    subset) to silage_share_confident when given.
+    """
+    out = shares.copy()
+    out["silage_share_all_adjusted"] = adjusted_share(out["silage_share_all"], tpr, fpr)
+    if tpr_conf is not None and fpr_conf is not None:
+        out["silage_share_confident_adjusted"] = adjusted_share(out["silage_share_confident"],
+                                                                tpr_conf, fpr_conf)
+    out.attrs["adjustment"] = {"tpr": tpr, "fpr": fpr, "tpr_conf": tpr_conf, "fpr_conf": fpr_conf}
+    return out

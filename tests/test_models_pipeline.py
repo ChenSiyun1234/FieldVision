@@ -157,3 +157,48 @@ def test_predict_and_external_evaluation(run_dir):
     assert "NOT the zero-shot" in rep
     ledger = [json.loads(line) for line in open(root / "ledger.jsonl", encoding="utf-8")]
     assert {r["kind"] for r in ledger} >= {"holdout", "external_zero_shot"}
+
+
+def test_calibrated_wrapper_and_explanations(synth, synth_features):
+    import pickle
+    from fieldvision.model.explain import explanation_columns, reference_values
+    from fieldvision.model.artifacts import predictions_frame
+    X, meta, y = _labelled(synth, synth_features)
+    X = X.copy()
+    X["block_id"] = meta["block_id"].to_numpy()
+    tr = (meta["country"] != "AT").to_numpy()
+    fac = make_factories(X.columns)
+    for name in ("rule", "logistic", "gbm"):
+        m = fac[name]().fit(X[tr], y[tr])
+        assert m.platt_ is not None
+        p = m.predict_proba(X[~tr])
+        assert np.isfinite(p).all() and 0 <= p.min() and p.max() <= 1
+        pickle.loads(pickle.dumps(m))            # run dirs must be loadable
+        ex = m.explain(X[~tr])
+        assert ex is not None and len(ex) == int((~tr).sum())
+    fields = synth[0]
+    ref = reference_values(X[tr], y[tr])
+    assert ref["pre_ndmi"]["silage"] > ref["pre_ndmi"]["grain"]
+    pf = predictions_frame(X[~tr].reset_index(drop=True), fields, p, 0.5, "gbm", model=m,
+                           reference=ref, prevalence=0.07, train_prevalence=float(y[tr].mean()))
+    assert pf["reason"].str.len().min() > 10
+    assert (pf["p_silage_at_prevalence"] <= pf["p_silage"] + 1e-9).all()
+    assert pf["top_model_factors"].str.len().max() > 0
+    assert ((pf["n_signals_silage_like"] <= pf["n_signals_observed"])).all()
+
+
+def test_asof_truncation_and_cli(tmp_path):
+    from synthetic import write_dataset
+    from fieldvision.features.loading import load_fields, load_timeseries
+    from fieldvision.model import asof
+    fdir, tdir = write_dataset(tmp_path / "d", n_fields=150, seed=9, blocks_per_country=4)
+    f = load_fields(fdir)
+    ts, _ = load_timeseries(tdir)
+    cut = asof.truncate(ts, f, "09-01")
+    assert cut["date"].max() <= pd.Timestamp("2023-09-01") and len(cut) < len(ts)
+    tab = asof.main(["--timeseries", str(tdir), "--fields", str(fdir), "--out", str(tmp_path / "a"),
+                     "--cutoffs", "08-15", "12-01", "--models", "majority", "gbm",
+                     "--n-splits", "3", "--n-boot", "30"])
+    g = tab[tab.model == "gbm"].set_index("cutoff")
+    assert g.loc["12-01", "harvest_seen_share"] > g.loc["08-15", "harvest_seen_share"]
+    assert (tmp_path / "a" / "asof.png").exists()

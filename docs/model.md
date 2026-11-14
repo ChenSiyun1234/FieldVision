@@ -40,6 +40,14 @@ the rest, next to the zero-shot numbers on the same fields:
 python -m fieldvision.model.evaluate_adapted <same arguments> --n-calib 10 --seed 0
 ```
 
+How early can we know (time series cut at each date, features rebuilt, models retrained with
+the same spatial folds):
+
+```
+python -m fieldvision.model.asof --timeseries <...> --fields <...> --out <dir> \
+    [--cutoffs 08-01 08-15 09-01 ...] [--exclude-blocks <holdout patterns>]
+```
+
 Tests (synthetic data only, a software check):
 
 ```
@@ -61,6 +69,22 @@ python -m pytest tests -q --basetemp=C:/t/fv/data/model/pytest_tmp -o tmp_path_r
   harvest interval wider than 20 days, or a harvest seen only once at the end of a gap.
 - Anything run on synthetic data carries a banner saying it is a software check only.
 
+## Probabilities, class balance, explanations
+
+- `p_silage` is Platt-calibrated inside each training fold (inner CV grouped by block), so it
+  is calibrated for the training class balance, which is 50/50 by design. The train report
+  shows a reliability table and `figures/calibration.png` on held-out folds.
+- About 6-8 % of US corn is silage. The train report re-weights held-out metrics to 7 % and 85 %
+  silage (`--prevalences`), at the model's threshold and at the Bayes-shifted threshold, next to
+  the always-one-class baseline. `predict --prevalence 0.07` adds `p_silage_at_prevalence`.
+- Each prediction carries the numbers behind it (NDVI before/after the drop, days from peak,
+  greenness and NDMI before, NDTI residue after, regrowth), how many of five physical signals
+  look like silage compared with the training medians of each class, a one-sentence `reason`,
+  and `top_model_factors` (LightGBM contributions or logistic coef*z, + = towards silage).
+- The peak is the longest green cycle peaking inside `peak_window` (default day 160-280), so a
+  short second crop does not pass for corn. For regions with an early calendar (Texas) set
+  `--peak-window` from the crop calendar.
+
 ## Predictions table
 
 `field_id, p_silage, predicted_label, low_evidence, low_evidence_reason, harvest_start,
@@ -77,3 +101,6 @@ area-weighted silage share among confident fields, the same with low-evidence fi
 the score-weighted share, and the low-evidence share of corn area. `reference_share` and
 `compare_county_shares` turn a USDA-style table (silage and grain acres per county) into shares
 and compare. Column names are arguments, since we have not seen the files yet.
+`add_adjusted_shares(shares, tpr, fpr)` corrects the counted share with recall and FPR measured on
+held-out data, (raw - FPR) / (TPR - FPR); without it a few percent of false positives on 93 %
+grain area inflate the silage total badly.
