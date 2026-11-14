@@ -37,8 +37,12 @@
       <div class="timeline" id="timeline" hidden></div>
       <div class="opening" id="intro" hidden role="dialog" aria-label="What this tool answers">
         <div class="opening-card">
-          <p class="opening-q">FieldVision tells, from space, which corn fields were <span class="s">chopped for silage</span> and which were <span class="g">combined for grain</span>, and shows the evidence behind every call.</p>
-          <button type="button" class="opening-go">Show the map →</button>
+          <h1 class="opening-q">From space: which cornfields were <span class="s">chopped</span>, and which were <span class="g">combined</span>?</h1>
+          <div class="yardsticks" id="yardsticks"></div>
+          <div class="opening-foot">
+            <button type="button" class="opening-go">Show the map →</button>
+            <span class="opening-region" id="opening-region"></span>
+          </div>
         </div>
       </div>
     </section>
@@ -48,7 +52,7 @@
       <nav class="tabs" id="tabs" role="tablist">
         <button type="button" role="tab" data-tab="check">Check these first</button>
         <button type="button" role="tab" data-tab="wrong">Model wrong</button>
-        <button type="button" role="tab" data-tab="counties">Totals check</button>
+        <button type="button" role="tab" data-tab="counties">Totals vs NASS</button>
       </nav>
       <section class="view" id="view"></section>
     </aside>

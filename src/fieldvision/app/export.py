@@ -41,6 +41,9 @@ DEFAULT_CUES = {
     "wet_ndmi": 0.2,       # at or above: "still wet"
     "dry_ndmi": 0.05,      # below: "dry"
     "residue_ndti": 0.10,  # at or above after the cut: stalks left on the ground; below: bare soil
+    "cliff_drop": 0.35,    # NDVI lost across the harvest window: a cliff
+    "fade_loss": 0.25,     # NDVI lost from the peak before the cut: weeks of browning
+    "regreen_ndvi": 0.45,  # NDVI back at or above this after the cut: a second green-up
 }
 
 PRED_COLUMNS = [
@@ -59,6 +62,7 @@ Q_EXCLUDED = 1   # some clear pixels, but clear_fraction below the threshold
 Q_USABLE = 2
 
 POST_WINDOW_DAYS = 30   # residue is read from clear views up to this long after the cut
+REGREEN_AFTER_DAYS = 14  # a second green-up is looked for from this many days after the cut
 
 
 # ---------------------------------------------------------------- helpers
@@ -297,6 +301,19 @@ def build_series(ts: pd.DataFrame, year: int, min_clear: float):
     return series, coverage
 
 
+def regreen(s, he_day, after=REGREEN_AFTER_DAYS):
+    """Highest usable NDVI from `after` days past the cut, and its day: a double crop or
+    cover crop greening up again. (None, None) when nothing usable."""
+    if s is None or he_day is None:
+        return None, None
+    idx = [i for i, t in enumerate(s["t"]) if s["q"][i] == Q_USABLE and t >= he_day + after
+           and s["ndvi"][i] is not None]
+    if not idx:
+        return None, None
+    i = max(idx, key=lambda k: s["ndvi"][k])
+    return s["ndvi"][i], s["t"][i]
+
+
 def post_harvest(s, he_day, window=POST_WINDOW_DAYS):
     """NDVI at the first clear view after the cut, and median NDTI of the first
     (up to three) clear views within `window` days. Nones when nothing usable."""
@@ -351,6 +368,11 @@ def region_metrics(props: list[dict]):
             round(sum(1 for p in predicted if p["pred"] == "silage") / len(predicted), 4) if predicted else None
         ),
         "all": confusion([p["label"] for p in both], [p["pred"] for p in both]) if both else None,
+        # the majority-class yardstick: about 94 % of US corn is grain, so "always grain" looks good
+        "always_grain": (
+            {"accuracy": round(sum(1 for p in both if p["label"] == "grain") / len(both), 4), "recall": 0.0}
+            if both else None
+        ),
         "confident": (
             confusion([p["label"] for p in confident], [p["pred"] for p in confident]) if confident else None
         ),
@@ -601,7 +623,8 @@ def export_region(
             **cov,
             "p": None, "pred": None, "low": None, "reason": None,
             "hs": None, "he": None, "pre_ndvi": None, "pre_ndmi": None,
-            "post_ndvi": None, "post_ndti": None, "explanation": None, "flip": None,
+            "post_ndvi": None, "post_ndti": None, "regreen_ndvi": None, "regreen_day": None,
+            "explanation": None, "flip": None,
             "correct": None,
         }
         if p["area_ha"] is None and geom is not None:
@@ -628,6 +651,7 @@ def export_region(
             })
             # ground after the cut: model's numbers if given, else read from the series
             post_v, post_r = post_harvest(series.get(fid), _day(p["he"], year))
+            p["regreen_ndvi"], p["regreen_day"] = regreen(series.get(fid), _day(p["he"], year))
             given_v = _num(r["post_ndvi"], 3) if "post_ndvi" in preds.columns else None
             given_r = _num(r["post_ndti"], 3) if "post_ndti" in preds.columns else None
             p["post_ndvi"] = given_v if given_v is not None else post_v

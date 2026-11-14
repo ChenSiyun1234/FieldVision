@@ -23,7 +23,7 @@ export class Timeline {
   }
 
   /** asof: asof.json; full: region metrics for the full season; index: 0..n */
-  render(asof, full, index, { hasLabels }) {
+  render(asof, full, index, { hasLabels, baseline = null } = {}) {
     if (!asof || !asof.cutoffs?.length) { this.el.hidden = true; this.stop(); return; }
     this.el.hidden = false;
     this.asof = asof;
@@ -54,6 +54,7 @@ export class Timeline {
       <line x1="${pad}" x2="${width - pad}" y1="${y(1)}" y2="${y(1)}" stroke="#2a3541"/>
       <line x1="${x(index)}" x2="${x(index)}" y1="0" y2="${h}" stroke="#f0e442" stroke-width="2"/>
       ${line(conf, 'stroke="#9fb0c0" stroke-width="1.6" stroke-dasharray="4 3"')}
+      ${hasLabels && isNum(baseline) ? `<line x1="${pad}" x2="${width - pad}" y1="${y(baseline)}" y2="${y(baseline)}" stroke="#f25cd6" stroke-width="1.4" stroke-dasharray="2 3"/>` : ""}
       ${line(acc, 'stroke="#eef2f6" stroke-width="2.4"')}
       ${dots(conf, "#9fb0c0")}${dots(acc, "#eef2f6")}
     </svg>`;
@@ -66,7 +67,7 @@ export class Timeline {
       </div>
       <div class="tl-chart">${svg}</div>
       <input type="range" min="0" max="${this.n}" step="1" value="${index}" aria-label="Use satellite data up to this date">
-      <div class="tl-foot"><span>${esc(first)}</span><span class="tl-key">${hasLabels ? '<i class="k-acc"></i>accuracy ' : ""}<i class="k-conf"></i>confident calls</span><button type="button" data-tl="full" class="${index === this.n ? "on" : ""}">Full season</button></div>`;
+      <div class="tl-foot"><span>${esc(first)}</span><span class="tl-key">${hasLabels ? '<i class="k-acc"></i>accuracy <i class="k-base"></i>"always grain" ' : ""}<i class="k-conf"></i>confident calls</span><button type="button" data-tl="full" class="${index === this.n ? "on" : ""}">Full season</button></div>`;
   }
 
   play() {

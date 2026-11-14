@@ -16,23 +16,43 @@ The committed data in `app/data/` is **synthetic**. Every synthetic region shows
 
 ## Demo path for a five-minute talk
 
-1. **Opening**: one sentence says what the tool answers, over the dimmed map. Any click or key (Enter, Space, Esc) shows the map. Clicking the FieldVision logo brings the sentence back. Add `#intro=0` to the URL to skip it.
-2. **Map**: fields are coloured by prediction, sky blue for silage and orange for grain. Low-evidence fields have a dashed outline. Zoomed out, each field is a dot.
-3. **Click a field: defend this call.** The panel shows:
-   - the call, and the probability as a bar from grain to silage;
-   - in words, why the call is low evidence when it is (too few clear dates, clouds over the harvest window);
-   - three pieces of evidence a skeptic can check against the curves below them:
-     - **when it was cut**: the harvest window, how far NDVI fell, and how that compares with the region's typical silage and grain dates;
-     - **the crop just before the cut**: NDVI and NDMI, and whether it stayed green or dried down slowly;
-     - **the ground after the cut**: a residue index, NDTI. Stalks left behind mean a combine; short stubble and bare soil mean a chopper.
+The demo mirrors the organisers' wording. Their challenge, "From space: which cornfields were chopped, and which were combined?", comes with three requirements: **public satellite data, earlier than January, explainable to a skeptic**. Their signal slide reads "Silage falls off a cliff. Grain fades out."
+
+1. **Opening**: their question over the dimmed map, with the three requirements each answered by the loaded region's numbers:
+   - **Public satellite data**: Sentinel-2, and the median number of looks and clear looks per field.
+   - **Earlier than January**: the first cutoff from which accuracy stays within 3 points of the full season (or the confident share, for regions without labels). NASS publishes the split in January.
+   - **Explainable to a skeptic**: every call shows its curve.
+
+   Any click or key (Enter, Space, Esc) shows the map. Clicking the FieldVision logo brings the card back. Add `#intro=0` to the URL to skip it.
+2. **Map**: fields are coloured by prediction, sky blue for silage (chopped) and orange for grain (combined). Low-evidence fields have a dashed outline. Zoomed out, each field is a dot.
+3. **Click a field.** The panel shows:
+   - the call ("Silage · chopped" or "Grain · combined"), and the probability as a bar from grain to silage;
+   - the three requirements for this one field:
+     - which public data the call rests on (clear looks out of all looks);
+     - from which date the call was settled (from the as-of predictions);
+     - that the checks follow below;
+   - **traps**, named in the organisers' words wherever one applies:
+     - "Clouds hid the week it was cut";
+     - "Clouds: only N clear looks all season";
+     - "A second green-up after harvest" (double crop or cover crop);
+     - "Early does not mean silage" (cut early but already browned).
+
+     For a low-evidence call this box explains why the call is low evidence.
+   - **Explainable to a skeptic**: three rows in plain words first, with the index names as small secondary labels. Each can be checked against the curves:
+     - **The drop: cliff or fade?** A cliff is still green one look and bare the next. A fade is weeks of browning, then the harvest. The row also gives the cut date against the region's typical silage and grain dates.
+     - **Right before the drop**: green and moist, or browned and dry.
+     - **After harvest: bare soil or residue?** Stalk residue means a combine; almost nothing left means a chopper.
    - Each row gets a "silage-like" or "grain-like" tag. Then comes **what would have made it the other call**: which signals already point the other way, and which would also have to change, closest first. If the model supplies its own reason or counterfactual text, it is shown too.
-4. **As-of slider** (bottom of the map): replays the season. Each step shows the calls made with satellite data up to that date. Observations after the date disappear from the curves, and the metrics change to that date. The small chart above the slider plots accuracy (and the share of confident calls) against the cutoff date. ▶ plays through the season.
+4. **As-of slider** (bottom of the map): replays the season. Each step shows the calls made with satellite data up to that date. Observations after the date disappear from the curves, and the metrics change to that date. The small chart above the slider plots accuracy, the share of confident calls, and the "always grain" yardstick against the cutoff date. ▶ plays through the season.
 5. **Check vs declared** (top right of the map): wrong calls turn magenta. The **Model wrong** tab lists them, most confident first.
-6. **Headline numbers** for the region: precision, recall and false positive rate (silage is the positive class), the number of fields, the share flagged low evidence, and the share called silage.
+6. **Headline numbers** for the region:
+   - precision, recall and false positive rate (silage is the positive class);
+   - the number of fields, the share flagged low evidence, and the share called silage;
+   - accuracy next to what "always grain" would score. About 94% of US corn is grain, so that baseline looks deceptively good.
 7. **Check these first**: the least certain predictions, which are where a survey call or field visit tells us the most.
-8. **Totals check** (US regions exported with `--counties`):
-   - our silage and grain acres per county and summed to state, next to USDA's reported acres;
-   - the gap stated in words ("13% more than USDA"), and how much of USDA's corn our fields cover;
+8. **Totals vs NASS** (US regions exported with `--counties`), the organisers' sanity check:
+   - our silage and grain acres per county and summed to state, next to the acres USDA NASS reports;
+   - the gap stated in words ("13% more than NASS"), and how much of NASS's corn acreage our fields cover;
    - the county silage-share scatter.
 
 The URL keeps the state (`#r=at-2024&f=<field_id>&asof=2024-09-12&mode=check`), so a bookmarked link reopens exactly that view.
@@ -48,7 +68,7 @@ The URL keeps the state (`#r=at-2024&f=<field_id>&asof=2024-09-12&mode=check`), 
 | shaded band | harvest window: last observation still standing to first observation clearly harvested |
 | solid ring | the value just before the cut (NDVI, NDMI) |
 | dashed ring | the value just after the cut (NDVI, NDTI) |
-| dashed line on NDTI | residue threshold: above means stalks left on the ground, below means bare soil |
+| dashed line on ground residue | above means stalk residue on the ground, below means bare soil |
 | yellow line | the as-of date. Everything right of it is hidden |
 
 Index definitions:

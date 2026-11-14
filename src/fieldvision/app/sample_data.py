@@ -149,6 +149,9 @@ def field_truth(rng, cls, h_sil, h_grn):
         p["sen_days"] = rng.uniform(35, 55)
         p["post_ndvi"] = rng.uniform(0.21, 0.3)
         p["post_ndmi"] = rng.uniform(-0.12, -0.04)
+    # a few fields green up again after the cut (a forage double crop or a cover crop)
+    p["regreen"] = rng.random() < 0.07
+    p["regreen_to"] = {"ndvi": rng.uniform(0.52, 0.7), "ndmi": rng.uniform(0.15, 0.25), "ndti": rng.uniform(0.2, 0.26)}
     return p
 
 
@@ -158,10 +161,12 @@ def curve(p, day):
     sen0 = p["harvest"] - p["sen_days"]
     fade = _smooth((day - sen0) / p["sen_days"])
     after = day >= p["harvest"]
+    regrow = _smooth((day - p["harvest"] - 18) / 28) if p.get("regreen") else np.zeros_like(day)
     out = []
     for k in ("ndvi", "ndmi", "ndti"):
         v = p[f"soil_{k}"] + (p[f"peak_{k}"] - p[f"soil_{k}"]) * rise - (p[f"peak_{k}"] - p[f"pre_{k}"]) * fade
-        out.append(np.where(after, p[f"post_{k}"], v))
+        post = p[f"post_{k}"] + (p["regreen_to"][k] - p[f"post_{k}"]) * regrow
+        out.append(np.where(after, post, v))
     return out
 
 

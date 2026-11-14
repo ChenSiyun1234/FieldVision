@@ -329,6 +329,32 @@ def test_index_upsert_does_not_duplicate(tmp_path):
     assert [(r["id"], r["title"]) for r in regions] == [("r", "Two"), ("s", "Other")]
 
 
+def test_regreen_after_harvest():
+    s = {"t": [250, 255, 262, 270, 290, 300], "q": [2, 2, 2, 1, 2, 2],
+         "ndvi": [0.8, 0.2, 0.25, 0.9, 0.62, None], "ndmi": [None] * 6, "ndti": [None] * 6, "cf": [1] * 6}
+    # day 270 is excluded (cloud), day 300 has no value: the green-up is read at day 290
+    assert export.regreen(s, 255) == (0.62, 290)
+    assert export.regreen(s, 295) == (None, None)
+    assert export.regreen(None, 255) == (None, None)
+
+
+def test_always_grain_yardstick(tmp_path):
+    fields = write_fields(tmp_path / "f.geojson", [
+        {"field_id": "a", "label": "grain", "year": 2024},
+        {"field_id": "b", "label": "grain", "year": 2024},
+        {"field_id": "c", "label": "grain", "year": 2024},
+        {"field_id": "d", "label": "silage", "year": 2024},
+        {"field_id": "e", "label": None, "year": 2024},
+    ])
+    pd.DataFrame({
+        "field_id": list("abcde"), "p_silage": [0.1, 0.2, 0.7, 0.9, 0.5],
+        "harvest_start": None, "harvest_end": None, "pre_ndvi": math.nan, "pre_ndmi": math.nan, "low_evidence": False,
+    }).to_parquet(tmp_path / "p.parquet", index=False)
+    m = export.export_region(fields, tmp_path / "app" / "r", predictions_path=tmp_path / "p.parquet")["metrics"]
+    assert m["always_grain"] == {"accuracy": 0.75, "recall": 0.0}
+    assert m["all"]["accuracy"] == 0.75
+
+
 def test_cli_runs(tmp_path):
     fields = write_fields(tmp_path / "f.geojson", [{"field_id": "a", "label": "grain", "year": 2023}])
     export.main(["--fields", str(fields), "--out", str(tmp_path / "app" / "x"), "--title", "X 2023", "--synthetic"])

@@ -2,7 +2,7 @@
 
 import { FieldMap, COLORS, RAMP } from "./map.js";
 import { seasonChart, chartLegendHtml } from "./chart.js";
-import { defendRows, tally, flipConditions, lowEvidenceLines, certainty, confidence, cuesOf } from "./evidence.js";
+import { defendRows, tally, flipConditions, traps, certainty, confidence, cuesOf, settledFrom, regionSettled } from "./evidence.js";
 import { scatterSvg, countyTableHtml, stateCardsHtml } from "./counties.js";
 import { Timeline } from "./timeline.js";
 import { pct, int, ha, fixed, shortDate, isoToDay, esc, cap, isNum, DASH } from "./format.js";
@@ -99,7 +99,10 @@ function setCut(i) {
 function renderTimeline() {
   if (!state.meta) { timeline.render(null); return; }
   const n = state.asof?.cutoffs?.length || 0;
-  timeline.render(state.asof, state.meta.metrics, state.cut === null ? n : state.cut, { hasLabels: state.meta.has_labels });
+  timeline.render(state.asof, state.meta.metrics, state.cut === null ? n : state.cut, {
+    hasLabels: state.meta.has_labels,
+    baseline: state.meta.metrics?.always_grain?.accuracy ?? null,
+  });
 }
 
 // ---------------------------------------------------------------- data loading
@@ -207,6 +210,7 @@ async function loadRegion(id, fieldId = null, asofIso = null) {
 
   if (!availableTabs().includes(state.tab)) state.tab = "check";
   renderAll();
+  renderOpening();
   if (fieldId && state.byId.has(fieldId)) selectField(fieldId);
 
   // the curves are the biggest file; load them after the map is up
@@ -227,6 +231,34 @@ function fatal(html) {
 
 function showIntro(on) {
   $("intro").hidden = !on;
+}
+
+const median = (xs) => {
+  const v = xs.filter(isNum).sort((a, b) => a - b);
+  return v.length ? v[Math.floor(v.length / 2)] : null;
+};
+
+/** The organisers' three requirements, each answered with this region's numbers. */
+function renderOpening() {
+  const meta = state.meta;
+  if (!meta) return;
+  const looks = median(state.fields.map((p) => p.n_obs));
+  const clear = median(state.fields.map((p) => p.n_usable));
+  const data = isNum(looks)
+    ? `Sentinel-2, free from the EU's Copernicus programme: about ${looks} looks per field this season, ${clear} of them clear.`
+    : "Sentinel-2, free from the EU's Copernicus programme.";
+  const s = regionSettled(state.asof, meta.metrics, meta.has_labels);
+  let early;
+  if (s && meta.has_labels) early = `Calls settle by <b>${shortDate(s.iso)}</b>: ${pct(s.value)} accurate, against ${pct(s.full)} with the whole season. NASS publishes the split in January.`;
+  else if (s) early = `By <b>${shortDate(s.iso)}</b>, ${pct(s.value)} of calls are confident. NASS publishes the split in January.`;
+  else early = "Each call is made as soon as the harvest drop is seen. NASS publishes the split in January.";
+  const skeptic = "Every call shows its curve: silage falls off a cliff, grain fades out; after harvest, bare soil or stalk residue.";
+  $("yardsticks").innerHTML = [
+    ["Public satellite data", data],
+    ["Earlier than January", early],
+    ["Explainable to a skeptic", skeptic],
+  ].map(([h, t]) => `<div class="yard"><div class="yard-h"><span class="tick">\u2713</span>${h}</div><div class="yard-t">${t}</div></div>`).join("");
+  $("opening-region").textContent = `Showing ${meta.title}${meta.synthetic ? " \u00b7 synthetic sample data" : ""}`;
 }
 
 $("intro").addEventListener("click", () => showIntro(false));
@@ -293,7 +325,8 @@ function renderMetrics() {
     foot = `<div class="foot">No declared labels here, so no accuracy numbers.${meta.note ? `<br>${esc(meta.note)}` : ""}</div>`;
   } else {
     const c = m.confident;
-    const parts = [`Silage = positive class · scored on <b>${int(a.n)}</b> declared fields`];
+    const parts = [`Silage = positive class \u00b7 scored on <b>${int(a.n)}</b> declared fields`];
+    if (m.always_grain) parts.push(`Accuracy <b>${pct(a.accuracy)}</b>; "always grain" would score <b>${pct(m.always_grain.accuracy)}</b> here and find no silage at all`);
     if (c && c.n !== a.n) parts.push(`Confident fields only (${int(c.n)}): precision <b>${pct(c.precision)}</b>, recall <b>${pct(c.recall)}</b>, FPR <b>${pct(c.fpr)}</b>`);
     if (meta.note) parts.push(esc(meta.note));
     foot = `<div class="foot">${parts.join("<br>")}</div>`;
@@ -320,8 +353,8 @@ function renderLegend() {
     ];
   } else {
     rows = [
-      [`<span class="sw" style="background:${COLORS.silage}"></span>`, "Silage", count((p) => p.pred === "silage" && p.low !== true)],
-      [`<span class="sw" style="background:${COLORS.grain}"></span>`, "Grain", count((p) => p.pred === "grain" && p.low !== true)],
+      [`<span class="sw" style="background:${COLORS.silage}"></span>`, "Silage (chopped)", count((p) => p.pred === "silage" && p.low !== true)],
+      [`<span class="sw" style="background:${COLORS.grain}"></span>`, "Grain (combined)", count((p) => p.pred === "grain" && p.low !== true)],
       [`<span class="sw dashed" style="border-color:${COLORS.silage}"></span>`, "Silage, low evidence", count((p) => p.pred === "silage" && p.low === true)],
       [`<span class="sw dashed" style="border-color:${COLORS.grain}"></span>`, "Grain, low evidence", count((p) => p.pred === "grain" && p.low === true)],
       [`<span class="sw hollow"></span>`, "No prediction", count((p) => !p.pred)],
@@ -388,7 +421,9 @@ function renderCheckList() {
   const area = ranked.reduce((s, p) => s + (p.area_ha || 0), 0);
   const rows = ranked.map((p, i) => {
     const bits = [ha(p.area_ha)];
-    if (p.low === true) bits.push(`<span class="tag">low evidence</span>`);
+    const tr = traps(p, state.meta);
+    if (tr.length) bits.push(tr.map((t) => `<span class="tag">${esc(t.tag)}</span>`).join(" "));
+    else if (p.low === true) bits.push(`<span class="tag">low evidence</span>`);
     if (p.correct === false) bits.push(`<span class="tag wrong">wrong</span>`);
     else if (p.label) bits.push(`declared ${p.label}`);
     return itemRow(p, i, bits.join(" · "));
@@ -415,7 +450,7 @@ function renderCounties() {
   const width = Math.max(280, $("view").clientWidth - 32);
   const skipped = c.rows.length - c.rows.filter((r) => isNum(r.pred_silage_share) && isNum(r.usda_silage_share)).length;
   const asofNote = asofActive() ? `<div class="notice">County totals use the full-season predictions; the date slider does not change them.</div>` : "";
-  return `${asofNote}<p class="intro">Our acres next to USDA's reported acres, with the gap stated plainly.</p>
+  return `${asofNote}<p class="intro">Sanity check: do our totals match NASS? Our acres next to the acres USDA NASS reports, with the gap stated plainly.</p>
     ${stateCardsHtml(c.states)}
     <h4 class="section">By county</h4>
     ${countyTableHtml(c.rows, state.county)}
@@ -427,7 +462,7 @@ function renderCounties() {
     </div>
     <div class="scatter" id="scatter">${scatterSvg(c.rows, { width, height: Math.round(width * 0.72), highlight: state.county })}</div>
     ${skipped ? `<p class="intro">${skipped} count${skipped === 1 ? "y" : "ies"} without predicted fields or USDA numbers not plotted.</p>` : ""}
-    <p class="intro" style="margin-top:0.7rem">Our acres: area of the fields we call silage or grain (all predictions, low-evidence ones included). USDA: corn acres harvested for silage and for grain.</p>`;
+    <p class="intro" style="margin-top:0.7rem">Our acres: area of the fields we call silage or grain (all predictions, low-evidence ones included). NASS: corn acres harvested for silage and for grain.</p>`;
 }
 
 function probBar(p) {
@@ -443,7 +478,7 @@ function defendHtml(p) {
   const meta = state.meta;
   if (!p.pred) return "";
   if (asofActive() && p.asofHidden) {
-    return `<section class="defend"><h4>Defend this call</h4><p class="muted">As of ${shortDate(cutoffIso())} no harvest had been seen yet, so this early call rests on the curve so far (a field still standing late in the season leans grain). Move the slider on to see the evidence.</p></section>`;
+    return `<section class="defend"><h4>Explainable to a skeptic</h4><p class="muted">As of ${shortDate(cutoffIso())} no harvest had been seen yet, so this early call rests on the curve so far (a field still standing late in the season leans grain). Move the slider on to see the evidence.</p></section>`;
   }
   const rows = defendRows(p, meta);
   const t = tally(rows);
@@ -467,7 +502,25 @@ function defendHtml(p) {
     flipHtml = `<div class="flip"><h5>What would have made it ${flip?.other || other}</h5>${lines.join("")}
       <p class="fine">Lines from the display thresholds behind these sentences${meta.harvest_ref ? " and this region's typical cutting dates" : ""}, not the model's internal rule.</p></div>`;
   }
-  return `<section class="defend"><h4>Defend this call <span class="tally">${summary}</span></h4>${rowHtml}${model}${flipHtml}</section>`;
+  return `<section class="defend"><h4>Explainable to a skeptic <span class="tally">${summary}</span></h4>
+    <p class="slogan">Silage falls off a cliff. Grain fades out.</p>${rowHtml}${model}${flipHtml}</section>`;
+}
+
+/** The three requirements, answered for this one field. */
+function yardstickStrip(p) {
+  const data = `Sentinel-2 \u00b7 ${int(p.n_usable)} clear of ${int(p.n_obs)} looks`;
+  let early = null;
+  if (state.asof) {
+    const full = state.byId.get(p.field_id);
+    const s = settledFrom(p.field_id, state.asof, full, state.meta.threshold ?? 0.5);
+    if (s) early = s.iso ? `Call settled by ${shortDate(s.iso)}` : "Settled only with the full season";
+  }
+  const chips = [
+    ["Public data", data],
+    early ? ["Earlier than January", early] : null,
+    ["Skeptic", "3 checks below"],
+  ].filter(Boolean);
+  return `<div class="ystrip">${chips.map(([h, t]) => `<div><span>${h}</span>${esc(t)}</div>`).join("")}</div>`;
 }
 
 function renderDetail(p) {
@@ -485,15 +538,18 @@ function renderDetail(p) {
     asofLine = `<div class="asof-line">Call with data up to <b>${shortDate(cutoffIso())}</b>${full?.pred ? ` · full season: ${cap(full.pred)} ${pct(confidence(full))}` : ""}</div>`;
   }
   const verdict = p.pred
-    ? `<div class="verdict"><span class="big ${p.pred}">${cap(p.pred)}</span><span class="prob">${pct(conf)} confident</span></div>${probBar(p)}`
+    ? `<div class="verdict"><span class="big ${p.pred}">${cap(p.pred)} <small>${p.pred === "silage" ? "chopped" : "combined"}</small></span><span class="prob">${pct(conf)} confident</span></div>${probBar(p)}`
     : `<div class="verdict"><span class="big none">No prediction${asofActive() ? " at this date" : " yet"}</span></div>`;
   let lowBox = "";
-  if (p.low === true) {
-    const lines = asofActive() && p.asofHidden ? ["The harvest has not been seen yet at this date."] : lowEvidenceLines(p);
+  const tr = asofActive() && p.asofHidden ? [] : traps(p, meta);
+  if (p.low === true || tr.length) {
+    const lines = asofActive() && p.asofHidden ? ["The harvest has not been seen yet at this date."] : tr.map((x) => x.text);
     if (!lines.length) lines.push(p.reason || "The model flagged this call as low evidence.");
     const flag = p.reason && !lines.includes(p.reason) ? `<div class="fine">Model's flag: ${esc(p.reason)}</div>` : "";
-    lowBox = `<div class="lowbox"><b>Why this is low evidence</b><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>${flag}</div>`;
+    const title = p.low === true ? "Why this is low evidence" : "Traps to keep in mind";
+    lowBox = `<div class="lowbox"><b>${title}</b><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>${flag}</div>`;
   }
+  const strip = p.pred ? yardstickStrip(p) : "";
   let declared;
   if (!p.label) declared = `<div class="declared">No declared label for this field.</div>`;
   else if (p.correct === false) declared = `<div class="declared">Declared: <b>${p.label}</b> <span class="miss">✗ model says ${p.pred}</span></div>`;
@@ -515,15 +571,15 @@ function renderDetail(p) {
     const hasNdti = Array.isArray(s.ndti) && s.ndti.some(isNum);
     const res = cuesOf(meta).residue_ndti;
     charts = noClear +
-      `<div class="chart">${seasonChart({ ...common, height: 165, key: "ndvi", label: "NDVI · greenness", color: "#8fd17f", yMin: -0.1, yMax: 1, yTicks: [0, 0.2, 0.4, 0.6, 0.8, 1],
+      `<div class="chart">${seasonChart({ ...common, height: 165, key: "ndvi", label: "Greenness (NDVI)", color: "#8fd17f", yMin: -0.1, yMax: 1, yTicks: [0, 0.2, 0.4, 0.6, 0.8, 1],
         pre: isNum(hs) ? { t: hs, v: p.pre_ndvi } : null, post: isNum(he) ? { t: he, v: p.post_ndvi } : null })}</div>` +
-      `<div class="chart">${seasonChart({ ...common, height: 150, key: "ndmi", label: "NDMI · leaf moisture", color: "#5ec8f2", yMin: -0.4, yMax: 0.6, yTicks: [-0.4, -0.2, 0, 0.2, 0.4, 0.6],
+      `<div class="chart">${seasonChart({ ...common, height: 150, key: "ndmi", label: "Leaf moisture (NDMI)", color: "#5ec8f2", yMin: -0.4, yMax: 0.6, yTicks: [-0.4, -0.2, 0, 0.2, 0.4, 0.6],
         pre: isNum(hs) ? { t: hs, v: p.pre_ndmi } : null })}</div>` +
-      (hasNdti ? `<div class="chart">${seasonChart({ ...common, height: 140, key: "ndti", label: "NDTI · residue on the ground", color: "#d9b38c", yMin: -0.1, yMax: 0.4, yTicks: [0, 0.1, 0.2, 0.3, 0.4],
-        post: isNum(he) ? { t: he, v: p.post_ndti } : null, refLine: isNum(res) ? { v: res, label: "stalks above · bare soil below" } : null })}</div>` : "") +
+      (hasNdti ? `<div class="chart">${seasonChart({ ...common, height: 140, key: "ndti", label: "Ground residue (NDTI)", color: "#d9b38c", yMin: -0.1, yMax: 0.4, yTicks: [0, 0.1, 0.2, 0.3, 0.4],
+        post: isNum(he) ? { t: he, v: p.post_ndti } : null, refLine: isNum(res) ? { v: res, label: "stalk residue above \u00b7 bare soil below" } : null })}</div>` : "") +
       chartLegendHtml("#cfd8e3", meta.min_clear);
   }
-  return head + asofLine + verdict + declared + lowBox + defendHtml(p) + charts;
+  return head + asofLine + verdict + declared + strip + lowBox + defendHtml(p) + charts;
 }
 
 function renderView() {
