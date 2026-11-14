@@ -431,3 +431,13 @@ def test_committed_registry_and_results_have_no_machine_paths():
                 for line in p.read_text(encoding="utf-8").splitlines():
                     hit = bad.search(line.replace("https://", "").replace("http://", ""))
                     assert not hit, (str(p.relative_to(root)), line[:120])
+
+
+def test_toolbox_says_how_to_install_a_parquet_engine(monkeypatch):
+    import importlib.util
+    from fieldvision import toolbox
+    real = importlib.util.find_spec
+    monkeypatch.setattr(importlib.util, "find_spec",
+                        lambda name, *a: None if name in ("pyarrow", "fastparquet") else real(name, *a))
+    with pytest.raises(ImportError, match="pip install --target /workspace/FieldVision/.deps pyarrow"):
+        toolbox.Toolbox()

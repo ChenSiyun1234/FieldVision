@@ -44,3 +44,6 @@ results/*
 !results/MD_2021.jsonl
 !results/MD_2022.jsonl
 !results/MD_2023.jsonl
+
+# private packages installed for the team workspace (pip install --target .deps ...)
+.deps/

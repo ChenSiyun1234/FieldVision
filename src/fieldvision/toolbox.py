@@ -34,6 +34,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]      # src/fieldvision/toolbox.p
 def _from_repo(path):
     p = Path(path)
     return p if p.is_absolute() else REPO_ROOT / p
+
+
+PARQUET_HINT = ("no Parquet engine (pyarrow or fastparquet) is importable; install one with "
+                "`pip install --target /workspace/FieldVision/.deps pyarrow` and put that folder "
+                "first on sys.path")
+
+
+def _require_parquet_engine():
+    import importlib.util
+    if not any(importlib.util.find_spec(m) for m in ("pyarrow", "fastparquet")):
+        raise ImportError(PARQUET_HINT)
 POLICIES = ("standard", "radar_first", "regional_threshold")
 STATE_BY_FIPS = {"01": "AL", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT", "10": "DE",
                  "12": "FL", "13": "GA", "16": "ID", "17": "IL", "18": "IN", "19": "IA", "20": "KS",
@@ -67,6 +78,7 @@ class Toolbox:
                  standard_model="composite_v1",
                  rule_model="eu_timing_rule_v1", n_resample=2000, seed=0):
         """Relative paths are taken from the repo root, so Toolbox() works from anywhere."""
+        _require_parquet_engine()
         self.data_root = _from_repo(data_root)
         self.registry = _from_repo(registry)
         self.out_root = _from_repo(out_root)

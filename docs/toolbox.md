@@ -10,12 +10,23 @@ In the workspace the repo is at `/workspace/FieldVision/`. Where `supervisor.py`
 
 ```python
 import sys
-sys.path.insert(0, "/workspace/FieldVision/src")
+sys.path[:0] = ["/workspace/FieldVision/.deps", "/workspace/FieldVision/src"]
 from fieldvision.toolbox import Toolbox
 
 # tools = StubToolbox()
 tools = Toolbox()          # data/counties, registry and results, all inside the repo
 ```
+
+The workspace's shared environment has no Parquet engine, so pyarrow is installed privately
+into the repo's `.deps/` folder (ignored by git), leaving the shared environment untouched:
+
+```
+pip install --target /workspace/FieldVision/.deps pyarrow
+```
+
+Without it `Toolbox()` stops with a one-line message naming this command. There is no
+`lightgbm` in the workspace either, so `eu_gbm_v1` and `ts_model_v1` cannot be loaded there;
+every other registry model (including `composite_v1`, which `standard` uses) can.
 
 `Toolbox(data_root="data/counties", registry="registry", out_root="results")` are the defaults.
 Relative paths are taken from the repo root, so it does not matter where the agent is started.
