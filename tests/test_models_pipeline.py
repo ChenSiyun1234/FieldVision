@@ -339,3 +339,54 @@ def test_app_predictions_format(run_dir, tmp_path):
     f = next((tmp_path / "app").glob("syn-*/predictions.parquet"))
     assert need <= set(pd.read_parquet(f).columns)
     assert app["flip_reason"].str.len().min() > 0
+
+
+STUB_KEYS = {
+    "scout": {"fips", "year", "n_fields", "fields_with_clear_series", "fields_with_cloud_gap_radar_ok",
+              "fields_with_little_data", "median_clear_obs_jul_nov", "largest_optical_gap_days_p90"},
+    "route_options": {"fips", "year", "routing_table", "options"},
+    "extract_features": {"fips", "year", "rows", "path", "quality"},
+    "classify": {"fips", "year", "policy", "n_fields", "models_used", "n_abstain", "results_path"},
+    "aggregate": {"fips", "year", "silage_acres", "silage_acres_low", "silage_acres_high",
+                  "grain_acres", "abstained_acres", "n_fields", "models_used"},
+}
+
+
+def test_toolbox_matches_stub_interface(run_dir, tmp_path):
+    import json
+    from fieldvision.model import registry
+    from fieldvision.toolbox import Toolbox, make_pseudo_county
+    root, out, fdir, tdir, _ = run_dir
+    reg = tmp_path / "reg"
+    files = sorted(str(p) for p in fdir.iterdir())
+    registry.export(out, "timing_rule", "eu_timing_rule_v1", reg, files, "abc1234")
+    registry.export_composite(out, "composite_v1", reg, files, "abc1234")
+    fpath = next(fdir.glob("*AT*.geojson"))
+    tpath = next(tdir.glob("*AT*.parquet"))
+    make_pseudo_county(fpath, tpath, tmp_path / "counties", "24033", 2023)
+    gj = json.loads((tmp_path / "counties" / "24033" / "2023" / "fields.geojson").read_text())
+    assert "label" not in gj["features"][0]["properties"]
+    tb = Toolbox(tmp_path / "counties", reg, tmp_path / "out")
+    s = tb.scout("24033", 2023)
+    assert set(s) == STUB_KEYS["scout"] | {"notes"} and "stub" not in s
+    assert s["fields_with_cloud_gap_radar_ok"] == 0
+    r = tb.route_options("24033", 2023)
+    assert set(r) == STUB_KEYS["route_options"] | {"notes"}
+    assert set(r["options"]) == {"standard", "radar_first", "regional_threshold"}
+    for o in r["options"].values():
+        assert {"models_used", "n_abstain"} <= set(o)
+    assert r["options"]["radar_first"]["models_used"] == r["options"]["standard"]["models_used"]
+    e = tb.extract_features("24033", 2023)
+    assert set(e) == STUB_KEYS["extract_features"] and set(e["quality"]) == {"rows_with_gap_filled"}
+    c = tb.classify("24033", 2023, "standard")
+    assert set(c) == STUB_KEYS["classify"]
+    rec = json.loads(open(c["results_path"].replace(".parquet", ".jsonl")).readline())
+    assert {"field_id", "year", "model", "p_silage", "label", "abstain", "evidence"} <= set(rec)
+    a1 = tb.aggregate("24033", 2023)
+    a2 = Toolbox(tmp_path / "counties", reg, tmp_path / "out2").aggregate("24033", 2023)
+    assert set(a1) == STUB_KEYS["aggregate"] and a1 == a2
+    total = gj and sum(f["properties"]["area_ha"] for f in gj["features"]) * 2.47105
+    assert abs(a1["silage_acres"] + a1["grain_acres"] + a1["abstained_acres"] - total) < 1.0
+    assert a1["silage_acres_low"] <= a1["silage_acres"] <= a1["silage_acres_high"]
+    ab = tb.abstain_region("24033", 2023, "test")
+    assert ab["abstained"] and ab["abstained_acres"] > 0
