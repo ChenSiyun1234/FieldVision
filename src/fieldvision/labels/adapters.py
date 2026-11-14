@@ -47,8 +47,9 @@ class Adapter:
                     'bbox': f'{west},{south},{east},{north}'}
         if self.country == 'NL':
             tests = ''.join(f'<PropertyIsEqualTo><ValueReference>gewascode</ValueReference><Literal>{c}</Literal></PropertyIsEqualTo>' for c in codes)
+            tests = f'<Or>{tests}</Or>' if len(codes) > 1 else tests
             xml = ('<Filter xmlns="http://www.opengis.net/fes/2.0" xmlns:gml="http://www.opengis.net/gml/3.2"><And>'
-                   f'<Or>{tests}</Or><PropertyIsEqualTo><ValueReference>jaar</ValueReference><Literal>{self.year}</Literal></PropertyIsEqualTo>'
+                   f'{tests}<PropertyIsEqualTo><ValueReference>jaar</ValueReference><Literal>{self.year}</Literal></PropertyIsEqualTo>'
                    '<BBOX><ValueReference>geom</ValueReference><gml:Envelope srsName="urn:ogc:def:crs:EPSG::4326">'
                    f'<gml:lowerCorner>{south} {west}</gml:lowerCorner><gml:upperCorner>{north} {east}</gml:upperCorner>'
                    '</gml:Envelope></BBOX></And></Filter>')
@@ -93,6 +94,11 @@ def get_adapter(country, year):
         return Adapter(
             'FR', year, FR_BASE, 'code_cultu', 'culture_d1',
             {'MIE': ('silage', 'Maïs ensilage'), 'MIS': ('grain', 'Maïs')},
-            [], f'{FR_BASE}?TYPENAMES=RPG.2022:parcelles_graphiques',
+            [('Ille-et-Vilaine', (-2.0, 47.9, -1.2, 48.4), 'grain'),
+             ('Mayenne', (-1.0, 47.85, -0.3, 48.4), 'grain'),
+             ('Landes', (-1.0, 43.7, -0.3, 44.2), 'silage'),
+             ('Bearn', (-0.9, 43.2, -0.1, 43.6), 'silage'),
+             ('Gers', (0.1, 43.5, 0.9, 43.9), 'silage')],
+            f'{FR_BASE}?TYPENAMES=RPG.2022:parcelles_graphiques',
             ('id_parcel', 'code_cultu'), page_size=1000, workers=3, geom_field='the_geom')
     raise ValueError(f'Unsupported country/year: {country} {year}')

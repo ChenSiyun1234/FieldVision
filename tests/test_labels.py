@@ -3,7 +3,7 @@ from collections import Counter
 import pytest
 
 from fieldvision.labels.core import balance, block_id, field_id
-from fieldvision.labels.core import normalize, TO_WGS84
+from fieldvision.labels.core import normalize, TO_WGS84, block_bbox
 from fieldvision.labels.adapters import get_adapter
 from shapely.geometry import box, mapping, Polygon
 from shapely.ops import transform
@@ -74,3 +74,47 @@ def test_dutch_filter_year_and_axis_order():
     assert '<Literal>316</Literal>' in query['filter']
     with pytest.raises(ValueError):
         get_adapter('NL', 2024)
+
+
+def test_block_bbox_contains_block_and_roundtrips():
+    west, south, east, north = block_bbox('AT-E4680N2790')
+    lon, lat = TO_WGS84(4685000, 2795000)
+    assert west < lon < east and south < lat < north
+    for x, y in [(4680001, 2790001), (4689999, 2799999)]:
+        lon, lat = TO_WGS84(x, y)
+        assert west <= lon <= east and south <= lat <= north
+    assert 0.1 < east - west < 0.25
+
+
+def test_each_austrian_year_uses_its_own_collection():
+    urls = {y: get_adapter('AT', y).url for y in (2022, 2023, 2024)}
+    for year, url in urls.items():
+        assert f'invekos_schlaege_{year}_2_polygon' in url
+    q = get_adapter('AT', 2022).query((13, 48, 14, 49), ['silage'], 200)
+    assert q['filter'] == "snar_code IN ('109')" and q['startIndex'] == 200 and q['filter-lang'] == 'cql2-text'
+    both = get_adapter('AT', 2022).query((13, 48, 14, 49), ['silage', 'grain'])
+    assert "'109'" in both['filter'] and "'105'" in both['filter']
+
+
+def test_french_query_axis_order_and_codes():
+    a = get_adapter('FR', 2022)
+    q = a.query((-2.0, 47.9, -1.2, 48.4), ['silage'], 0)
+    assert q['TYPENAMES'] == 'RPG.2022:parcelles_graphiques'
+    assert "code_cultu IN ('MIE')" in q['CQL_FILTER']
+    assert 'BBOX(the_geom,47.9,-2.0,48.4,-1.2' in q['CQL_FILTER']
+    assert a.codes['MIE'][0] == 'silage' and a.codes['MIS'][0] == 'grain'
+    for year in (2023, 2024):
+        with pytest.raises(ValueError):
+            get_adapter('FR', year)
+
+
+def test_balance_min_n_and_priority_order():
+    features = []
+    for block, n in [('a', 30), ('b', 10), ('c', 3)]:
+        for label in ('silage', 'grain'):
+            for i in range(n):
+                features.append({'properties': {'region': 'r', 'block_id': block, 'label': label,
+                                                'field_id': f'{block}-{label}-{i}'}})
+    assert {f['properties']['block_id'] for f in balance(features, 999, min_n=5)} == {'a', 'b'}
+    first = balance(features, 10, priority={'a': 2, 'b': 0, 'c': 1})
+    assert {f['properties']['block_id'] for f in first} == {'b'}

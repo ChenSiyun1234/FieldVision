@@ -48,7 +48,12 @@ class Client:
         if self.cache_dir:
             path = self.cache_dir / (hashlib.sha1(prepared.url.encode()).hexdigest() + '.json')
             if path.exists():
-                return json.loads(path.read_text(encoding='utf-8'))
+                j = json.loads(path.read_text(encoding='utf-8'))
+                stamp = datetime.fromtimestamp(path.stat().st_mtime, timezone.utc).isoformat()
+                with self.lock:
+                    self.log.append({'url': prepared.url[:400], 'fetched_at': stamp, 'from_cache': True,
+                                     'numberMatched': j.get('numberMatched'), 'returned': len(j.get('features', []))})
+                return j
         started = now()
         for attempt in range(3):
             try:
@@ -134,16 +139,22 @@ def quicklook(frame, boundary, path):
     from matplotlib.patches import Patch
     regions = sorted(frame.region.unique())
     fig, axes = plt.subplots(1, len(regions) + 1, figsize=(5 * (len(regions) + 1), 6))
-    outline = gpd.GeoSeries([boundary], crs=4326).to_crs(3035)
+    outline = gpd.GeoSeries([boundary], crs=4326).to_crs(3035).explode(index_parts=False)
+    fx0, fy0, fx1, fy1 = frame.to_crs(3035).total_bounds
+    # keep only country parts near the fields, so overseas territories do not stretch the overview
+    near = outline[outline.geometry.distance(shapely.box(fx0, fy0, fx1, fy1)) < 300000]
+    ox0, oy0, ox1, oy1 = near.total_bounds
     colors = {'silage': '#008837', 'grain': '#d95f02'}
     for ax, region in zip(axes, [None] + regions):
-        outline.plot(ax=ax, color='#f2f0e5', edgecolor='#777777', linewidth=.5)
+        near.plot(ax=ax, color='#f2f0e5', edgecolor='#777777', linewidth=.5)
         sub = frame if region is None else frame[frame.region == region]
         metric = sub.to_crs(3035)
         metric.plot(ax=ax, color=sub.label.map(colors), linewidth=.15, edgecolor=sub.label.map(colors))
         if region is None:
             centers = metric.geometry.centroid
             ax.scatter(centers.x, centers.y, c=sub.label.map(colors), s=3, alpha=.7)
+            ax.set_xlim(ox0 - 10000, ox1 + 10000)
+            ax.set_ylim(oy0 - 10000, oy1 + 10000)
         else:
             x0, y0, x1, y1 = metric.total_bounds
             ax.set_xlim(x0 - 5000, x1 + 5000)
