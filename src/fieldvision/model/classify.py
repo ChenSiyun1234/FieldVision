@@ -1,7 +1,9 @@
 """Classify fields with one frozen registry model, in the team's result shape.
 
-    python -m fieldvision.model.classify --registry C:\\t\\fv\\data\\registry --model ts_model_v1 \
-        --timeseries <...> --fields <...> --state MD --out C:\\t\\fv\\data\\results
+    python -m fieldvision.model.classify --model eu_logistic_v1 \
+        --timeseries <timeseries.parquet> --fields <fields.geojson> --state MD --out results
+
+(--registry defaults to the repo's registry/ folder.)
 
 One result per field and year:
     {"field_id": "BARC-112", "year": 2023, "model": "timing_rule_v1", "p_silage": 0.91,

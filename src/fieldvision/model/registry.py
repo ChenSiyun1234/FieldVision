@@ -1,7 +1,7 @@
 """Frozen model folders for the team's registry.
 
     python -m fieldvision.model.registry export --run <run dir> --which gbm --name ts_model_v1 \
-        --registry C:\\t\\fv\\data\\registry --training-files <files...> [--eval <eval dir>]
+        --training-files <files...> [--eval <eval dir>]    (--registry defaults to registry/)
 
 A frozen model is a folder, not a weights file:
 

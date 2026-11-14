@@ -1,9 +1,8 @@
 """Per-field predictions in the format of `fieldvision.app.export --predictions`, from one
 frozen registry model, one file per region (e.g. barc-2021, barc-2022, barc-2023).
 
-    python -m fieldvision.model.app_predictions --registry C:\\t\\fv\\data\\registry \
-        --model eu_logistic_v1 --timeseries <...> --fields <...> --region-prefix barc \
-        --out C:\\t\\fv\\data\\app\\predictions
+    python -m fieldvision.model.app_predictions --model eu_logistic_v1 \
+        --timeseries <...> --fields <...> --region-prefix barc --out <predictions dir>
 
 The app requires out-of-fold predictions for labelled regions. A model trained only on
 European data and applied to US fields satisfies that; a model fitted on the same fields

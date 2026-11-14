@@ -1,8 +1,9 @@
 # Features, models and evaluation
 
 Code: `src/fieldvision/features/` (indices, per-field season features) and
-`src/fieldvision/model/` (models, evaluation, CLIs). Outputs go to
-`C:\t\fv\data\model\`, never into git.
+`src/fieldvision/model/` (models, evaluation, CLIs). Run outputs go to a data folder outside
+the repo (`<data>` below), never into git; frozen models go to `registry/` (see
+`registry/README.md`), and the agent toolbox is described in `docs/toolbox.md`.
 
 Until the package is installable from the merged `pyproject.toml`, run from the
 repo root with `PYTHONPATH=src` (PowerShell: `$env:PYTHONPATH="src"`).
@@ -13,8 +14,8 @@ Train and evaluate (spatial CV, leave-one-country-out, leave-one-year-out,
 ablations, importance, collection-shift check, optional region holdout):
 
 ```
-python -m fieldvision.model.train --timeseries C:\t\fv\data\timeseries\<country>_<year> ... \
-    --fields C:\t\fv\data\labels\<...>.geojson ... --out C:\t\fv\data\model\runs\<name> \
+python -m fieldvision.model.train --timeseries <data>/timeseries/<country>_<year>/timeseries.parquet ... \
+    --fields <data>/labels/<country>_<year>/fields.geojson ... --out <data>/model/runs/<name> \
     [--holdout-blocks "AT-E46*"] [--primary gbm] [--variant relative]
 ```
 
@@ -40,7 +41,7 @@ same GeoJSON is what the extractor should use, so the time-series `field_id`s ma
 python -m fieldvision.model.barc --gpkg BARC_Corn.2021-2023.gpkg --out barc_field_years.geojson
 python -m fieldvision.model.evaluate --model <run dir> --timeseries <barc series> \
     --fields barc_field_years.geojson --keep-columns OBJECTID --out <dir> \
-    --access-log C:\t\fv\data\eval\ACCESS_LOG.md
+    --access-log <data>/eval/ACCESS_LOG.md
 ```
 
 Separate, clearly labelled variant that refits only the decision threshold on
@@ -62,7 +63,7 @@ python -m fieldvision.model.asof --timeseries <...> --fields <...> --out <dir> \
 Tests (synthetic data only, a software check):
 
 ```
-python -m pytest tests -q --basetemp=C:/t/fv/data/model/pytest_tmp -o tmp_path_retention_policy=failed
+python -m pytest tests -q --basetemp=<scratch dir> -o tmp_path_retention_policy=failed
 ```
 
 ## Rules the code enforces

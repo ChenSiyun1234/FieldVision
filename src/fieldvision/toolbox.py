@@ -25,9 +25,15 @@ import pandas as pd
 from .features.build import build_features
 from .features.loading import load_fields, load_timeseries
 from .model.classify import results as classify_rows
-from .model.registry import DEFAULT_REGISTRY, load as load_model
+from .model.registry import load as load_model
 
 HA_TO_ACRE = 2.47105
+REPO_ROOT = Path(__file__).resolve().parents[2]      # src/fieldvision/toolbox.py -> repo root
+
+
+def _from_repo(path):
+    p = Path(path)
+    return p if p.is_absolute() else REPO_ROOT / p
 POLICIES = ("standard", "radar_first", "regional_threshold")
 STATE_BY_FIPS = {"01": "AL", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT", "10": "DE",
                  "12": "FL", "13": "GA", "16": "ID", "17": "IL", "18": "IN", "19": "IA", "20": "KS",
@@ -57,12 +63,13 @@ def make_pseudo_county(fields_path, timeseries_path, data_root, fips="24033", ye
 class Toolbox:
     """Same interface as the team's StubToolbox; numbers from fieldvision code only."""
 
-    def __init__(self, data_root, registry=DEFAULT_REGISTRY, out_root="toolbox_out",
+    def __init__(self, data_root="data/counties", registry="registry", out_root="results",
                  standard_model="composite_v1",
                  rule_model="eu_timing_rule_v1", n_resample=2000, seed=0):
-        self.data_root = Path(data_root)
-        self.registry = Path(registry)
-        self.out_root = Path(out_root)
+        """Relative paths are taken from the repo root, so Toolbox() works from anywhere."""
+        self.data_root = _from_repo(data_root)
+        self.registry = _from_repo(registry)
+        self.out_root = _from_repo(out_root)
         self.standard_model = standard_model
         self.rule_model = rule_model
         self.n_resample = n_resample
@@ -181,7 +188,7 @@ class Toolbox:
 
     def classify(self, fips, year, policy="standard"):
         rows, name, note = self._policy_predictions(fips, year, policy)
-        out = self.out_root / "results"
+        out = self.out_root
         out.mkdir(parents=True, exist_ok=True)
         path = out / f"{self._state(fips)}_{year}_{fips}_{policy}.parquet"
         df = pd.DataFrame(rows)
@@ -224,7 +231,7 @@ class Toolbox:
         acres = float(fields["area_ha"].astype(float).sum() * HA_TO_ACRE)
         rec = {"fips": str(fips), "year": int(year), "abstained": True, "reason": str(reason),
                "n_fields": int(len(fields)), "abstained_acres": round(acres, 1)}
-        out = self.out_root / "results"
+        out = self.out_root
         out.mkdir(parents=True, exist_ok=True)
         with open(out / "abstained_regions.jsonl", "a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec) + "\n")

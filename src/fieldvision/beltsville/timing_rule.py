@@ -2,7 +2,7 @@
 Beltsville and validated by leave-one-year-out (train on two years, test on the third).
 
     python -m fieldvision.beltsville.timing_rule --timeseries <barc parquet x3> \
-        --fields <barc geojson x3> --registry C:\\t\\fv\\data\\registry --out <report dir> \
+        --fields <barc geojson x3> --registry registry --out <report dir> \
         --git-commit <sha>
 
 The rule: silage if the harvest drop comes on or before day T (mid-point of the bracket
