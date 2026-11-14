@@ -256,3 +256,33 @@ def headline(summary, scheme, variant, model, subset="all"):
 __all__ = ["run_splits", "summarize_predictions", "compare_models", "permutation_drop",
            "importance_groups", "summarize_importance", "field_collection", "collection_shift",
            "response_time", "headline", "ALL_METRICS"]
+
+
+def coverage_table(preds_model, X, cfg, limits=(10, 15, 20, 30, 45, None)):
+    """How precision/recall/FPR change as the harvest-interval limit for abstention moves.
+
+    preds_model: held-out predictions of one model (field_id, y, pred, p).
+    The other low-evidence criteria stay as configured. Read it to choose
+    the limit on development data, never on a holdout or external set.
+    """
+    from dataclasses import replace
+    from ..features.season import evidence_flags
+    from .metrics import classification_metrics
+    f = X.set_index("field_id").loc[preds_model["field_id"]]
+    rows = []
+    for lim in limits:
+        c = replace(cfg, low_evidence_max_interval_days=float("inf") if lim is None else float(lim))
+        low, _ = evidence_flags(f["q_n_usable_season"], f["harv_mid_doy"],
+                                f["q_harv_width_days"], f["q_harv_confirmed"], c)
+        keep = ~low
+        m = classification_metrics(preds_model["y"].to_numpy()[keep],
+                                   preds_model["pred"].to_numpy()[keep],
+                                   preds_model["p"].to_numpy()[keep])
+        rows.append({"max_interval_days": "none" if lim is None else lim,
+                     "coverage": float(keep.mean()), "n": m["n"], "precision": m["precision"],
+                     "recall": m["recall"], "fpr": m["fpr"], "roc_auc": m["roc_auc"]})
+    m = classification_metrics(preds_model["y"], preds_model["pred"], preds_model["p"])
+    rows.append({"max_interval_days": "no abstention", "coverage": 1.0, "n": m["n"],
+                 "precision": m["precision"], "recall": m["recall"], "fpr": m["fpr"],
+                 "roc_auc": m["roc_auc"]})
+    return pd.DataFrame(rows)

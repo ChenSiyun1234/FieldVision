@@ -36,7 +36,8 @@ from ..features.season import FeatureConfig, feature_group, signal_features
 from . import plots
 from .artifacts import (fingerprint, ledger_check_and_record, ledger_path, save_run,
                         write_json)
-from .harness import (collection_shift, compare_models, field_collection, importance_groups,
+from .harness import (collection_shift, compare_models, coverage_table, field_collection,
+                      importance_groups,
                       response_time, run_splits, summarize_importance, summarize_predictions)
 from .metrics import block_bootstrap_ci, classification_metrics, precision_at_prevalence
 from .models import MODEL_ORDER, make_factories
@@ -192,8 +193,8 @@ def main(argv=None):
             rec["n_train_dropped_same_blocks"] = n_drop
         preds.append(p)
         fold_info += info
-    say(f"leave-one-country-out: {[g for g, *_ in loco] or 'only one country'}; "
-        f"leave-one-year-out: {[g for g, *_ in loyo] or 'only one year'}")
+    say(f"leave-one-country-out: {[str(g) for g, *_ in loco] or 'only one country'}; "
+        f"leave-one-year-out: {[str(g) for g, *_ in loyo] or 'only one year'}")
 
     preds = pd.concat(preds, ignore_index=True)
     summary = summarize_predictions(preds, n_boot=args.n_boot, seed=args.seed)
@@ -215,6 +216,9 @@ def main(argv=None):
             comparisons[f"{m}: with {group} - without"] = res
 
     importance = summarize_importance(imp_records)
+    sp_prim = preds[(preds.scheme == "spatial") & (preds.variant == v)
+                    & (preds.model == args.primary)]
+    coverage = coverage_table(sp_prim, Xd, cfg)
 
     # ------------------------------------------------- collection shift
     shift_cols = [c for c in signal_features(X.columns, "all")] + \
@@ -306,6 +310,7 @@ def main(argv=None):
         .value_counts().to_dict(),
         "collection_by_country_year": {str(k): v_ for k, v_ in coll_year.to_dict().items()},
         "final_models": meta_run["models"],
+        "coverage_vs_interval_limit": coverage.to_dict("records"),
         "seconds_total": time.perf_counter() - t_start,
     }
     write_json(out / "metrics.json", metrics)
@@ -498,6 +503,16 @@ def _write_report(out, metrics, importance, shift, coll_year, figs, args, synthe
     L.append("## Low-evidence fields\n")
     L.append("Flagged from data quality only (never from labels or scores): " + ", ".join(
         f"{k}: {n}" for k, n in metrics["low_evidence_reasons"].items()) + "\n")
+    lim = args.max_harvest_interval or FeatureConfig().low_evidence_max_interval_days
+    L.append(f"How the `{metrics['primary']}` spatial-CV numbers change with the harvest-interval "
+             f"limit used for abstention (other criteria unchanged; this run uses {lim:g} days). "
+             "Choose the limit here, on development data, never on a holdout or external set:\n")
+    L.append(kv_table([(str(r["max_interval_days"]), fmt(r["coverage"]), r["n"], fmt(r["precision"]),
+                        fmt(r["recall"]), fmt(r["fpr"]), fmt(r["roc_auc"]))
+                       for r in metrics["coverage_vs_interval_limit"]],
+                      ["max interval (days)", "coverage", "n", "precision", "recall", "FPR",
+                       "ROC-AUC"]))
+    L.append("")
 
     h = metrics.get("holdout")
     if h:

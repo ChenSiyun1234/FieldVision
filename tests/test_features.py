@@ -84,3 +84,18 @@ def test_feature_selection_excludes_ids_and_flags(synth_features):
     assert "harv_days_since_peak" in rel and "harv_mid_doy" not in rel
     cal = signal_features(X.columns, "calendar")
     assert "harv_mid_doy" in cal and "harv_days_since_peak" not in cal
+
+
+def test_single_bare_soil_drop_followed_by_catch_crop_is_unconfirmed_harvest():
+    from fieldvision.features.season import detect_harvest
+    t = np.array([150, 180, 200, 220, 230, 265, 290, 310.0])
+    ndvi = np.array([0.3, 0.7, 0.85, 0.86, 0.8, 0.30, 0.75, 0.8])
+    base, amp = 0.2, 0.66
+    # bare soil after the cut: NDMI below zero -> accepted, unconfirmed
+    ndmi = np.array([0.0, 0.3, 0.4, 0.4, 0.35, -0.05, 0.25, 0.3])
+    i_lo, i_hi, confirmed, reason = detect_harvest(t, ndvi, 3, base, amp, FeatureConfig(), ndmi)
+    assert (t[i_lo], t[i_hi], confirmed, reason) == (230, 265, False, "single_low_obs")
+    # same NDVI dip but wet canopy (e.g. a shadow): rejected
+    ndmi_wet = ndmi.copy()
+    ndmi_wet[5] = 0.3
+    assert detect_harvest(t, ndvi, 3, base, amp, FeatureConfig(), ndmi_wet)[3] == "no_sustained_drop"

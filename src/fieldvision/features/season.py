@@ -64,6 +64,9 @@ class FeatureConfig:
     drop_fraction: float = 0.35
     confirm_days: float = 25.0
     confirm_obs: int = 2
+    # fallback when regrowth (catch crop) follows too soon to confirm the drop:
+    # one observation below the threshold that also looks like bare soil
+    bare_soil_ndmi: float = 0.05
     # windows
     slope_window_days: float = 30.0
     integral_window: tuple = (213, 304)      # 1 Aug - 31 Oct
@@ -195,7 +198,7 @@ def find_plateau_start(t, ndvi, i_peak, base, amp):
     return float(t[k0 + int(cand[0])]), OK
 
 
-def detect_harvest(t, ndvi, i_peak, base, amp, cfg=FeatureConfig()):
+def detect_harvest(t, ndvi, i_peak, base, amp, cfg=FeatureConfig(), ndmi=None):
     """First sustained drop after the peak.
 
     Returns (i_lo, i_hi, confirmed, reason): i_lo is the last observation
@@ -224,6 +227,18 @@ def detect_harvest(t, ndvi, i_peak, base, amp, cfg=FeatureConfig()):
         standing = np.where(~below[i_peak:i])[0]
         i_lo = i_peak + int(standing[-1])
         return i_lo, i, confirmed, OK
+    # Nothing sustained. After silage a catch crop is often sown at once, and
+    # with a cloud gap the only low observation is followed by regrowth.
+    # Accept the first low observation that also looks like bare soil (NDMI
+    # near or below zero, which a cloud shadow does not produce), unconfirmed.
+    if ndmi is not None:
+        with np.errstate(invalid="ignore"):
+            soil = below & (np.asarray(ndmi) <= cfg.bare_soil_ndmi)
+        cand = np.flatnonzero(soil[i_peak + 1:])
+        if len(cand):
+            i = i_peak + 1 + int(cand[0])
+            standing = np.where(~below[i_peak:i])[0]
+            return i_peak + int(standing[-1]), i, False, "single_low_obs"
     return None, None, False, "no_sustained_drop"
 
 
@@ -398,7 +413,8 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
         cfg.integral_edge_tolerance)
 
     # ---- harvest interval
-    i_lo, i_hi, confirmed, reason = detect_harvest(t, ndvi, i_peak, base, amp, cfg)
+    i_lo, i_hi, confirmed, reason = detect_harvest(t, ndvi, i_peak, base, amp, cfg,
+                                                     ndmi=idx["ndmi"])
     reasons["reason_harvest"] = reason
     if i_lo is None:
         for k in ("reason_pre", "reason_slope", "reason_post", "reason_regreen"):
