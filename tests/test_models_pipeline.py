@@ -361,6 +361,7 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     files = sorted(str(p) for p in fdir.iterdir())
     registry.export(out, "timing_rule", "eu_timing_rule_v1", reg, files, "abc1234")
     registry.export_composite(out, "composite_v1", reg, files, "abc1234")
+    registry.write_rates(reg / "composite_v1", "composite", {"syn": (out, "composite")}, "syn:spatial")
     fpath = next(fdir.glob("*AT*.geojson"))
     tpath = next(tdir.glob("*AT*.parquet"))
     make_pseudo_county(fpath, tpath, tmp_path / "counties", "24033", 2023)
@@ -384,12 +385,38 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     assert {"field_id", "year", "model", "p_silage", "label", "abstain", "evidence"} <= set(rec)
     a1 = tb.aggregate("24033", 2023)
     a2 = Toolbox(tmp_path / "counties", reg, tmp_path / "out2").aggregate("24033", 2023)
-    assert set(a1) == STUB_KEYS["aggregate"] and a1 == a2
+    assert STUB_KEYS["aggregate"] <= set(a1) and a1 == a2
+    extra = {"silage_acres_adjusted", "silage_acres_adjusted_low", "silage_acres_adjusted_high",
+             "grain_acres_adjusted", "silage_share_counted", "silage_share_adjusted",
+             "adjustment_method", "adjustment_clipped", "adjusted_share_by_rates", "notes"}
+    assert set(a1) == STUB_KEYS["aggregate"] | extra
     total = gj and sum(f["properties"]["area_ha"] for f in gj["features"]) * 2.47105
     assert abs(a1["silage_acres"] + a1["grain_acres"] + a1["abstained_acres"] - total) < 1.0
     assert a1["silage_acres_low"] <= a1["silage_acres"] <= a1["silage_acres_high"]
+    assert a1["silage_acres_adjusted"] is not None
+    assert abs(a1["silage_acres_adjusted"] + a1["grain_acres_adjusted"] + a1["abstained_acres"]
+               - total) < 1.0
+    assert a1["silage_acres_adjusted_low"] <= a1["silage_acres_adjusted"] <= a1["silage_acres_adjusted_high"]
+    assert 0.0 <= a1["silage_share_adjusted"] <= 1.0
+    assert "half the fields are silage" in a1["notes"]
     ab = tb.abstain_region("24033", 2023, "test")
     assert ab["abstained"] and ab["abstained_acres"] > 0
+
+
+def test_adjusted_share_is_clipped_and_says_so(tmp_path):
+    import numpy as np
+    from fieldvision.toolbox import Toolbox
+    reg = tmp_path / "reg" / "m_v1"
+    reg.mkdir(parents=True)
+    (reg / "rates.json").write_text(json.dumps({"primary": "x", "sets": {
+        "x": {"tp": 70, "fp": 30, "fn": 30, "tn": 70, "tpr": 0.7, "fpr": 0.3, "n": 200}}}))
+    tb = Toolbox(data_root=tmp_path, registry=tmp_path / "reg", out_root=tmp_path / "o", n_resample=200)
+    a = np.array([10.0, 10.0, 10.0, 10.0])
+    called = np.array([False, False, False, True])        # counted share 0.25 < FPR 0.3
+    ok = np.ones(4, bool)
+    r = tb._adjusted("m_v1", a, called, ok, 0.0)
+    assert r["silage_share_adjusted"] == 0.0 and r["adjustment_clipped"] is True
+    assert "clipped" in r["notes"]
 
 
 MACHINE_PATH = r"[A-Za-z]:[\\/]|\bUsers\b|worktrees"

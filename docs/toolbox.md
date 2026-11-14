@@ -108,10 +108,15 @@ computed across a gap).
 ```python
 {"fips": "24033", "year": 2022, "silage_acres": 47.7, "silage_acres_low": 16.1,
  "silage_acres_high": 73.5, "grain_acres": 25.8, "abstained_acres": 36.8, "n_fields": 7,
- "models_used": {"composite_v1": 7}}
+ "models_used": {"composite_v1": 7},
+ "silage_acres_adjusted": ..., "silage_acres_adjusted_low": ..., "silage_acres_adjusted_high": ...,
+ "grain_acres_adjusted": ..., "silage_share_counted": ..., "silage_share_adjusted": ...,
+ "adjustment_method": "adjusted classify-and-count, European held-out TPR/FPR",
+ "adjustment_clipped": false, "adjusted_share_by_rates": {...}, "notes": "..."}
 ```
 
-Silage acres = sum over non-abstained fields of area x p_silage; grain acres the same with
+The stub's keys come first and keep their meaning; the adjusted keys are explained in
+"Reading the county total" below. Silage acres = sum over non-abstained fields of area x p_silage; grain acres the same with
 1 - p_silage; the range is the 5th-95th percentile of 2,000 seeded draws where each field is
 silage with its own probability. Abstained fields are only in `abstained_acres`, never in grain.
 Area comes from the polygons (hectares x 2.47105). The probabilities assume a 50/50 class
@@ -126,6 +131,41 @@ silage acres will read high; compare with USDA's county figures before trusting 
 ```
 
 The stub's `run_critic` is not here; it belongs to the agent.
+
+## Reading the county total
+
+`aggregate` keeps the stub's keys with their meaning and adds an adjusted total beside them.
+
+- `silage_acres` (and its range) sums area x `p_silage`. The probabilities are calibrated for the
+  training data, which is half silage, so this sum assumes half the fields are silage and reads
+  high wherever silage is the minority (most US counties).
+- `silage_acres_adjusted` (with `_low`, `_high`) counts the area called silage and corrects it
+  with the model's true- and false-positive rates measured on held-out European fields only
+  (no US labels): adjusted share = (counted share - FPR) / (TPR - FPR). The range resamples the
+  fields and draws both rates from their uncertainty. `grain_acres_adjusted` is the rest of the
+  area that was not abstained.
+- `adjusted_share_by_rates` repeats the adjustment with the rates from each European validation
+  design (spatial CV, each Austrian year held out) so the spread is visible. Rates measured in
+  Austria may not hold in a US county; when they differ a lot, the total is not trustworthy.
+- A share that would fall below 0 or above 1 is clipped and `adjustment_clipped` says so.
+- Abstained acres are in neither total. `notes` says all of this in one paragraph.
+
+Example, Frederick County MD (24021), 2022, **partial snapshot: 248 of 2,233 fields, 11 % of the
+area, 7 neighbouring extraction blocks**, `standard` policy (composite_v1):
+
+| | silage share | silage acres |
+|---|---|---|
+| raw sum of p (assumes half silage) | 33 % | 1,397 [1,136, 1,661] |
+| counted (area called silage) | 18.9 % | |
+| adjusted with European rates (TPR 0.70, FPR 0.16) | 4.9 % | 205 [0, 642] |
+| adjusted, other European designs | 0 % (clipped) to 5.3 % | |
+| USDA Census 2022, whole county | 19.6 % | 7,748 of 39,500 |
+
+On this snapshot the adjustment overcorrects: Austria's false-positive rate (0.16) is much
+higher than what the European logistic showed on the Beltsville fields (0.03), so subtracting it
+removes real silage. Read the counted share, the adjusted share and their spread together, and
+compare with the county's Census figure before quoting either. To be replaced with the full-county
+numbers when the extraction finishes.
 
 ## What the policies really do
 

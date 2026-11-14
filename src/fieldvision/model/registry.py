@@ -486,5 +486,75 @@ def export_composite(run_dir, name, registry_dir, training_files, git_commit, fa
     return final
 
 
+
+
+# --------------------------------------------------------------------------
+# error rates for adjusting counted totals (European cross-validation only)
+# --------------------------------------------------------------------------
+
+RATE_MEMBERS = {"composite": COMPOSITE_MEMBERS}
+
+
+def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), spread_limit=0.5):
+    """True/false positive counts on held-out fields that the model did not abstain on.
+
+    Uses a run's out-of-fold predictions. For 'composite' in a run that predates it, the
+    member average is rebuilt from the members' out-of-fold probabilities. Returns
+    {scheme: {tp, fp, fn, tn, tpr, fpr, n}}.
+    """
+    import pandas as pd
+    cv = pd.read_parquet(Path(run_dir) / "cv_predictions.parquet")
+    variant = json.loads((Path(run_dir) / "run.json").read_text(encoding="utf-8"))["variant"]
+    cv = cv[cv["variant"] == variant]
+    out = {}
+    for scheme, g in cv.groupby("scheme"):
+        if not scheme.startswith(scheme_prefix):
+            continue
+        if model in set(g["model"]):
+            m = g[g["model"] == model].set_index("field_id")
+            p, y, ab = m["p"].to_numpy(), m["y"].to_numpy(int), m["low_evidence"].to_numpy(bool)
+            if model == "composite":
+                P = g[g["model"].isin(COMPOSITE_MEMBERS)].pivot(index="field_id", columns="model",
+                                                                values="p").loc[m.index]
+                votes = (P.to_numpy() >= 0.5).sum(axis=1)
+                spread = (P.max(axis=1) - P.min(axis=1)).to_numpy()
+                ab = ab | ((votes > 0) & (votes < P.shape[1]) & (spread >= spread_limit))
+        elif model == "composite" and set(COMPOSITE_MEMBERS) <= set(g["model"]):
+            P = g[g["model"].isin(COMPOSITE_MEMBERS)].pivot(index="field_id", columns="model", values="p")
+            meta = g.drop_duplicates("field_id").set_index("field_id").loc[P.index]
+            p = P.mean(axis=1).to_numpy()
+            y = meta["y"].to_numpy(int)
+            votes = (P.to_numpy() >= 0.5).sum(axis=1)
+            spread = (P.max(axis=1) - P.min(axis=1)).to_numpy()
+            ab = meta["low_evidence"].to_numpy(bool) | ((votes > 0) & (votes < P.shape[1])
+                                                        & (spread >= spread_limit))
+        else:
+            continue
+        keep = ~ab
+        pred = p[keep] >= 0.5
+        yy = y[keep]
+        tp, fp = int((pred & (yy == 1)).sum()), int((pred & (yy == 0)).sum())
+        fn, tn = int((~pred & (yy == 1)).sum()), int((~pred & (yy == 0)).sum())
+        out[scheme] = {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "n": int(keep.sum()),
+                       "tpr": tp / max(tp + fn, 1), "fpr": fp / max(fp + tn, 1)}
+    return out
+
+
+def write_rates(folder, model, runs, primary):
+    """rates.json beside a frozen model: European held-out rates, used by the toolbox to
+    correct counted silage area. runs: {label: (run_dir, model name in that run)}."""
+    sets = {}
+    for label, (run_dir, name) in runs.items():
+        for scheme, r in rates_from_run(run_dir, name).items():
+            sets[f"{label}:{scheme}"] = r
+    if primary not in sets:
+        raise ValueError(f"primary rate set {primary!r} not among {sorted(sets)}")
+    doc = {"note": "true/false positive rates of this model family on held-out European fields it "
+                   "did not abstain on (no US labels); added after export, not read by the model",
+           "primary": primary, "sets": sets}
+    write_json(Path(folder) / "rates.json", portable(doc))
+    return doc
+
+
 if __name__ == "__main__":
     main()

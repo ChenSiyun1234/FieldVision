@@ -264,11 +264,83 @@ class Toolbox:
         draws = rng.random((self.n_resample, int(ok.sum()))) < p[ok][None, :]
         sims = draws.astype(float) @ a[ok]
         lo, hi = (np.percentile(sims, [5, 95]) if ok.any() else (0.0, 0.0))
-        return {"fips": str(fips), "year": int(year), "silage_acres": round(silage, 1),
-                "silage_acres_low": round(float(lo), 1), "silage_acres_high": round(float(hi), 1),
-                "grain_acres": round(grain, 1),
-                "abstained_acres": round(float(np.nansum(a[ab])), 1),
-                "n_fields": int(len(df)), "models_used": {df["model"].iloc[0]: int(len(df))}}
+        out = {"fips": str(fips), "year": int(year), "silage_acres": round(silage, 1),
+               "silage_acres_low": round(float(lo), 1), "silage_acres_high": round(float(hi), 1),
+               "grain_acres": round(grain, 1),
+               "abstained_acres": round(float(np.nansum(a[ab])), 1),
+               "n_fields": int(len(df)), "models_used": {df["model"].iloc[0]: int(len(df))}}
+        called = (df["label"].to_numpy() == "silage")
+        out.update(self._adjusted(df["model"].iloc[0], a, called, ok, silage))
+        return out
+
+    def _adjusted(self, model_name, a, called, ok, raw_silage):
+        """Counted silage area corrected with the model's European held-out error rates.
+
+        share_adj = (counted share - FPR) / (TPR - FPR), clipped to [0, 1] (and said so).
+        The range draws fields with replacement and TPR/FPR from their Beta posteriors.
+        """
+        base = model_name.split("+")[0]
+        path = self.registry / base / "rates.json"
+        area_ok = float(np.sum(a[ok]))
+        counted = float(np.sum(a[ok & called]) / area_ok) if area_ok > 0 else float("nan")
+        empty = {"silage_acres_adjusted": None, "silage_acres_adjusted_low": None,
+                 "silage_acres_adjusted_high": None, "grain_acres_adjusted": None,
+                 "silage_share_counted": round(counted, 4) if np.isfinite(counted) else None,
+                 "silage_share_adjusted": None, "adjustment_method": None,
+                 "adjustment_clipped": None, "adjusted_share_by_rates": {}}
+        if not path.exists() or not np.isfinite(counted):
+            empty["notes"] = (f"silage_acres sums area x p_silage, which assumes half the fields are "
+                              f"silage (the training balance); no European error rates are stored for "
+                              f"{base}, so no adjusted total is given")
+            return empty
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        sets, primary = doc["sets"], doc["primary"]
+
+        def adjust(share, tpr, fpr):
+            den = tpr - fpr
+            if den < 0.05:
+                return None, None
+            v = (share - fpr) / den
+            return float(min(max(v, 0.0), 1.0)), bool(v < 0 or v > 1)
+
+        by = {}
+        for k, r in sets.items():
+            v, c = adjust(counted, r["tpr"], r["fpr"])
+            by[k] = {"share": None if v is None else round(v, 4), "clipped": c,
+                     "tpr": round(r["tpr"], 3), "fpr": round(r["fpr"], 3)}
+        r = sets[primary]
+        share, clipped = adjust(counted, r["tpr"], r["fpr"])
+        if share is None:
+            empty["notes"] = f"TPR and FPR of {base} are too close to correct the count"
+            empty["adjusted_share_by_rates"] = by
+            return empty
+        rng = np.random.default_rng(self.seed + 1)
+        aa, cc = a[ok], called[ok].astype(float)
+        idx = rng.integers(0, len(aa), size=(self.n_resample, len(aa)))
+        shares_b = (aa[idx] * cc[idx]).sum(axis=1) / aa[idx].sum(axis=1)
+        tpr_b = rng.beta(r["tp"] + 1, r["fn"] + 1, self.n_resample)
+        fpr_b = rng.beta(r["fp"] + 1, r["tn"] + 1, self.n_resample)
+        den = tpr_b - fpr_b
+        adj_b = np.clip((shares_b - fpr_b) / np.where(den > 0.05, den, np.nan), 0, 1)
+        lo, hi = np.nanpercentile(adj_b, [5, 95])
+        others = [v["share"] for v in by.values() if v["share"] is not None]
+        note = (f"silage_acres sums area x p_silage and so assumes half the fields are silage, the "
+                f"balance of the training data; it reads high where silage is rare. "
+                f"silage_acres_adjusted counts the area called silage ({counted:.1%} of the area not "
+                f"abstained) and corrects it with {base}'s error rates on held-out European fields "
+                f"({primary}: TPR {r['tpr']:.2f}, FPR {r['fpr']:.2f}): adjusted share {share:.1%}"
+                + (" (clipped to the 0-1 range)" if clipped else "")
+                + f"; the range covers resampled fields and uncertain rates. Rates from the other "
+                f"European validation designs give {min(others):.1%} to {max(others):.1%}. Rates "
+                f"measured in Europe may not hold here. Abstained acres are in neither total.")
+        return {"silage_acres_adjusted": round(share * area_ok, 1),
+                "silage_acres_adjusted_low": round(float(lo) * area_ok, 1),
+                "silage_acres_adjusted_high": round(float(hi) * area_ok, 1),
+                "grain_acres_adjusted": round((1 - share) * area_ok, 1),
+                "silage_share_counted": round(counted, 4),
+                "silage_share_adjusted": round(share, 4),
+                "adjustment_method": "adjusted classify-and-count, European held-out TPR/FPR",
+                "adjustment_clipped": clipped, "adjusted_share_by_rates": by, "notes": note}
 
     def abstain_region(self, fips, year, reason):
         fields, _, _, _ = self._data(fips, year)
