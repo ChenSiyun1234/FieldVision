@@ -142,3 +142,25 @@ def test_restrict_and_verdict():
     assert verdict({"a": 0.01, "b": -0.01, "c": 0.02}, {"ci": [-0.01, 0.03]}) == "no clear difference"
     assert verdict({"a": 0.05, "b": 0.06, "c": 0.04}, {"ci": [0.03, 0.07]}) == "better"
     assert verdict({"a": -0.05, "b": -0.06, "c": -0.04}, {"ci": [-0.07, -0.03]}) == "worse"
+
+
+def test_raw_composite_table_matches_mask(small):
+    from fieldvision.foundation.compare import raw_composite_table
+    fields, ts = small
+    b = build_presto_inputs(ts, fields, 4, 11)
+    raw = raw_composite_table(b)
+    assert raw.shape == (3, 1 + 8 * 11)
+    assert raw.loc[0, "raw_m04_B4"] == pytest.approx(0.22, abs=1e-6)
+    assert np.isnan(raw.loc[0, "raw_m05_B4"])            # May: no usable acquisition
+    assert raw.loc[1, "raw_m11_NDVI"] == pytest.approx(b.x[1, 7, PRESTO_BANDS.index("NDVI")])
+
+
+def test_comparison_factories_use_main_line_physical_models():
+    from fieldvision.foundation.compare import make_comparison_factories
+    from fieldvision.model.models import LOGISTIC_FEATURES
+    cols = LOGISTIC_FEATURES["all"] + ["e1", "e2"]
+    f = make_comparison_factories(cols, {"emb": ["e1", "e2"]}, {"both": "emb"})
+    assert set(f) >= {"majority", "phys-rule", "phys-logistic", "phys-gbm", "emb-logistic",
+                      "emb-gbm", "both-logistic", "both-gbm"}
+    assert f["both-logistic"]().feature_names == f["phys-logistic"]().feature_names + ["e1", "e2"]
+    assert f["emb-gbm"]().feature_names == ["e1", "e2"]

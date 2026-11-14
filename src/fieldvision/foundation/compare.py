@@ -42,26 +42,53 @@ from .embed import DEFAULT_WEIGHTS, EMB_COLS, embed_batch, file_sha256
 TABLE_METRICS = ["precision", "recall", "fpr", "f1", "roc_auc"]
 
 
-def make_comparison_factories(columns, seed=0, emb_cols=EMB_COLS, tag="emb"):
-    """name -> constructor for the three inputs x two heads, plus rule and majority."""
+def make_comparison_factories(columns, inputs, combos=None, seed=0):
+    """name -> constructor, for every input x {logistic, LightGBM}.
+
+    inputs  {tag: [columns]} vector inputs, e.g. {"emb": EMB_COLS, "raw": [...]}
+    combos  {name: tag} inputs to concatenate with the physical features,
+            e.g. {"both": "emb"} gives both-logistic and both-gbm
+
+    The physical models and the rule are exactly the main line's
+    (make_factories, variant "relative"); the new heads use the same
+    classes, hyper-parameters and in-fold Platt calibration.
+    """
     main = make_factories(columns, "relative", seed=seed)
     phys_logit = main["logistic"]().feature_names
     phys_gbm = main["gbm"]().feature_names
-    emb_cols = list(emb_cols)
 
     def cal(make):
         return lambda m=make: CalibratedModel(m, seed=seed)
 
-    return {
-        "majority": MajorityModel,
-        "phys-rule": main["rule"],
-        "phys-logistic": main["logistic"],
-        "phys-gbm": main["gbm"],
-        f"{tag}-logistic": cal(partial(LogisticModel, emb_cols)),
-        f"{tag}-gbm": cal(partial(GBMModel, emb_cols, seed=seed)),
-        "both-logistic": cal(partial(LogisticModel, phys_logit + emb_cols)),
-        "both-gbm": cal(partial(GBMModel, phys_gbm + emb_cols, seed=seed)),
-    }
+    out = {"majority": MajorityModel, "phys-rule": main["rule"],
+           "phys-logistic": main["logistic"], "phys-gbm": main["gbm"]}
+    for tag, cols in inputs.items():
+        out[f"{tag}-logistic"] = cal(partial(LogisticModel, list(cols)))
+        out[f"{tag}-gbm"] = cal(partial(GBMModel, list(cols), seed=seed))
+    for name, tag in (combos or {}).items():
+        cols = list(inputs[tag])
+        out[f"{name}-logistic"] = cal(partial(LogisticModel, phys_logit + cols))
+        out[f"{name}-gbm"] = cal(partial(GBMModel, phys_gbm + cols, seed=seed))
+    return out
+
+
+def raw_composite_table(batch):
+    """The monthly composites Presto sees, flattened (S2 bands + NDVI per month), NaN when masked.
+
+    This is the no-pretraining control: the same input, without the encoder.
+    """
+    from .presto_bands import PRESTO_BANDS
+    s2 = ["B2", "B3", "B4", "B5", "B6", "B7", "B8", "B8A", "B11", "B12", "NDVI"]
+    cols, data = [], []
+    for t in range(batch.x.shape[1]):
+        month = (batch.month + t) % 12 + 1
+        for b in s2:
+            k = PRESTO_BANDS.index(b)
+            cols.append(f"raw_m{month:02d}_{b}")
+            data.append(np.where(batch.mask[:, t, k] == 0, batch.x[:, t, k], np.nan))
+    df = pd.DataFrame(np.column_stack(data), columns=cols)
+    df.insert(0, "field_id", batch.field_id)
+    return df
 
 
 def restrict(splits, keep):
@@ -144,8 +171,6 @@ def parse_args(argv=None):
     ap.add_argument("--only-blocks-with-data", action="store_true",
                     help="keep only label blocks with at least one time-series row "
                          "(for partial extraction runs; a complete run needs no filter)")
-    ap.add_argument("--extra-embeddings", default=None,
-                    help="parquet of other per-field vectors (e.g. fine-tuned) to add as model 'ft'")
     return ap.parse_args(argv)
 
 
@@ -185,19 +210,23 @@ def main(argv=None):
     E.to_parquet(out / "presto_embeddings.parquet", index=False)
     say(f"features {t_feat:.1f}s, Presto inputs {t_adapt:.1f}s, embeddings {t_embed:.1f}s "
         f"for {len(fields)} fields")
+    # controls: same architecture with random weights, and the composites without any encoder
+    import torch
+    from .presto_encoder import Encoder
+    torch.manual_seed(args.seed)
+    R = embed_batch(batch, encoder=Encoder())
+    rand_cols = [c.replace("presto_", "rand_") for c in EMB_COLS]
+    R = R.rename(columns=dict(zip(EMB_COLS, rand_cols)))
+    raw = raw_composite_table(batch)
+    raw_cols = [c for c in raw.columns if c != "field_id"]
 
     meta = fields.copy()
     meta["year"] = meta["year"].map(lambda v: str(int(v)) if np.isfinite(v) else "unknown")
     meta["low_evidence"] = X["low_evidence"].to_numpy()
     y = meta["y"].to_numpy(int)
-    Xall = pd.concat([X.reset_index(drop=True), E[EMB_COLS + ["n_months_observed"]]], axis=1)
+    Xall = pd.concat([X.reset_index(drop=True), E[EMB_COLS + ["n_months_observed"]],
+                      R[rand_cols], raw[raw_cols]], axis=1)
     Xall["block_id"] = meta["block_id"].to_numpy()
-    extra_cols = []
-    if args.extra_embeddings:
-        ext = pd.read_parquet(args.extra_embeddings)
-        extra_cols = [c for c in ext.columns if c != "field_id"]
-        Xall = Xall.merge(ext, on="field_id", how="left")
-
     has_emb = np.isfinite(Xall[EMB_COLS].to_numpy()).all(axis=1)
     has_ts = X["q_n_rows"].to_numpy() > 0
     keep = has_emb
@@ -214,10 +243,9 @@ def main(argv=None):
     say(f"evaluated on {keep.sum()} fields; dropped {(~keep).sum()} without any usable month "
         f"(dropped from every model)")
 
-    facs = make_comparison_factories(Xall.columns, args.seed)
-    if extra_cols:
-        ft = make_comparison_factories(Xall.columns, args.seed, extra_cols, tag="ft")
-        facs.update({k: v for k, v in ft.items() if k.startswith("ft-")})
+    inputs = {"emb": EMB_COLS, "raw": raw_cols, "rand": rand_cols}
+    combos = {"both": "emb", "physraw": "raw"}
+    facs = make_comparison_factories(Xall.columns, inputs, combos, args.seed)
 
     folds = spatial_folds(meta["block_id"], y, args.n_splits, args.seed)
     splits = restrict([(f"fold{i}", tr, te) for i, (tr, te) in enumerate(folds)], keep)
@@ -243,9 +271,11 @@ def main(argv=None):
 
     comparisons = {}
     for head in ("logistic", "gbm"):
-        pairs = [(f"both-{head}", f"phys-{head}"), (f"emb-{head}", f"phys-{head}")]
-        if extra_cols:
-            pairs.append((f"ft-{head}", f"phys-{head}"))
+        pairs = [(f"both-{head}", f"phys-{head}"),        # the question asked
+                 (f"emb-{head}", f"phys-{head}"),
+                 (f"emb-{head}", f"raw-{head}"),          # does pretraining beat the raw composites?
+                 (f"emb-{head}", f"rand-{head}"),         # ... or the same network untrained?
+                 (f"both-{head}", f"physraw-{head}")]     # extra info vs pretrained summary of it
         for a, b in pairs:
             boot = compare_models(preds, a, b, "spatial", "relative", n_boot=args.n_boot,
                                   seed=args.seed)["roc_auc"]
