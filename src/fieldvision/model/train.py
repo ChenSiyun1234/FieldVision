@@ -240,10 +240,14 @@ def main(argv=None):
     sp_all = preds[(preds.scheme == "spatial") & (preds.variant == v)
                    & preds.model.isin(MODEL_ORDER)]
     calib = {m: calibration_summary(g["y"], g["p"]) for m, g in sp_all.groupby("model", sort=False)
-             if m != "majority"}
+             if m not in ("majority", "always_grain")}
     prev_tab = prevalence_table(sp_all, args.prevalences, float(yd.mean()), args.n_boot, args.seed)
     sp_prim_cy = sp_prim.assign(country_year=sp_prim["country"] + " " + sp_prim["year"])
     disagree = label_disagreement(sp_prim_cy, "country_year")
+
+    # ------------------------------------------------ diagnostics on training data
+    diag = _diagnostics(out, ts, fields, X, Xd, md, yd, dev, cfg, sp_prim, importance, prim_fac,
+                        splits, loco, loyo, args, synthetic)
 
     # ------------------------------------------------- collection shift
     shift_cols = [c for c in signal_features(X.columns, "all")] + \
@@ -353,6 +357,7 @@ def main(argv=None):
         "calibration": calib, "train_prevalence": float(yd.mean()),
         "prevalence_table": prev_tab.to_dict("records"),
         "label_disagreement": disagree.to_dict("records"),
+        "diagnostics": diag,
         "collection_shift_matched": None if shift_matched is None else {
             "n_blocks": int(md.loc[multi, "block_id"].nunique()), "n_fields": int(multi.sum()),
             "n_large": int(shift_matched.loc[shift_matched["abs_smd"] >= 0.5, "feature"].nunique())
@@ -364,6 +369,65 @@ def main(argv=None):
     _write_report(out, metrics, importance, shift, coll_year, figs, args, synthetic)
     say(f"done in {time.perf_counter() - t_start:.0f}s -> {out}")
     return metrics
+
+
+def _diagnostics(out, ts, fields, X, Xd, md, yd, dev, cfg, sp_prim, importance, prim_fac,
+                 splits, loco, loyo, args, synthetic):
+    """Double cropping, self-normalised vs raw, redundancy and separability heatmaps."""
+    from functools import partial
+    from . import diagnostics as dg
+    from .models import CalibratedModel, LogisticModel
+    tag = " (SYNTHETIC)" if synthetic else ""
+    res = {}
+    dev_ids = set(md["field_id"])
+    f_dev = fields[fields["field_id"].isin(dev_ids)]
+    X_dev = X[X["field_id"].isin(dev_ids)]
+    dc = dg.double_crop_table(ts[ts["field_id"].isin(dev_ids)], f_dev, X_dev, cfg, sp_prim)
+    dc.to_csv(out / "double_crop.csv", index=False)
+    res["double_crop"] = dc.to_dict("records")
+
+    uni = dg.univariate_by_country(Xd, md, yd)
+    uni.to_csv(out / "selfnorm_univariate.csv", index=False)
+    res["selfnorm_univariate"] = uni.to_dict("records")
+    fac = {"logit_raw": partial(CalibratedModel, partial(LogisticModel, dg.RAW_SET), seed=args.seed),
+           "logit_selfnorm": partial(CalibratedModel, partial(LogisticModel, dg.NORM_SET),
+                                     seed=args.seed)}
+    schemes = [("spatial", splits)] + [(f"loco:{g}", [(g, tr, te)]) for g, tr, te, _ in loco] \
+        + [(f"loyo:{g}", [(g, tr, te)]) for g, tr, te, _ in loyo]
+    comp = []
+    for scheme, spl in schemes:
+        p, _, _ = run_splits(Xd, md, yd, fac, spl, scheme, args.variant)
+        s = summarize_predictions(p, n_boot=0).get(scheme, {}).get(args.variant, {})
+        d = compare_models(p, "logit_selfnorm", "logit_raw", scheme, args.variant,
+                           n_boot=args.n_boot, seed=args.seed)
+        comp.append({"scheme": scheme,
+                     "auc_raw": s.get("logit_raw", {}).get("all", {}).get("roc_auc"),
+                     "auc_selfnorm": s.get("logit_selfnorm", {}).get("all", {}).get("roc_auc"),
+                     "silage_recall_raw": s.get("logit_raw", {}).get("all", {}).get("recall"),
+                     "silage_recall_selfnorm": s.get("logit_selfnorm", {}).get("all", {}).get("recall"),
+                     "auc_diff": d["roc_auc"]["diff"] if d else None,
+                     "auc_diff_ci": d["roc_auc"]["ci"] if d else None})
+    res["raw_vs_selfnorm"] = comp
+
+    top = []
+    if importance is not None and not importance.empty:
+        g = importance[(importance["model"] == "gbm") & ~importance["feature"].str.startswith("group:")]
+        top = g.sort_values("auc_drop_mean", ascending=False)["feature"].head(25).tolist()
+    kept = set(prim_fac["logistic"]().feature_names) | set(top[:15])
+    feats = list(prim_fac["logistic"]().feature_names) + top + dg.RAW_SET + dg.NORM_SET
+    rho = dg.correlation_heatmap(Xd, feats, kept, out / "figures" / "feature_correlation.png")
+    if rho is not None:
+        rho.to_csv(out / "feature_correlation.csv")
+        res["redundant_pairs"] = dg.redundant_pairs(rho)[:15]
+
+    sep = dg.separability(ts[ts["field_id"].isin(dev_ids)], X_dev, md, yd, cfg,
+                          n_boot=200, seed=args.seed)
+    if not sep.empty:
+        sep.to_csv(out / "separability.csv", index=False)
+        dg.plot_separability(sep, out / "figures" / "separability.png",
+                             title="Single-index separability by time bin" + tag)
+        res["separability_summary"] = dg.separability_summary(sep)
+    return res
 
 
 def _data_summary(meta, labelled, hold, finfo, ts_notes, load_warnings):
@@ -567,6 +631,7 @@ def _write_report(out, metrics, importance, shift, coll_year, figs, args, synthe
             L.append(metrics_table(s[k][v], "all", MODEL_ORDER))
             L.append("")
 
+    _diagnostics_report(L, metrics.get("diagnostics") or {})
     L.append("## Paired comparisons (spatial CV, same fields, block bootstrap)\n")
     rows = []
     for name, res in metrics["comparisons"].items():
@@ -673,6 +738,72 @@ def _write_report(out, metrics, importance, shift, coll_year, figs, args, synthe
         L.append(f"- `figures/{f}`")
     L.append("")
     (out / "REPORT.md").write_text("\n".join(L), encoding="utf-8")
+
+
+def _diagnostics_report(L, d):
+    if not d:
+        return
+    dc = d.get("double_crop")
+    if dc:
+        L.append("## Double cropping and spring green-up\n")
+        L.append("The corn peak is searched only inside the summer window (default day 160-280), "
+                 "as the longest green cycle there, and the harvest drop only after it; a green-up "
+                 "after harvest cannot replace it. Fields whose spring greenness (day 60-150: winter "
+                 "cover crop or forage) is higher than the summer corn peak are the risky ones. "
+                 "'Stable' = the same harvest interval when the peak window is moved to 145-295 "
+                 "and to 175-265.\n")
+        L.append(kv_table([(r["country_year"], r["n"], r["spring_above_summer"], fmt(r["share"]),
+                            fmt(r["harvest_found_spring"]), fmt(r["harvest_found_others"]),
+                            fmt(r["median_harvest_doy_spring"], 0), fmt(r["median_harvest_doy_others"], 0),
+                            fmt(r["stable_under_window_shift"]), fmt(r.get("error_rate_spring")),
+                            fmt(r.get("error_rate_others")))
+                           for r in dc],
+                          ["country, year", "n", "spring > summer", "share", "harvest found (those)",
+                           "harvest found (others)", "median harvest DOY (those)",
+                           "median harvest DOY (others)", "stable", "error (those)",
+                           "error (others)"]))
+        L.append("")
+    comp = d.get("raw_vs_selfnorm")
+    if comp:
+        L.append("## Self-normalised features vs their raw counterparts\n")
+        L.append("Each self-normalised feature uses the field as its own reference (value at the "
+                 "last standing observation over its own summer peak; residue and brightness after "
+                 "harvest minus its own spring bare soil; drop over peak; dry-down days; moisture "
+                 "change against greenness change). Two logistic models with the same calibration, "
+                 "one on the raw set and one on the self-normalised set, on the same splits. If "
+                 "normalising helps, it should show most when a whole country or year is held out.\n")
+        L.append(kv_table([(r["scheme"], fmt(r["auc_raw"]), fmt(r["auc_selfnorm"]),
+                            fmt(r["silage_recall_raw"]), fmt(r["silage_recall_selfnorm"]),
+                            fmt(r["auc_diff"]),
+                            f"[{fmt(r['auc_diff_ci'][0])}, {fmt(r['auc_diff_ci'][1])}]"
+                            if r.get("auc_diff_ci") else "")
+                           for r in comp],
+                          ["split", "ROC-AUC raw", "ROC-AUC self-norm", "silage recall raw",
+                           "silage recall self-norm", "difference", "95% CI"]))
+        L.append("\nSingle-feature ROC-AUC per country (no fitting) is in `selfnorm_univariate.csv`.\n")
+    rp = d.get("redundant_pairs")
+    if rp is not None:
+        L.append("## Feature redundancy\n")
+        L.append("`figures/feature_correlation.png`: Spearman correlation between the features the "
+                 "models use most (marked *) and the raw and self-normalised sets, clustered so "
+                 "redundant features sit together. Pairs with |rho| >= 0.9: " +
+                 ("; ".join(f"{a} ~ {b} ({r:+.2f})" for a, b, r in rp) if rp else "none") + ".\n")
+    ss = d.get("separability_summary")
+    if ss:
+        L.append("## Where the signal sits in time\n")
+        L.append("`figures/separability.png` (table `separability.csv`): for each index and time "
+                 "bin, how well the raw value alone separates silage from grain (ROC-AUC; red > 0.5 "
+                 "means higher for silage, blue lower; no fitting, block-bootstrap intervals in the "
+                 "table, class counts under each column). Left: calendar half-months July-November. "
+                 "Right: weeks before the last standing observation and after the first harvested "
+                 "one. If the signal is about the state of the crop at harvest rather than the "
+                 "calendar date, the right-hand panels should be stronger, and more alike across "
+                 "countries.\n")
+        L.append(kv_table([(r["scope"], fmt(r["median_distance_calendar"]),
+                            fmt(r["median_distance_drop_relative"]), r["text"]) for r in ss],
+                          ["scope", "median |AUC-0.5| calendar", "median |AUC-0.5| drop-relative",
+                           "strongest cells"]))
+        L.append("")
 
 
 def _has_tabulate():

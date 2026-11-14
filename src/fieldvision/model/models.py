@@ -82,6 +82,23 @@ class MajorityModel(_Base):
         return f"always {cls} (training share of silage {self.prevalence_:.3f})"
 
 
+class AlwaysGrainModel(_Base):
+    """Calls every field grain. Right about 93 % of the time on US corn and useless."""
+    name = "always_grain"
+
+    def __init__(self):
+        self.feature_names = []
+
+    def fit(self, X, y):
+        return self
+
+    def predict_proba(self, X):
+        return np.zeros(len(X))
+
+    def describe(self):
+        return "always grain"
+
+
 def _robust_scale(v):
     v = v[np.isfinite(v)]
     if len(v) < 2:
@@ -368,7 +385,7 @@ class CalibratedModel(_Base):
         return text + f"; Platt calibration p = sigmoid({a:.2f}*logit(score) {b:+.2f})"
 
 
-MODEL_ORDER = ["majority", "timing_rule", "rule", "logistic", "gbm"]
+MODEL_ORDER = ["majority", "always_grain", "timing_rule", "rule", "logistic", "gbm"]
 
 
 def make_factories(columns, variant="relative", exclude=(), use_quality=False, seed=0,
@@ -398,7 +415,7 @@ def make_factories(columns, variant="relative", exclude=(), use_quality=False, s
         "logistic": partial(LogisticModel, logit_cols),
         "gbm": partial(GBMModel, gbm_cols, seed=seed),
     }
-    out = {"majority": MajorityModel}
+    out = {"majority": MajorityModel, "always_grain": AlwaysGrainModel}
     for name, make in base.items():
         out[name] = (lambda m=make: CalibratedModel(m, seed=seed)) if calibrate else make
     return out

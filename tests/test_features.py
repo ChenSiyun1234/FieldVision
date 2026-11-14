@@ -111,3 +111,22 @@ def test_double_crop_picks_the_longer_green_cycle():
     vals, i, reason = find_peak(t, ndvi, FeatureConfig(), ndmi)
     assert reason == "ok" and 205 <= vals["peak_doy"] <= 270
     assert vals["q_n_green_cycles"] == 2
+
+
+def test_spring_cover_crop_greener_than_corn_does_not_move_the_harvest():
+    t = np.arange(95, 340, 6.0)
+    n = len(t)
+    ndvi = np.full(n, 0.15)
+    ndvi[(t >= 95) & (t <= 125)] = 0.92                      # winter forage, greener than corn
+    ndvi[(t >= 185) & (t <= 255)] = 0.84                     # corn
+    ndvi[(t >= 300)] = 0.6                                    # catch crop after harvest
+    nir, red = 0.45, 0.45 * (1 - ndvi) / (1 + ndvi)
+    bands = np.tile([0.04, 0.07, 0.05, 0.12, 0.3, 0.4, 0.45, 0.46, 0.25, 0.15], (n, 1))
+    bands[:, 2] = red
+    bands[:, 6] = nir
+    vals, reasons = field_features(t, np.full(n, 9), np.full(n, 1), np.ones(n), bands, FeatureConfig())
+    assert vals["q_spring_above_summer"] == 1.0
+    assert 185 <= vals["peak_doy"] <= 255
+    assert 255 <= vals["harv_hi_doy"] <= 262                 # the corn harvest, not planting
+    assert reasons["reason_selfnorm"].startswith(("ok", "missing"))
+    assert np.isfinite(vals["pre_ndvi_over_peak"])

@@ -47,7 +47,7 @@ POST_VARS = ["ndvi", "ndmi", "nbr", "psri", "ndti", "B11", "B12"]
 REASON_NAMES = [
     "reason_peak", "reason_plateau", "reason_harvest", "reason_pre", "reason_slope",
     "reason_integral_cal", "reason_integral_rel", "reason_post", "reason_regreen",
-    "reason_bins_cal", "reason_bins_rel",
+    "reason_bins_cal", "reason_bins_rel", "reason_soil_baseline", "reason_selfnorm",
 ]
 
 
@@ -78,6 +78,12 @@ class FeatureConfig:
     regreen_min_lag_days: float = 10.0
     regreen_min_delta: float = 0.15
     season_window: tuple = (182, 334)        # 1 Jul - 30 Nov, used for quality counts
+    # spring window for the double-cropping check (cover crop / winter forage before corn)
+    spring_window: tuple = (60, 150)
+    # self-normalised features
+    drydown_ndmi_fraction: float = 0.6       # "dried" = NDMI below this share of its peak
+    soil_max_ndvi: float = 0.3               # spring observations below this count as bare soil
+    min_green_change: float = 0.03           # smaller NDVI changes make the ratio meaningless
     rel_bin_start: int = -30
     rel_bin_stop: int = 120
     rel_bin_width: int = 15
@@ -115,15 +121,35 @@ def numeric_feature_names(cfg=FeatureConfig()):
     names += [f"post_{v.lower()}" for v in POST_VARS]
     names += ["drop_ndvi", "drop_ndvi_frac", "drop_ndmi", "drop_ndti", "drop_rate_ndvi",
               "post_regreen_delta", "post_regreen_frac", "post_regreen_flag"]
+    # self-normalised: each field is its own reference
+    names += SELF_NORMALISED
     names += [f"cal_{v.lower()}_{h}" for v in VAR_NAMES for h in HALF_MONTHS]
     names += [f"rel_{v}_{lab}" for v in REL_VARS for lab in rel_bin_labels(cfg)]
     names += [
         "q_n_rows", "q_n_usable", "q_n_usable_season", "q_first_usable_doy",
         "q_last_usable_doy", "q_max_gap_days", "q_mean_clear_fraction",
         "q_harv_width_days", "q_harv_confirmed", "q_sen_n_obs", "q_post_n_obs",
-        "q_n_green_cycles", "q_green_cycle_days",
+        "q_n_green_cycles", "q_green_cycle_days", "q_spring_max_ndvi", "q_spring_above_summer",
     ]
     return names
+
+
+# name -> (raw counterpart, what it means); the raw counterpart is used to report
+# whether normalising by the field itself helps
+SELF_NORMALISED_INFO = {
+    "pre_ndvi_over_peak": ("pre_ndvi", "NDVI at last standing obs / own summer peak NDVI"),
+    "pre_ndmi_over_peak": ("pre_ndmi", "NDMI at last standing obs / own peak NDMI"),
+    "pre_ndre_over_peak": ("pre_ndre", "red-edge index at last standing obs / own peak value"),
+    "drop_over_peak": ("drop_ndvi", "NDVI drop at harvest / own peak NDVI"),
+    "drop_rate_over_peak": ("drop_rate_ndvi", "NDVI drop per day / own peak NDVI"),
+    "harv_drydown_days": ("harv_days_since_peak",
+                          "days from NDMI first falling below a share of its peak to the drop"),
+    "post_ndti_minus_soil": ("post_ndti", "NDTI after the drop minus the field's own spring bare-soil NDTI"),
+    "post_bright_minus_soil": ("post_bright", "brightness after the drop minus own spring bare-soil brightness"),
+    "sen_dndmi_over_dndvi": ("sen_ndmi_slope", "NDMI change / NDVI change over the 30 days before the drop"),
+    "sen_dndmi_minus_dndvi": ("sen_ndmi_slope", "NDMI change minus NDVI change over the same 30 days"),
+}
+SELF_NORMALISED = list(SELF_NORMALISED_INFO) + ["post_bright", "soil_ndti", "soil_bright"]
 
 
 _TEMPLATES = {}
@@ -407,6 +433,9 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
     out["q_mean_clear_fraction"] = float(np.mean(np.asarray(clear_fraction, dtype=float)[use]))
     knots = np.concatenate([[s0], t[in_season], [s1]])
     out["q_max_gap_days"] = float(np.diff(knots).max())
+    spring = (t >= cfg.spring_window[0]) & (t <= cfg.spring_window[1]) & np.isfinite(ndvi)
+    if spring.any():
+        out["q_spring_max_ndvi"] = float(np.max(ndvi[spring]))
 
     # ---- calendar half-month medians, July to November
     bin_id = (month.astype(int) - 7) * 2 + (day.astype(int) > 15)
@@ -431,12 +460,25 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
     reasons["reason_peak"] = reason
     if i_peak is None:
         for k in ("reason_plateau", "reason_harvest", "reason_pre", "reason_slope",
-                  "reason_integral_rel", "reason_post", "reason_regreen", "reason_bins_rel"):
+                  "reason_integral_rel", "reason_post", "reason_regreen", "reason_bins_rel",
+                  "reason_soil_baseline", "reason_selfnorm"):
             reasons[k] = reason
         return out, reasons
 
     peak, base, amp = out["peak_ndvi"], out["base_ndvi"], out["amplitude"]
     t_peak = float(t[i_peak])
+    if np.isfinite(out["q_spring_max_ndvi"]):
+        out["q_spring_above_summer"] = 1.0 if out["q_spring_max_ndvi"] > peak else 0.0
+
+    # ---- the field's own bare soil in spring (before the corn emerged)
+    bright = np.mean(B[:, [col["B02"], col["B03"], col["B04"], col["B08"], col["B11"], col["B12"]]], axis=1)
+    bare = (t >= cfg.spring_window[0]) & (t <= t_peak - 30) & (ndvi < cfg.soil_max_ndvi)
+    if bare.any():
+        out["soil_ndti"] = float(np.median(idx["ndti"][bare]))
+        out["soil_bright"] = float(np.median(bright[bare]))
+        reasons["reason_soil_baseline"] = OK
+    else:
+        reasons["reason_soil_baseline"] = "no_bare_soil_obs_in_spring"
     plateau = np.isfinite(ndvi) & (ndvi >= base + 0.9 * amp) \
         & (t >= cfg.peak_window[0]) & (t <= cfg.peak_window[1]) & (np.abs(t - t_peak) <= 60)
     out["peak_ndmi"] = float(np.nanmedian(idx["ndmi"][plateau]))
@@ -471,7 +513,8 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
                                                      ndmi=idx["ndmi"])
     reasons["reason_harvest"] = reason
     if i_lo is None:
-        for k in ("reason_pre", "reason_slope", "reason_post", "reason_regreen"):
+        for k in ("reason_pre", "reason_slope", "reason_post", "reason_regreen",
+                  "reason_selfnorm"):
             reasons[k] = reason
         return out, reasons
 
@@ -532,7 +575,42 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
         out["post_regreen_flag"] = 1.0 if delta >= cfg.regreen_min_delta else 0.0
         reasons["reason_regreen"] = OK
 
+    # ---- self-normalised combinations (each field is its own reference)
+    _self_normalised(out, reasons, t, ndvi, idx, bright, i_peak, i_lo, i_hi, j_end, cfg)
     return out, reasons
+
+
+def _ratio(a, b, min_abs):
+    return float(a / b) if np.isfinite(a) and np.isfinite(b) and abs(b) >= min_abs else NAN
+
+
+def _self_normalised(out, reasons, t, ndvi, idx, bright, i_peak, i_lo, i_hi, j_end, cfg):
+    peak = out["peak_ndvi"]
+    out["pre_ndvi_over_peak"] = _ratio(out["pre_ndvi"], peak, 0.05)
+    out["pre_ndmi_over_peak"] = _ratio(out["pre_ndmi"], out["peak_ndmi"], 0.05)
+    out["pre_ndre_over_peak"] = _ratio(out["pre_ndre"], out["peak_ndre"], 0.05)
+    out["drop_over_peak"] = _ratio(out["drop_ndvi"], peak, 0.05)
+    out["drop_rate_over_peak"] = _ratio(out["drop_rate_ndvi"], peak, 0.05)
+    out["post_bright"] = float(np.median(bright[i_hi:j_end])) if j_end > i_hi else NAN
+    out["post_ndti_minus_soil"] = out["post_ndti"] - out["soil_ndti"]
+    out["post_bright_minus_soil"] = out["post_bright"] - out["soil_bright"]
+    # dry-down: first observation after the peak with NDMI below a share of its peak
+    pk = out["peak_ndmi"]
+    ndmi = idx["ndmi"]
+    if np.isfinite(pk) and pk > 0.05:
+        dried = np.flatnonzero(ndmi[i_peak:i_hi + 1] < cfg.drydown_ndmi_fraction * pk)
+        if len(dried):
+            first = i_peak + int(dried[0])
+            out["harv_drydown_days"] = max(0.0, float(t[i_lo] - t[first])) if first <= i_lo else 0.0
+    # moisture change versus greenness change over the 30 days before the drop
+    k0 = int(np.searchsorted(t, t[i_lo] - cfg.slope_window_days, side="left"))
+    if k0 < i_lo:
+        dg = float(ndvi[i_lo] - ndvi[k0])
+        dm = float(ndmi[i_lo] - ndmi[k0])
+        out["sen_dndmi_minus_dndvi"] = dm - dg
+        out["sen_dndmi_over_dndvi"] = _ratio(dm, dg, cfg.min_green_change)
+    missing = [k for k in SELF_NORMALISED_INFO if not np.isfinite(out[k])]
+    reasons["reason_selfnorm"] = OK if not missing else "missing:" + ",".join(missing)
 
 
 # --------------------------------------------------------------------------
@@ -542,6 +620,9 @@ def _field_features(doy, month, day, clear_fraction, bands, cfg, n_clear):
 _CALENDAR = {"peak_doy", "plateau_start_doy", "harv_lo_doy", "harv_hi_doy", "harv_mid_doy",
              "gi_ndvi_aug_oct"}
 _RELATIVE = {"harv_days_since_peak", "harv_days_since_plateau_start", "harv_decline_days",
+             "pre_ndvi_over_peak", "pre_ndmi_over_peak", "pre_ndre_over_peak", "drop_over_peak",
+             "drop_rate_over_peak", "harv_drydown_days", "post_ndti_minus_soil",
+             "post_bright_minus_soil", "sen_dndmi_over_dndvi", "sen_dndmi_minus_dndvi",
              "pre_ndvi_frac", "pre_ndmi_rel", "pre_ndre_frac", "pre_b11_ratio",
              "sen_ndvi_slope_rel", "drop_ndvi_frac", "post_regreen_frac", "gi_rel_after_peak"}
 
@@ -574,7 +655,8 @@ def feature_group(name):
                           ("gi_", "greenness_integral"), ("post_regreen", "regreening")):
         if name.startswith(prefix):
             return group
-    if name in ("post_ndti", "drop_ndti", "post_b11", "post_b12"):
+    if name in ("post_ndti", "drop_ndti", "post_b11", "post_b12", "post_ndti_minus_soil",
+                "post_bright", "post_bright_minus_soil", "soil_ndti", "soil_bright"):
         return "residue"
     if name.startswith(("post_", "drop_")):
         return "post_harvest_other"
