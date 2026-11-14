@@ -150,11 +150,25 @@ class Toolbox:
             "median_clear_obs_jul_nov": float(np.nanmedian(n_use)) if len(n_use) else float("nan"),
             "largest_optical_gap_days_p90": float(np.nanpercentile(gaps, 90))
             if np.isfinite(gaps).any() else float("nan"),
-            "notes": "no radar data or radar model in this toolbox, so no field is counted as "
+            "notes": self._partial_note(fips, year) +
+                     "no radar data or radar model in this toolbox, so no field is counted as "
                      "rescued by radar; 'clear series' = not low evidence under the optical rule "
                      f"(>= {cfg.low_evidence_min_usable} usable dates Jul-Nov, harvest bracket <= "
                      f"{cfg.low_evidence_max_interval_days:g} days, drop confirmed)",
         }
+
+    def _partial_note(self, fips, year):
+        """'PARTIAL county: ...' when the county folder carries a PARTIAL.json, else ''."""
+        p = self.data_root / str(fips) / str(year) / "PARTIAL.json"
+        if not p.exists():
+            return ""
+        try:
+            info = json.loads(p.read_text(encoding="utf-8"))
+            return (f"PARTIAL county: {info.get('fields_included')} of {info.get('fields_total')} "
+                    f"fields, {info.get('acres_included')} of {info.get('acres_total')} acres; "
+                    "totals from aggregate cover only these fields. ")
+        except (ValueError, OSError):
+            return "PARTIAL county (PARTIAL.json unreadable); totals cover only the fields present. "
 
     def _policy_predictions(self, fips, year, policy):
         if policy not in POLICIES:
