@@ -4,13 +4,14 @@
     python -m fieldvision.app.sample_data --only at-2024 --n 40
 
 It writes the same inputs the real pipeline produces (fields GeoJSON, long-format
-Sentinel-2 Parquet, per-field predictions, and for the US a county table) into a
+Sentinel-2 Parquet, per-field predictions, predictions at early cutoff dates, and
+for the US a county table) into a
 work folder, then runs the normal export on them. Every region is marked synthetic,
 and the app shows a "sample data" badge for it. Nothing here is a result.
 
 The "model" is a toy: it reads the observed curve around the true harvest day and
-turns greenness, moisture and timing into a probability, so the curves, the
-harvest band and the prediction in the app agree with each other.
+turns greenness, moisture, timing and the ground after the cut into a probability,
+so the curves, the harvest band and the prediction in the app agree with each other.
 """
 from __future__ import annotations
 
@@ -113,28 +114,38 @@ def _smooth(x):
 
 
 def field_truth(rng, cls, h_sil, h_grn):
-    """Season parameters for one field. About 1 in 12 is atypical (late dry silage, early green grain)."""
+    """Season parameters for one field. About 1 in 12 is atypical (late dry silage, early green grain).
+
+    Greenness and moisture at the cut follow how the field looks (typical or not); the ground
+    after the cut follows what really happened: chopping removes the whole plant and leaves
+    bare soil (low NDTI), combining leaves stalks on the ground (higher NDTI)."""
     atypical = rng.random() < 0.08
     p = {"cls": cls, "atypical": atypical}
     p["greenup"] = rng.normal(158, 7)
     p["peak_ndvi"] = rng.uniform(0.83, 0.92)
     p["peak_ndmi"] = rng.uniform(0.34, 0.44)
+    p["peak_ndti"] = rng.uniform(0.28, 0.34)
     p["soil_ndvi"] = rng.uniform(0.14, 0.21)
     p["soil_ndmi"] = rng.uniform(-0.16, -0.08)
+    p["soil_ndti"] = rng.uniform(0.04, 0.09)
     silage_like = (cls == "silage") != atypical
     if cls == "silage":
         p["harvest"] = rng.normal(h_grn - 12, 6) if atypical else rng.normal(h_sil, 8)
+        p["post_ndti"] = rng.uniform(0.02, 0.08)
     else:
         p["harvest"] = rng.normal(h_sil + 12, 6) if atypical else rng.normal(h_grn, 10)
+        p["post_ndti"] = rng.uniform(0.12, 0.2)
     if silage_like:
         p["pre_ndvi"] = rng.uniform(0.66, 0.84)
         p["pre_ndmi"] = rng.uniform(0.16, 0.32)
+        p["pre_ndti"] = rng.uniform(0.24, 0.3)
         p["sen_days"] = rng.uniform(15, 30)
         p["post_ndvi"] = rng.uniform(0.15, 0.22)
         p["post_ndmi"] = rng.uniform(-0.17, -0.09)
     else:
         p["pre_ndvi"] = rng.uniform(0.32, 0.52)
         p["pre_ndmi"] = rng.uniform(-0.06, 0.1)
+        p["pre_ndti"] = rng.uniform(0.16, 0.22)
         p["sen_days"] = rng.uniform(35, 55)
         p["post_ndvi"] = rng.uniform(0.21, 0.3)
         p["post_ndmi"] = rng.uniform(-0.12, -0.04)
@@ -146,23 +157,24 @@ def curve(p, day):
     rise = 1 / (1 + np.exp(-(day - p["greenup"]) / 7))
     sen0 = p["harvest"] - p["sen_days"]
     fade = _smooth((day - sen0) / p["sen_days"])
-    ndvi = p["soil_ndvi"] + (p["peak_ndvi"] - p["soil_ndvi"]) * rise - (p["peak_ndvi"] - p["pre_ndvi"]) * fade
-    ndmi = p["soil_ndmi"] + (p["peak_ndmi"] - p["soil_ndmi"]) * rise - (p["peak_ndmi"] - p["pre_ndmi"]) * fade
     after = day >= p["harvest"]
-    ndvi = np.where(after, p["post_ndvi"], ndvi)
-    ndmi = np.where(after, p["post_ndmi"], ndmi)
-    return ndvi, ndmi
+    out = []
+    for k in ("ndvi", "ndmi", "ndti"):
+        v = p[f"soil_{k}"] + (p[f"peak_{k}"] - p[f"soil_{k}"]) * rise - (p[f"peak_{k}"] - p[f"pre_{k}"]) * fade
+        out.append(np.where(after, p[f"post_{k}"], v))
+    return out
 
 
-def bands_from(ndvi, ndmi, rng):
-    """Reflectances that give back the requested NDVI (B08/B04) and NDMI (B8A/B11)."""
+def bands_from(ndvi, ndmi, ndti, rng):
+    """Reflectances that give back the requested NDVI (B08/B04), NDMI (B8A/B11) and NDTI (B11/B12)."""
     nir = 0.18 + 0.2 * np.clip(ndvi, 0, 1) + rng.normal(0, 0.01, np.shape(ndvi))
     b04 = nir * (1 - ndvi) / (1 + ndvi)
     b8a = nir * 1.02
     b11 = b8a * (1 - ndmi) / (1 + ndmi)
+    b12 = b11 * (1 - ndti) / (1 + ndti)
     return {
         "B02": b04 * 0.75, "B03": b04 * 1.15, "B04": b04, "B05": b04 * 1.3 + 0.02,
-        "B06": nir * 0.75, "B07": nir * 0.92, "B08": nir, "B8A": b8a, "B11": b11, "B12": b11 * 0.72,
+        "B06": nir * 0.75, "B07": nir * 0.92, "B08": nir, "B8A": b8a, "B11": b11, "B12": b12,
     }
 
 
@@ -186,6 +198,12 @@ def weather(rng, days):
     return cover
 
 
+def cutoff_days(year):
+    """Early-season cutoffs: every two weeks from Aug 1 to early November (day of year)."""
+    start = pd.Timestamp(year=year, month=8, day=1).day_of_year
+    return [start + 14 * k for k in range(8)]
+
+
 # ---------------------------------------------------------------- one region
 
 def simulate_region(cfg, seed, n=None):
@@ -201,27 +219,26 @@ def simulate_region(cfg, seed, n=None):
         layout = make_layout(layout_rng, cfg["centre"], n, cfg["field_ha"], n_blocks=5, spread_km=9, block_km=2.5)
     n = len(layout)
 
-    county_rows, county_shapes, county_of = None, None, [None] * n
+    county_shapes, county_of, share_of, county_names = None, [None] * n, {}, {}
     if cfg["counties"]:
-        county_rows, county_shapes, county_of, share_of = _counties(rng, cfg["centre"], layout)
+        county_shapes, county_of, share_of, county_names = _counties(rng, layout)
 
     days = acquisitions(rng, year)
     cover = weather(rng, days)
     jan1 = pd.Timestamp(year=year, month=1, day=1)
+    cuts = cutoff_days(year)
 
-    features, rows, preds = [], [], []
+    features, rows, preds, asof, truths = [], [], [], [], []
     special = rng.permutation(n)
     no_clear = set(special[:2].tolist())                 # nothing usable all season
     gap_at_harvest = set(special[2:7].tolist())          # long overcast spell around harvest
     unlabelled = set(special[7:10].tolist()) if cfg["labels"] else set()
 
     for i, f in enumerate(layout):
-        if cfg["counties"]:
-            share = share_of[county_of[i]]
-        else:
-            share = cfg["silage"]
+        share = share_of[county_of[i]] if cfg["counties"] else cfg["silage"]
         cls = "silage" if rng.random() < share else "grain"
         truth = field_truth(rng, cls, cfg["h_sil"], cfg["h_grn"])
+        truths.append((cls, f["area"], county_of[i]))
         fid = f"{cfg['id'].replace('-', '')}-s{i:04d}"
         label = cls if cfg["labels"] and i not in unlabelled else None
         props = {
@@ -234,7 +251,7 @@ def simulate_region(cfg, seed, n=None):
         features.append({"type": "Feature", "properties": props,
                          "geometry": {"type": "Polygon", "coordinates": [f["ring"]]}})
 
-        ndvi, ndmi = curve(truth, days)
+        ndvi, ndmi, ndti = curve(truth, days)
         cf = np.clip(1 - cover + rng.normal(0, 0.12, len(days)), 0, 1)
         if i in gap_at_harvest:
             cf = np.where(np.abs(days - truth["harvest"]) < rng.uniform(14, 22), 0.0, cf)
@@ -245,7 +262,8 @@ def simulate_region(cfg, seed, n=None):
         haze = (1 - cf) * rng.uniform(0.0, 0.5, len(days))
         obs_ndvi = ndvi - haze * (ndvi - 0.05) + rng.normal(0, 0.018, len(days))
         obs_ndmi = ndmi - haze * 0.25 + rng.normal(0, 0.02, len(days))
-        b = bands_from(np.clip(obs_ndvi, -0.2, 0.97), np.clip(obs_ndmi, -0.5, 0.8), rng)
+        obs_ndti = ndti - haze * 0.1 + rng.normal(0, 0.012, len(days))
+        b = bands_from(np.clip(obs_ndvi, -0.2, 0.97), np.clip(obs_ndmi, -0.5, 0.8), np.clip(obs_ndti, -0.3, 0.6), rng)
         n_pix = int(round(f["area"] * 100 * 0.7))
         for k, d in enumerate(days):
             n_clear = int(round(n_pix * cf[k]))
@@ -257,57 +275,115 @@ def simulate_region(cfg, seed, n=None):
             rows.append(row)
 
         if cfg["preds"]:
-            usable = (cf >= 0.7)
-            obs_doy = days[usable]
-            obs_v = obs_ndvi[usable]
-            obs_m = obs_ndmi[usable]
-            preds.append(_toy_prediction(rng, fid, jan1, truth, obs_doy, obs_v, obs_m, cfg))
+            usable = cf >= 0.7
+            obs = (days[usable], obs_ndvi[usable], obs_ndmi[usable], obs_ndti[usable])
+            pred, state = _toy_prediction(rng, fid, jan1, truth, obs, cfg)
+            preds.append(pred)
+            asof.extend(_toy_asof(rng, fid, jan1, pred, state, obs, cuts, cfg))
 
+    county_rows = _usda_rows(rng, truths, county_names) if cfg["counties"] else None
     fields = {"type": "FeatureCollection", "features": features}
-    ts = pd.DataFrame(rows)
-    pr = pd.DataFrame(preds) if preds else None
-    return fields, ts, pr, county_rows, county_shapes
+    return {
+        "fields": fields,
+        "timeseries": pd.DataFrame(rows),
+        "predictions": pd.DataFrame(preds) if preds else None,
+        "asof": pd.DataFrame(asof) if asof else None,
+        "counties": county_rows,
+        "county_shapes": county_shapes,
+    }
 
 
-def _toy_prediction(rng, fid, jan1, truth, doy, v, m, cfg):
+def _sigmoid(x):
+    return 1 / (1 + math.exp(-x))
+
+
+def _toy_prediction(rng, fid, jan1, truth, obs, cfg):
+    doy, v, m, r = obs
     h = truth["harvest"]
-    before = doy < h
-    after = doy >= h
+    before, after = doy < h, doy >= h
     reasons = []
     hs = he = None
-    pre_v = pre_m = None
+    pre_v = pre_m = post_r = None
     if before.any() and after.any():
         i0 = np.where(before)[0][-1]
         i1 = np.where(after)[0][0]
         hs, he = int(doy[i0]), int(doy[i1])
         pre_v, pre_m = float(v[i0]), float(m[i0])
+        late = (doy >= he) & (doy <= he + 30)
+        post_r = float(np.median(r[late][:3])) if late.any() else None
+    contrib = {}
     if hs is None:
         reasons.append("no harvest drop seen between clear observations")
         prob = float(np.clip(rng.normal(0.5, 0.12), 0.05, 0.95))
     else:
         mid = (hs + he) / 2
-        timing = ((cfg["h_sil"] + cfg["h_grn"]) / 2 - mid) / 12
-        score = 6 * (pre_v - 0.58) + 7 * (pre_m - 0.12) + 0.6 * timing + rng.normal(0, 0.5)
-        prob = float(1 / (1 + math.exp(-score)))
+        contrib = {
+            "green": 6 * (pre_v - 0.58),
+            "moist": 7 * (pre_m - 0.12),
+            "timing": 0.6 * ((cfg["h_sil"] + cfg["h_grn"]) / 2 - mid) / 12,
+            "ground": 0.0 if post_r is None else 4 * (0.1 - post_r),
+        }
+        prob = _sigmoid(sum(contrib.values()) + rng.normal(0, 0.5))
         if he - hs > 21:
             reasons.append(f"harvest window {he - hs} days wide")
     if len(doy) < 8:
         reasons.append(f"only {len(doy)} clear observations")
     low = bool(reasons)
 
-    def iso(d):
-        return None if d is None else (jan1 + pd.Timedelta(days=d - 1)).date().isoformat()
+    # a short reason string for most fields; the app must also work without one
+    explanation = flip = None
+    if contrib and rng.random() < 0.7:
+        words = {
+            "green": ("green at the cut", "dried down before the cut"),
+            "moist": ("leaves still moist", "leaves already dry"),
+            "timing": ("early cut", "late cut"),
+            "ground": ("bare soil afterwards", "stalks left afterwards"),
+        }
+        top = sorted(contrib, key=lambda k: -abs(contrib[k]))[:2]
+        explanation = "Mostly: " + ", ".join(words[k][0 if contrib[k] > 0 else 1] for k in top)
+        if rng.random() < 0.2:
+            weakest = min(contrib, key=lambda k: abs(contrib[k]))
+            other = "grain" if prob >= 0.5 else "silage"
+            flip = f"Would tip to {other} if the {weakest} signal pointed the other way"
 
-    return {
+    def iso(d):
+        return None if d is None else (jan1 + pd.Timedelta(days=int(d) - 1)).date().isoformat()
+
+    pred = {
         "field_id": fid, "p_silage": round(prob, 4),
         "harvest_start": iso(hs), "harvest_end": iso(he),
         "pre_ndvi": None if pre_v is None else round(pre_v, 4),
         "pre_ndmi": None if pre_m is None else round(pre_m, 4),
         "low_evidence": low, "low_evidence_reason": "; ".join(reasons) if reasons else None,
+        "explanation": explanation, "flip_reason": flip,
     }
+    return pred, {"hs": hs, "he": he}
 
 
-def _counties(rng, centre, layout):
+def _toy_asof(rng, fid, jan1, pred, state, obs, cuts, cfg):
+    """What the toy model would have said with data up to each cutoff."""
+    doy, v, m, _ = obs
+    out = []
+    for c in cuts:
+        if state["he"] is not None and state["he"] <= c:
+            prob = float(np.clip(pred["p_silage"] + rng.normal(0, 0.03), 0.01, 0.99))
+            low = pred["low_evidence"]
+        else:
+            seen = doy <= c
+            last_m = float(m[seen][-1]) if seen.any() else 0.12
+            late = c - (cfg["h_sil"] + 5)
+            if late < 0:
+                prob = float(np.clip(rng.normal(0.5, 0.08), 0.2, 0.8))
+            else:
+                # still standing well after the silage harvest: grain becomes likely
+                prob = _sigmoid(-late / 8 + 3 * (last_m - 0.12) + rng.normal(0, 0.4))
+            low = bool(late < 15 or not seen.any())
+        out.append({"field_id": fid, "cutoff_date": (jan1 + pd.Timedelta(days=c - 1)).date().isoformat(),
+                    "p_silage": round(prob, 4), "low_evidence": low})
+    return out
+
+
+def _counties(rng, layout):
     """Ten square sample counties on a 5 x 2 grid covering the fields."""
     lons = [f["lon"] for f in layout]
     lats = [f["lat"] for f in layout]
@@ -315,17 +391,13 @@ def _counties(rng, centre, layout):
     y0, y1 = min(lats) - 0.02, max(lats) + 0.02
     nx, ny = 5, 2
     dx, dy = (x1 - x0) / nx, (y1 - y0) / ny
-    rows, shapes, share_of = [], [], {}
+    shapes, share_of, names = [], {}, {}
     for j in range(ny):
         for i in range(nx):
             k = j * nx + i
             fips = f"99{k + 1:03d}"
-            share = float(np.clip(0.1 + 0.07 * k + rng.normal(0, 0.05), 0.03, 0.9))
-            share_of[fips] = share
-            total = float(rng.uniform(15000, 60000))
-            reported = float(np.clip(share + rng.normal(0, 0.04), 0.01, 0.95))
-            rows.append({"county_fips": fips, "county_name": f"Sample County {chr(65 + k)}", "state": "WI",
-                         "silage_acres": round(total * reported), "grain_acres": round(total * (1 - reported))})
+            share_of[fips] = float(np.clip(0.1 + 0.07 * k + rng.normal(0, 0.05), 0.03, 0.9))
+            names[fips] = f"Sample County {chr(65 + k)}"
             ring = [[round(x0 + i * dx, 5), round(y0 + j * dy, 5)], [round(x0 + (i + 1) * dx, 5), round(y0 + j * dy, 5)],
                     [round(x0 + (i + 1) * dx, 5), round(y0 + (j + 1) * dy, 5)],
                     [round(x0 + i * dx, 5), round(y0 + (j + 1) * dy, 5)], [round(x0 + i * dx, 5), round(y0 + j * dy, 5)]]
@@ -336,7 +408,21 @@ def _counties(rng, centre, layout):
         i = min(int((f["lon"] - x0) / dx), nx - 1)
         j = min(int((f["lat"] - y0) / dy), ny - 1)
         county_of.append(f"99{j * nx + i + 1:03d}")
-    return pd.DataFrame(rows), {"type": "FeatureCollection", "features": shapes}, county_of, share_of
+    return {"type": "FeatureCollection", "features": shapes}, county_of, share_of, names
+
+
+def _usda_rows(rng, truths, names):
+    """USDA-style county acres consistent with the simulated fields: we 'map' 80-100 % of
+    each county's corn, and the reported numbers carry a few percent of survey noise."""
+    rows = []
+    for fips, name in names.items():
+        sil = sum(a for c, a, f in truths if f == fips and c == "silage") * export.ACRES_PER_HA
+        grn = sum(a for c, a, f in truths if f == fips and c == "grain") * export.ACRES_PER_HA
+        cover = rng.uniform(0.8, 1.0)
+        rows.append({"county_fips": fips, "county_name": name, "state": "WI",
+                     "silage_acres": round(sil / cover * rng.normal(1, 0.04)),
+                     "grain_acres": round(grn / cover * rng.normal(1, 0.04))})
+    return pd.DataFrame(rows)
 
 
 # ---------------------------------------------------------------- driver
@@ -347,24 +433,26 @@ def build(region_ids=None, work=DEFAULT_WORK, app_data=DEFAULT_APP_DATA, seed=7,
     for k, cfg in enumerate(REGIONS):
         if region_ids and cfg["id"] not in region_ids:
             continue
-        fields, ts, preds, crow, cshape = simulate_region(cfg, seed + 13 * k, n)
+        sim = simulate_region(cfg, seed + 13 * k, n)
         src = work / cfg["id"]
         src.mkdir(parents=True, exist_ok=True)
-        (src / "fields.geojson").write_text(json.dumps(fields), encoding="utf-8")
-        ts.to_parquet(src / "timeseries.parquet", index=False)
-        pred_path = None
-        if preds is not None:
+        (src / "fields.geojson").write_text(json.dumps(sim["fields"]), encoding="utf-8")
+        sim["timeseries"].to_parquet(src / "timeseries.parquet", index=False)
+        pred_path = asof_path = counties = shapes = None
+        if sim["predictions"] is not None:
             pred_path = src / "predictions.parquet"
-            preds.to_parquet(pred_path, index=False)
-        counties = shapes = None
-        if crow is not None:
+            sim["predictions"].to_parquet(pred_path, index=False)
+        if sim["asof"] is not None:
+            asof_path = src / "predictions_by_cutoff.parquet"
+            sim["asof"].to_parquet(asof_path, index=False)
+        if sim["counties"] is not None:
             counties = src / "usda_counties.csv"
-            crow.to_csv(counties, index=False)
+            sim["counties"].to_csv(counties, index=False)
             shapes = src / "county_shapes.geojson"
-            shapes.write_text(json.dumps(cshape), encoding="utf-8")
+            shapes.write_text(json.dumps(sim["county_shapes"]), encoding="utf-8")
         meta = export.export_region(
             src / "fields.geojson", app_data / cfg["id"], src / "timeseries.parquet", pred_path,
-            title=cfg["title"], group=cfg["group"], year=cfg["year"], synthetic=True,
+            asof_path=asof_path, title=cfg["title"], group=cfg["group"], year=cfg["year"], synthetic=True,
             note="synthetic sample, not a model result", counties=counties, county_shapes=shapes,
         )
         done.append(meta)
