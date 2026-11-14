@@ -14,7 +14,7 @@ Run from the repo root:
 from __future__ import annotations
 
 import argparse
-import warnings
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -25,17 +25,18 @@ import pandas as pd
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
-import odc.geo.xr  # noqa: F401  registers the .odc geobox accessor on xarray
 import planetary_computer
-import rasterio.features
 from matplotlib.lines import Line2D
 from odc.stac import load
 from pystac_client import Client
-from shapely import make_valid
-from shapely.geometry import GeometryCollection, Polygon
-from shapely.ops import unary_union
+from shapely.geometry import Polygon
 
 ROOT = Path(__file__).resolve().parents[1]
+if __package__ in {None, ""}:
+    sys.path.insert(0, str(ROOT))
+    from src.common import field_date_medians, normalized_difference, polygonal, scale_reflectance
+else:
+    from .common import field_date_medians, normalized_difference, polygonal, scale_reflectance
 
 # Every processing choice lives here so a run can be repeated from the log.
 CONFIG = {
@@ -146,17 +147,6 @@ def load_labels(path: Path) -> gpd.GeoDataFrame:
     return labels
 
 
-def polygonal(geom):
-    """Keep only polygon parts. An inward buffer can return a collection or an empty shape."""
-    geom = make_valid(geom)
-    if isinstance(geom, GeometryCollection):
-        parts = [part for part in geom.geoms if part.geom_type in ("Polygon", "MultiPolygon")]
-        geom = unary_union(parts) if parts else Polygon()
-    if geom.geom_type not in ("Polygon", "MultiPolygon"):
-        return Polygon()
-    return geom
-
-
 def prepare_polygons(labels: gpd.GeoDataFrame) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
     """Reproject to UTM 18N and buffer inward so field edges do not mix with neighbours."""
     projected = labels.to_crs(CONFIG["crs"]).copy()
@@ -232,94 +222,35 @@ def search_scenes(catalog: Client, fields: gpd.GeoDataFrame, year: int):
     return items, bbox
 
 
-def scale_reflectance(cube) -> dict[str, np.ndarray]:
-    """DN to reflectance. Float before arithmetic, then the baseline-04.00 offset."""
-    offset_start = np.datetime64(CONFIG["offset_date"])
-    times = cube.time.values
-    offset_on = times >= offset_start
-    scaled = {}
-    for band in CONFIG["refl_bands"]:
-        # uint16 subtraction wraps. Cast first, then remove the nodata fill (DN 0).
-        dn = cube[band].values.astype("float32")
-        dn[dn == 0] = np.nan
-        dn[offset_on] -= np.float32(CONFIG["dn_offset"])
-        dn = np.clip(dn, 0, None) / np.float32(CONFIG["scale"])
-        scaled[band] = dn
-    return scaled
-
-
-def normalized_difference(high: np.ndarray, low: np.ndarray) -> np.ndarray:
-    """(high - low) / (high + low), with divide-by-zero set to NaN."""
-    denom = high + low
-    with np.errstate(divide="ignore", invalid="ignore"):
-        index = (high - low) / denom
-    index[~np.isfinite(denom) | (denom == 0)] = np.nan
-    return index
-
-
 def summarize_fields(cube, reflectance: dict[str, np.ndarray], fields: gpd.GeoDataFrame) -> tuple[list[dict], list[str]]:
     """Median NDVI and NDTI inside each field, on dates that are mostly clear."""
-    geobox = cube.odc.geobox
-    out_shape = (geobox.height, geobox.width)
-    if out_shape != (cube.sizes["y"], cube.sizes["x"]):
-        raise RuntimeError(f"Geobox shape {out_shape} does not match cube y, x {(cube.sizes['y'], cube.sizes['x'])}.")
-
     ndvi = normalized_difference(reflectance["B08"], reflectance["B04"])
     ndti = normalized_difference(reflectance["B11"], reflectance["B12"])
-    # SCL classes must stay integers. Nearest resampling keeps them that way.
     clear = np.isin(cube["SCL"].values, CONFIG["scl_classes"])
-    times = cube.time.values
     rows: list[dict] = []
     notes: list[str] = []
-
     for field in fields.itertuples(index=False):
-        # The cube is a rectangle around every field, so mask to this polygon.
-        inside = rasterio.features.geometry_mask(
-            [field.geometry],
-            out_shape=out_shape,
-            transform=geobox.affine,
-            invert=True,
-            all_touched=False,
+        kept, note = field_date_medians(
+            cube,
+            field.geometry,
+            clear,
+            {"ndvi": ndvi, "ndti": ndti},
+            CONFIG["clear_frac_min"],
+            require_finite="ndvi",
         )
-        n_inside = int(inside.sum())
-        if n_inside == 0:
-            note = f"OBJECTID {field.OBJECTID} {field.year}: zero pixels inside the polygon, skipped"
-            print(note)
-            notes.append(note)
-            continue
-
-        valid = clear & inside
-        n_valid = valid.sum(axis=(1, 2))
-        clear_frac = n_valid / n_inside
-        keep = np.flatnonzero(clear_frac >= CONFIG["clear_frac_min"])
-        kept_for_field = 0
-        for index in keep:
-            pixels = valid[index]
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", category=RuntimeWarning)
-                ndvi_value = float(np.nanmedian(ndvi[index][pixels]))
-                ndti_value = float(np.nanmedian(ndti[index][pixels]))
-            if not np.isfinite(ndvi_value):
-                continue
-            stamp = pd.Timestamp(times[index])
+        if note:
+            message = f"OBJECTID {field.OBJECTID} {field.year}: {note}"
+            print(message)
+            notes.append(message)
+        for item in kept:
             rows.append(
                 {
                     "OBJECTID": int(field.OBJECTID),
                     "year": int(field.year),
-                    "date": stamp.strftime("%Y-%m-%d"),
-                    "doy": int(stamp.day_of_year),
-                    "ndvi": ndvi_value,
-                    "ndti": ndti_value,
-                    "clear_frac": float(clear_frac[index]),
-                    "n_pixels": int(n_valid[index]),
                     "label": field.label,
+                    **item,
                 }
             )
-            kept_for_field += 1
-        if kept_for_field == 0:
-            note = f"OBJECTID {field.OBJECTID} {field.year}: no date passed clear_frac {CONFIG['clear_frac_min']}, skipped"
-            print(note)
-            notes.append(note)
     return rows, notes
 
 
@@ -493,7 +424,7 @@ def process_year(catalog: Client, fields: gpd.GeoDataFrame, year: int) -> tuple[
     if missing:
         raise RuntimeError(f"{year}: cube is missing bands {missing}")
 
-    reflectance = scale_reflectance(cube)
+    reflectance = scale_reflectance(cube, CONFIG["refl_bands"])
     rows, notes = summarize_fields(cube, reflectance, year_fields)
     print(f"{year}: kept {len(rows)} field-date rows")
     return rows, notes, len(items)

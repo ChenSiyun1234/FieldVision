@@ -9,3 +9,7 @@ rasterio
 matplotlib
 shapely
 pyproj
+rasterstats
+tqdm
+h5netcdf
+pygridmet
