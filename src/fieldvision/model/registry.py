@@ -300,8 +300,6 @@ def main(argv=None):
     print(f"exported {a.which} -> {folder}")
 
 
-if __name__ == "__main__":
-    main()
 
 
 COMPOSITE_MEMBERS = ("timing_rule", "rule", "logistic")
@@ -420,3 +418,7 @@ def export_composite(run_dir, name, registry_dir, training_files, git_commit, fa
     (folder / "model_card.md").write_text("\n".join(L), encoding="utf-8")
     folder.rename(final)
     return final
+
+
+if __name__ == "__main__":
+    main()
