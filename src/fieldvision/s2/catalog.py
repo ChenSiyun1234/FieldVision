@@ -159,10 +159,17 @@ def calibration(item, asset):
     if not np.isfinite(scale) or scale <= 0 or not np.isfinite(offset):
         raise ValueError("Invalid reflectance scale/offset")
     if item["collection"] == LEGACY:
+        # Measured at Beltsville (scripts/compare_s2_sources.py): flag=True scenes
+        # equal Collection 1 / original ESA numbers minus 1000, i.e. the offset is
+        # already in the data. All five flag=False 2022 scenes tested were ALSO
+        # already shifted, so the flag cannot be trusted when False. Those scenes
+        # are refused and logged, not guessed; use the Planetary Computer source.
         applied = item["properties"].get("earthsearch:boa_offset_applied")
         if applied is True:
             offset = 0.0
-        elif applied is not False and offset != 0:
+        elif applied is False:
+            raise ValueError("Legacy boa_offset_applied=False is unreliable; refusing scene")
+        elif offset != 0:
             raise ValueError("Legacy offset flag missing; refusing ambiguous calibration")
     return scale, offset, metadata.get("nodata", 0)
 

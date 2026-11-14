@@ -2,6 +2,7 @@
 from collections import defaultdict
 import json
 import math
+import re
 import numpy as np
 from pyproj import Transformer
 from rasterio.transform import from_origin
@@ -56,7 +57,12 @@ def _split_compact(records, size):
         return
     axis = int(np.argmax(span))
     records = sorted(records, key=lambda f: f["local_geometry"].centroid.coords[0][axis])
-    middle = len(records) // 2
+    centers = [f["local_geometry"].centroid.coords[0][axis] for f in records]
+    # Cut at the middle of the extent so an outlying field does not split a
+    # tight cluster; fall back to the median when one side would be empty.
+    middle = int(np.searchsorted(centers, (centers[0] + centers[-1]) / 2))
+    if middle in (0, len(records)):
+        middle = len(records) // 2
     yield from _split_compact(records[:middle], size)
     yield from _split_compact(records[middle:], size)
 
@@ -71,18 +77,27 @@ def make_blocks(fields, size=6000):
         epsg = (32600 if center.y >= 0 else 32700) + zone
         local = project(field["geometry"], 4326, epsg)
         field["local_geometry"] = local
-        key = (epsg, math.floor(local.centroid.x / size), math.floor(local.centroid.y / size))
+        # Label files group fields into sampling blocks; keeping those together
+        # avoids cutting one 10 km block into many partial read windows.
+        label_block = field["properties"].get("block_id")
+        if label_block:
+            key = (epsg, "b", re.sub(r"[^A-Za-z0-9-]", "-", str(label_block)))
+        else:
+            key = (epsg, math.floor(local.centroid.x / size), math.floor(local.centroid.y / size))
         groups[key].append(field)
     blocks = []
-    for key, records in sorted(groups.items()):
+    for key, records in sorted(groups.items(), key=lambda kv: tuple(map(str, kv[0]))):
         for part, subset in enumerate(_split_compact(sorted(records, key=lambda f: f["field_id"]), size)):
-            blocks.append({"id": f"{key[0]}_{key[1]}_{key[2]}_{part}", "epsg": key[0], "fields": subset,
+            name = f"{key[0]}_{key[2]}" if key[1] == "b" else f"{key[0]}_{key[1]}_{key[2]}"
+            blocks.append({"id": f"{name}_{part}", "epsg": key[0], "fields": subset,
                            "bbox": unary_union([f["geometry"] for f in subset]).bounds})
     return blocks
 
 
 def scene_grid(block, item):
-    props, red = item["properties"], item["assets"]["red"]
+    props = item["properties"]
+    # Planetary Computer names the red asset "B04"; Earth Search names it "red".
+    red = item["assets"].get("red") or item["assets"]["B04"]
     crs = red.get("proj:epsg") or props.get("proj:epsg") or props.get("proj:code")
     if crs is None:
         raise ValueError("Scene lacks a projected CRS")

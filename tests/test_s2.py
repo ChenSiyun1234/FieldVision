@@ -62,7 +62,7 @@ def test_indices_and_no_mutation():
     pd.testing.assert_frame_equal(table, before)
 
 
-@pytest.mark.parametrize("collection,flag,expected", [(PRIMARY, None, 0.05), (LEGACY, True, 0.15), (LEGACY, False, 0.05)])
+@pytest.mark.parametrize("collection,flag,expected", [(PRIMARY, None, 0.05), (LEGACY, True, 0.15)])
 def test_scale_and_offset(collection, flag, expected):
     item = {"collection": collection, "properties": {"earthsearch:boa_offset_applied": flag}}
     asset = {"raster:bands": [{"scale": 0.0001, "offset": -0.1, "nodata": 0}]}
@@ -72,8 +72,12 @@ def test_scale_and_offset(collection, flag, expected):
 
 
 def test_ambiguous_legacy_metadata_rejected():
+    asset = {"raster:bands": [{"scale": 0.0001, "offset": -0.1}]}
     with pytest.raises(ValueError, match="ambiguous"):
-        calibration({"collection": LEGACY, "properties": {}}, {"raster:bands": [{"scale": 0.0001, "offset": -0.1}]})
+        calibration({"collection": LEGACY, "properties": {}}, asset)
+    # flag=False was measured to be wrong on real 2022 scenes; never trust it.
+    with pytest.raises(ValueError, match="unreliable"):
+        calibration({"collection": LEGACY, "properties": {"earthsearch:boa_offset_applied": False}}, asset)
 
 
 def test_negative_red_guard():
@@ -106,6 +110,20 @@ def test_field_validation_and_multiple_utm_zones(tmp_path):
     item = {"properties": {"proj:epsg": 32632}, "assets": {"red": {"proj:transform": [10, 0, 0, 0, -10, 6000000]}}}
     grid = scene_grid(blocks[0], item)
     assert grid[0] == 32632 and min(grid[2]) > 0
+
+
+def test_label_block_id_keeps_fields_together_within_size(tmp_path):
+    # Two fields 1 km apart straddle a 6 km grid line but share a label block.
+    features = [{"type": "Feature", "geometry": mapping(box(x, 48.0, x + 0.002, 48.002)),
+                 "properties": {"field_id": f"f{i}", "year": 2024, "block_id": "AT-E1/N2"}}
+                for i, x in enumerate((15.0, 15.013))]
+    features.append({"type": "Feature", "geometry": mapping(box(15.3, 48.0, 15.302, 48.002)),
+                     "properties": {"field_id": "far", "year": 2024, "block_id": "AT-E1/N2"}})
+    path = tmp_path / "fields.geojson"
+    path.write_text(json.dumps({"type": "FeatureCollection", "features": features}))
+    blocks = make_blocks(load_fields(path, 2024), 6000)
+    assert sorted(len(b["fields"]) for b in blocks) == [1, 2]
+    assert all("/" not in b["id"] and "AT-E1-N2" in b["id"] for b in blocks)
 
 
 def test_2022_fallback_fills_partial_c1_catalog(monkeypatch):
