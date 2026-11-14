@@ -6,7 +6,27 @@ build-backend = "setuptools.build_meta"
 name = "fieldvision"
 version = "0.1.0"
 requires-python = ">=3.10"
-dependencies = ["requests", "numpy", "pandas", "geopandas", "shapely>=2", "pyproj", "pyarrow", "matplotlib"]
+dependencies = [
+    "requests",
+    "numpy",
+    "pandas",
+    "geopandas",
+    "pyogrio",
+    "shapely>=2",
+    "pyproj",
+    "pyarrow",
+    "matplotlib",
+    "rasterio",
+    "scipy",
+    "scikit-learn",
+    "lightgbm",
+    "tabulate",
+]
+
+[project.optional-dependencies]
+# Only needed for the pretrained time-series model comparison in src/fieldvision/foundation.
+foundation = ["torch", "einops"]
+dev = ["pytest"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
