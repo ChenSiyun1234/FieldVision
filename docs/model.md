@@ -32,6 +32,16 @@ python -m fieldvision.model.evaluate --model <run dir> --timeseries <...> --fiel
     --out <dir> [--rename field_id=<col> label=<col> year=<col>] [--label-map <value>=silage <value>=grain]
 ```
 
+For the organisers' Beltsville file, first expand it to one row per field-year
+(`barc-<OBJECTID>-<year>`, EPSG:4326; blank years kept as unlabelled and never scored). The
+same GeoJSON is what the extractor should use, so the time-series `field_id`s match:
+
+```
+python -m fieldvision.model.barc --gpkg BARC_Corn.2021-2023.gpkg --out barc_field_years.geojson
+python -m fieldvision.model.evaluate --model <run dir> --timeseries <barc series> \
+    --fields barc_field_years.geojson --keep-columns OBJECTID --out <dir>
+```
+
 Separate, clearly labelled variant that refits only the decision threshold on
 `--n-calib` evaluation fields (fixed seed, stratified by label) and reports on
 the rest, next to the zero-shot numbers on the same fields:
