@@ -219,6 +219,28 @@ class RuleModel(_Base):
         text += f"; no harvest detected -> score {self.p_missing_:.2f}"
         return text
 
+    _STATE = ("timing", "moisture", "min_gain", "name", "mode_", "t_time_", "t_moist_",
+              "scale_time_", "scale_moist_", "p_missing_", "prevalence_", "threshold")
+
+    def to_dict(self):
+        """Every learned number, as plain JSON (the rule can be rebuilt from it alone)."""
+        out = {}
+        for k in self._STATE:
+            v = getattr(self, k, None)
+            out[k] = None if isinstance(v, float) and not np.isfinite(v) else v
+        return out
+
+    @classmethod
+    def from_dict(cls, d):
+        gain = d.get("min_gain", 0.01)
+        m = cls(timing=d["timing"], moisture=d["moisture"],
+                min_gain=float("inf") if gain is None else gain, name=d.get("name", "rule"))
+        for k in cls._STATE:
+            if k in d and k not in ("timing", "moisture", "min_gain", "name"):
+                v = d[k]
+                setattr(m, k, float("nan") if v is None and k.endswith("_") and k != "mode_" else v)
+        return m
+
 
 class _Constant:
     def __init__(self, p):
