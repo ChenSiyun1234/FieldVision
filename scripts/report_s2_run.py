@@ -28,7 +28,9 @@ def summarize(run):
         scenes |= set(block.get("completed_scene_ids", []))
         for message in block.get("scene_errors", {}).values():
             errors["plausibility" if "sanity check" in message else
-                   "legacy_flag" if "unreliable" in message or "ambiguous" in message else "read/other"] += 1
+                   "legacy_flag" if "unreliable" in message or "ambiguous" in message else
+                   # Upstream STAC items that lack band assets cannot be read on any retry.
+                   "missing_asset" if message.startswith("KeyError") else "read/other"] += 1
     attempted = len(scenes) + sum(errors.values())
     sources = usable.collection.value_counts()
     return {
@@ -41,7 +43,17 @@ def summarize(run):
         "sources": "; ".join(f"{name} {count / len(usable):.0%}" for name, count in sources.items()),
         "scene_block_pairs_ok": len(scenes), "scene_failures": dict(errors), "attempted": attempted,
         "started": manifest["started_at"], "ended": manifest["ended_at"],
+        "failed_blocks": sum(b["status"] == "failed" for b in manifest["blocks"].values()),
+        "invalid_fields": len(manifest.get("invalid_fields", {})),
     }
+
+
+def usable_for_modelling(s):
+    """Complete, or partial only because of scene errors a rerun cannot fix."""
+    if s["status"] == "complete":
+        return True
+    return (s["status"] == "partial" and not s["failed_blocks"] and not s["invalid_fields"]
+            and not s["scene_failures"].get("read/other"))
 
 
 def line(s):
@@ -50,6 +62,8 @@ def line(s):
     lost = s["scene_failures"].get("plausibility", 0)
     if s["attempted"] and lost / s["attempted"] > 0.05:
         flag = f" WARNING: {lost / s['attempted']:.0%} of scene-block reads rejected by plausibility check."
+    if s["status"] == "partial":
+        flag += " (status partial only because of the permanent scene errors listed; all other scenes are in.)"
     started = datetime.fromisoformat(s["started"])
     ended = datetime.fromisoformat(s["ended"])
     hours = (ended - started).total_seconds() / 3600
@@ -69,8 +83,8 @@ def main():
     text = line(summary)
     print(text)
     if args.append:
-        if summary["status"] != "complete":
-            raise SystemExit("Run is not complete; not appending")
+        if not usable_for_modelling(summary):
+            raise SystemExit("Run has failed blocks, invalid fields or retryable read errors; rerun first")
         with open(args.append, "a", encoding="utf-8") as handle:
             handle.write(text + "\n")
 
