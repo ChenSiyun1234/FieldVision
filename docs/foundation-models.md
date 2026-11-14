@@ -9,15 +9,26 @@ predictions.parquet, embeddings).
 
 ## Conclusion
 
-**In plain words:** adding the pretrained satellite model (Presto) to our
-feature model makes it slightly better, but giving the model the same
-monthly satellite values directly, with no pretrained network, helps just
-as much, so the gain comes from using the whole season's colours and not
-from pretraining. Presto on its own is no better than our interpretable
-features, so it stays a side experiment and the main line does not change.
+**In two plain sentences:** a pretrained satellite model (Presto) did no
+better than simply handing our model the same monthly satellite values,
+so the small gain it adds inside Austria comes from the extra season-long
+data, not from pretraining. Moving to a different Austrian year cost
+every model about the same small amount, so this test cannot tell us
+which model will hold up in Maryland, where the simplest models have so
+far transferred best.
 
-Data: Austria 2024 only so far (2,400 fields, 20 blocks); the
-leave-one-year-out check is below once Austria 2022 is extracted.
+What that means for the main line: no change. Presto is not worth its
+extra complexity here. Richer inputs (Presto, raw monthly values, the
+135-feature LightGBM) win within Austria and across Austrian years, but
+the modelling session's one-time US check showed the opposite ordering
+(as reported to us: 6-feature logistic 42 of 44 correct, LightGBM 30 of
+44; not re-checked here, this experiment never read the US data), and nothing here
+contradicts that: year-to-year change inside one country is much
+smaller than the jump to another continent.
+
+Data: Austria 2024 (2,400 fields, 20 blocks) for the main table;
+Austria 2022 + 2024 (3,600 fields) for leave-one-year-out. Austria 2023
+and other countries were not yet extracted when this was written.
 
 ## Which model and why
 
@@ -197,6 +208,72 @@ composites with LightGBM (+0.001, CI [-0.008, +0.008]) or from the main
 line (+0.013, CI [-0.003, +0.029]). Its threshold is a plain 0.5 without
 in-fold calibration, which is why it sits at a different operating point
 (recall 0.84, false positive rate 0.25); compare it on ROC-AUC.
+
+### Transfer to a new year (leave-one-year-out)
+
+Data: Austria 2022 (`at_2022\timeseries.parquet`, listed 13:55 local,
+1,200 fields in 10 blocks that are all also in 2024) + Austria 2024
+(2,400 fields), run `C:\t\fv\data\foundation\runs\at2022_2024`. Train on
+one year, test on the other, same models and settings as above; the
+training year's fields in the same blocks are kept (the main line's
+default). "AUC in" is the same held-out fields scored by the spatial-CV
+models of the same run, whose training did include that year (other
+blocks); "loss" = in - out. The last column is paired against the main
+line's 6-feature logistic regression on the same fields, block-bootstrap
+95 % CI. Note the two years also differ in imagery source (2022 from
+Planetary Computer, 2024 from Earth Search Collection 1), so "a new year"
+here also means "slightly different processing".
+
+| test year | model | accuracy | recall | FPR | AUC out | AUC in | loss | AUC vs 6-feature logistic |
+|---|---|---:|---:|---:|---:|---:|---:|---|
+| 2022 | phys-logistic (6 features) | 0.629 | 0.605 | 0.347 | 0.690 | 0.715 | 0.025 | reference |
+| 2022 | phys-rule | 0.637 | 0.780 | 0.507 | 0.708 | 0.740 | 0.033 | +0.018 [-0.005, +0.039] |
+| 2022 | phys-gbm (main line) | 0.706 | 0.802 | 0.390 | 0.780 | 0.810 | 0.030 | +0.090 [+0.058, +0.122] |
+| 2022 | emb-logistic (Presto) | 0.701 | 0.668 | 0.267 | 0.771 | 0.786 | 0.016 | +0.081 [+0.042, +0.120] |
+| 2022 | raw-gbm | 0.664 | 0.698 | 0.370 | 0.744 | 0.781 | 0.037 | +0.054 [+0.012, +0.103] |
+| 2022 | raw-logistic | 0.724 | 0.653 | 0.205 | 0.789 | 0.788 | -0.002 | +0.100 [+0.067, +0.137] |
+| 2022 | both-gbm (phys + Presto) | 0.703 | 0.827 | 0.420 | 0.797 | 0.823 | 0.026 | +0.107 [+0.076, +0.140] |
+| 2022 | physraw-gbm (phys + raw) | 0.698 | 0.802 | 0.405 | 0.790 | 0.819 | 0.029 | +0.101 [+0.073, +0.129] |
+| 2022 | majority | 0.500 | 1.000 | 1.000 | 0.500 | 0.500 | 0 | -0.190 |
+| 2024 | phys-logistic (6 features) | 0.676 | 0.769 | 0.417 | 0.743 | 0.780 | 0.038 | reference |
+| 2024 | phys-rule | 0.701 | 0.707 | 0.305 | 0.749 | 0.743 | -0.006 | +0.007 [-0.006, +0.020] |
+| 2024 | phys-gbm (main line) | 0.764 | 0.695 | 0.167 | 0.826 | 0.862 | 0.036 | +0.083 [+0.049, +0.110] |
+| 2024 | emb-logistic (Presto) | 0.759 | 0.700 | 0.182 | 0.829 | 0.862 | 0.033 | +0.087 [+0.055, +0.119] |
+| 2024 | raw-gbm | 0.737 | 0.793 | 0.319 | 0.824 | 0.870 | 0.046 | +0.081 [+0.048, +0.114] |
+| 2024 | raw-logistic | 0.770 | 0.829 | 0.290 | 0.843 | 0.861 | 0.018 | +0.100 [+0.066, +0.136] |
+| 2024 | both-gbm (phys + Presto) | 0.777 | 0.727 | 0.172 | 0.846 | 0.880 | 0.034 | +0.103 [+0.072, +0.125] |
+| 2024 | physraw-gbm (phys + raw) | 0.780 | 0.738 | 0.179 | 0.843 | 0.885 | 0.042 | +0.100 [+0.069, +0.123] |
+| 2024 | majority | 0.500 | 1.000 | 1.000 | 0.500 | 0.500 | 0 | -0.243 |
+
+(emb-gbm, the logistic combinations and the controls are in the run's
+REPORT.md and transfer_table.csv.)
+
+**Do calendar-month inputs lose more when the year changes?** Not
+detectably within Austria. Losses are 0.02-0.05 ROC-AUC for nearly
+every model in both directions; the calendar inputs (raw-gbm 0.037 /
+0.046, Presto emb-gbm 0.014 / 0.053) sit in the same range as the
+relative-timing physical features (phys-gbm 0.030 / 0.036, 6-feature
+logistic 0.025 / 0.038), and with two test years and differences of a
+hundredth or two there is no clear difference. Austria's harvest
+calendar does not move much between 2022 and 2024, so this test is too
+gentle to expose a calendar dependence; the US is the real test.
+
+**Does any combination beat the 6-feature logistic out of year?** Yes,
+within Austria: every richer model (main-line LightGBM, Presto, raw
+values, and the combinations) beats it by 0.05-0.11 ROC-AUC in both
+directions with intervals that exclude zero; physical + Presto and
+physical + raw are the best (about +0.10). This is the opposite of what
+the US check found, which says the gap between Austrian years is not a
+good stand-in for the gap between Austria and Maryland. A transfer test
+that matters needs a second country (Netherlands or France, not yet
+extracted), run with the same command (`compare.py` adds
+leave-one-country-out automatically when the field files cover two
+countries).
+
+Spatial CV on the combined 3,600 fields repeats the Austria 2024 pattern:
+both-gbm vs phys-gbm +0.017 [+0.010, +0.024]; both-gbm vs physraw-gbm
+-0.002 [-0.006, +0.003], no clear difference; emb-gbm vs raw-gbm -0.023
+[-0.032, -0.014], worse.
 
 ## Field plus surroundings
 
