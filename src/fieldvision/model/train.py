@@ -243,6 +243,13 @@ def main(argv=None):
         ["q_n_usable_season", "q_max_gap_days", "q_mean_clear_fraction"]
     shift = collection_shift(Xd, md, yd, shift_cols, md["collection"])
     coll_year = pd.crosstab(md["collection"], [md["country"], md["year"]])
+    # cleanest version: only blocks seen under more than one collection
+    n_coll = md.groupby("block_id")["collection"].nunique()
+    multi = md["block_id"].isin(n_coll[n_coll > 1].index).to_numpy()
+    shift_matched = None
+    if multi.sum() >= 40:
+        shift_matched = collection_shift(Xd[multi], md[multi], yd[multi], shift_cols,
+                                         md.loc[multi, "collection"])
 
     # ------------------------------------------------------- final models
     final = {}
@@ -298,6 +305,8 @@ def main(argv=None):
     importance.to_csv(out / "permutation_importance.csv", index=False)
     if not shift.empty:
         shift.to_csv(out / "collection_shift.csv", index=False)
+    if shift_matched is not None and not shift_matched.empty:
+        shift_matched.to_csv(out / "collection_shift_matched.csv", index=False)
 
     plots.reliability(calib, out / "figures" / "calibration.png",
                       title="calibration on held-out spatial folds" +
@@ -337,6 +346,11 @@ def main(argv=None):
         "calibration": calib, "train_prevalence": float(yd.mean()),
         "prevalence_table": prev_tab.to_dict("records"),
         "label_disagreement": disagree.to_dict("records"),
+        "collection_shift_matched": None if shift_matched is None else {
+            "n_blocks": int(md.loc[multi, "block_id"].nunique()), "n_fields": int(multi.sum()),
+            "n_large": int(shift_matched.loc[shift_matched["abs_smd"] >= 0.5, "feature"].nunique())
+            if not shift_matched.empty else 0,
+            "top": shift_matched.head(12).to_dict("records") if not shift_matched.empty else []},
         "seconds_total": time.perf_counter() - t_start,
     }
     write_json(out / "metrics.json", metrics)
@@ -571,6 +585,25 @@ def _write_report(out, metrics, importance, shift, coll_year, figs, args, synthe
                             fmt(r["ks_stat"], 2)) for r in shift.head(12).to_dict("records")],
                           ["class", "collection a (years)", "collection b (years)", "feature",
                            "mean a", "mean b", "SMD", "KS"]))
+    ms = metrics.get("collection_shift_matched")
+    if ms:
+        L.append("\n### Same blocks, different collection\n")
+        L.append(f"Only the {ms['n_blocks']} blocks that have fields under more than one collection "
+                 f"({ms['n_fields']} fields; e.g. AT 2022 vs AT 2023 on the same places). Place and "
+                 "label source are fixed; year and imagery source still change together, so a "
+                 "shift here is source or season, not geography. Full table: "
+                 "`collection_shift_matched.csv`.\n")
+        rows = ms["top"]
+        if rows:
+            L.append(kv_table([(r["class"], f"{r['collection_a']} ({r['years_a']})",
+                                f"{r['collection_b']} ({r['years_b']})", r["feature"],
+                                fmt(r["mean_a"]), fmt(r["mean_b"]), fmt(r["smd"], 2),
+                                fmt(r["ks_stat"], 2)) for r in rows],
+                              ["class", "collection a (years)", "collection b (years)", "feature",
+                               "mean a", "mean b", "SMD", "KS"]))
+            L.append(f"\n{ms['n_large']} features with |SMD| >= 0.5 within a class.")
+        else:
+            L.append("Too few fields per class and collection to compare.")
     if coll_year is not None and not coll_year.empty:
         L.append("\nFields per collection, country and year:\n")
         L.append(coll_year.to_markdown() if hasattr(coll_year, "to_markdown") and _has_tabulate()
