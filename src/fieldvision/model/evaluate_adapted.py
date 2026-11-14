@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 from .artifacts import fingerprint, ledger_check_and_record, ledger_path, write_json
-from .evaluate import choose_groups, evaluate_frame, prepare, write_report, misclassified
+from .evaluate import check_frozen, choose_groups, evaluate_frame, prepare, write_report, misclassified
 from .metrics import metrics_from_counts
 from .predict import add_input_args
 from .report import fmt
@@ -83,8 +83,9 @@ def main(argv=None):
         raise SystemExit(f"--n-calib {args.n_calib} leaves too few fields to report on "
                          f"({len(prim)} labelled)")
     fp = fingerprint(prim["field_id"])
+    frozen = check_frozen(args.model, st["name"], meta)
     ledger = (ledger_path(out), f"external_adapted_n{args.n_calib}_s{args.seed}", fp,
-              meta["run_id"], out, args.allow_repeat)
+              frozen["id"], out, args.allow_repeat)
     earlier = ledger_check_and_record(*ledger, record=False)
     cal_idx = pick_calibration(prim["y"], args.n_calib, args.seed)
     cal_ids = set(prim.loc[cal_idx, "field_id"])
@@ -105,7 +106,7 @@ def main(argv=None):
     miss = misclassified(adapted, st["X"], st["fields"])
     miss.to_csv(out / "misclassified.csv", index=False)
     metrics = {
-        "mode": "threshold_recalibrated", "NOT_ZERO_SHOT": True,
+        "mode": "threshold_recalibrated", "NOT_ZERO_SHOT": True, "frozen_model": frozen,
         "fit_on_evaluation_set": f"decision threshold only, on {len(cal)} fields",
         "run_id": meta["run_id"], "model": st["name"],
         "original_threshold": st["model"].threshold, "adapted_threshold": thr,

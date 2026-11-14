@@ -227,3 +227,34 @@ def test_barc_field_years_and_external_report(tmp_path, run_dir):
     for needle in ("Claim and validation design", "by year and class", "timing_rule",
                    "grain precision", "Confusion matrix", "Abstention", "Limits"):
         assert needle in rep, needle
+
+
+def test_training_refuses_evaluation_fields(tmp_path):
+    import json
+    from synthetic import fields_to_geojson, make_dataset
+    from fieldvision.model import asof, train
+    f, ts = make_dataset(n_fields=60, seed=4, blocks_per_country=3)
+    ts.to_parquet(tmp_path / "ts.parquet", index=False)
+    for variant in ("us", "split"):
+        g = f.copy()
+        if variant == "us":
+            g.loc[g.index[:3], "country"] = "US"
+        else:
+            g["split"] = None
+            g.loc[g.index[:1], "split"] = "external_eval"
+        path = tmp_path / f"fields_{variant}.geojson"
+        path.write_text(json.dumps(fields_to_geojson(g)), encoding="utf-8")
+        for main in (train.main, asof.main):
+            with pytest.raises(SystemExit, match="reserved for external evaluation"):
+                main(["--timeseries", str(tmp_path / "ts.parquet"), "--fields", str(path),
+                      "--out", str(tmp_path / f"out_{variant}")])
+
+
+def test_frozen_model_id_recorded_and_reported(run_dir):
+    import json
+    from fieldvision.model.artifacts import frozen_model_id
+    root, out, *_ = run_dir
+    meta = json.loads((out / "run.json").read_text(encoding="utf-8"))
+    assert meta["frozen_model_ids"]["gbm"] == frozen_model_id(out, "gbm")
+    rep = (root / "zs" / "REPORT.md").read_text(encoding="utf-8")
+    assert meta["frozen_model_ids"]["gbm"] in rep

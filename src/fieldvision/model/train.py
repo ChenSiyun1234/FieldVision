@@ -34,7 +34,8 @@ from ..features.build import build_features
 from ..features.loading import load_fields, load_timeseries
 from ..features.season import FeatureConfig, feature_group, signal_features
 from . import plots
-from .artifacts import (fingerprint, ledger_check_and_record, ledger_path, save_run,
+from .artifacts import (fingerprint, ledger_check_and_record, ledger_path, refuse_evaluation_fields,
+                        save_run,
                         write_json)
 from .explain import reference_values
 from .harness import (collection_shift, compare_models, coverage_table, field_collection,
@@ -116,7 +117,8 @@ def main(argv=None):
     # ------------------------------------------------------------------ data
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        fields = load_fields(args.fields)
+        fields = load_fields(args.fields, keep_columns=["split"])
+        refuse_evaluation_fields(fields)
         t0 = time.perf_counter()
         ts, ts_notes = load_timeseries(args.timeseries, field_ids=fields["field_id"])
         load_s = time.perf_counter() - t0

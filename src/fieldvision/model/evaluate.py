@@ -61,11 +61,14 @@ def evaluate_frame(df, n_boot, seed, groups_col):
     out = {"all": score_block(y, pred, p, g, n_boot, seed),
            "confident": score_block(y[conf], pred[conf], p[conf], g[conf], n_boot, seed)}
     out["confident"]["coverage"] = float(conf.mean()) if len(conf) else float("nan")
-    out["per_year"] = {}
-    for yr, sub in df.groupby("year"):
-        out["per_year"][str(yr)] = score_block(sub["y"].to_numpy(int), sub["pred"].to_numpy(int),
-                                               sub["p"].to_numpy(float),
-                                               sub[groups_col].astype(str).to_numpy(), n_boot, seed)
+    for col in ("year", "collection"):
+        if col not in df.columns:
+            continue
+        out[f"per_{col}"] = {}
+        for key, sub in df.groupby(col):
+            out[f"per_{col}"][str(key)] = score_block(
+                sub["y"].to_numpy(int), sub["pred"].to_numpy(int), sub["p"].to_numpy(float),
+                sub[groups_col].astype(str).to_numpy(), n_boot, seed)
     return out
 
 
@@ -111,6 +114,9 @@ def prepare(args):
     preds = preds[np.isfinite(preds["y"].to_numpy(float))].copy()
     preds["y"] = preds["y"].astype(int)
     preds["unit"] = physical_unit(preds["field_id"])
+    from .harness import field_collection
+    coll = field_collection(ts)
+    preds["collection"] = preds["field_id"].map(coll).fillna("none")
     return dict(model=model, name=name, meta=meta, cfg=cfg, fields=fields, ts=ts, X=X,
                 info=info, preds=preds, n_unlabelled=int((~lab).sum()), models=models)
 
@@ -134,6 +140,19 @@ def domain_shift_table(run_dir, X, fields, cols=KEY_FEATURES):
             r[f"eval_{cls}_nan"] = float(ev.loc[ev["label"] == cls, c].isna().mean())
         rows.append(r)
     return pd.DataFrame(rows)
+
+
+def check_frozen(run_dir, name, meta):
+    """Identifier of the model being evaluated, checked against the one recorded at training."""
+    from .artifacts import frozen_model_id
+    now = frozen_model_id(run_dir, name)
+    recorded = (meta.get("frozen_model_ids") or {}).get(name)
+    if recorded and recorded != now:
+        raise SystemExit(f"model {name} in {run_dir} changed after training (recorded {recorded}, "
+                         f"now {now}); refusing to evaluate a model that is not the frozen one")
+    return {"id": now, "recorded_at_training": recorded, "model": name,
+            "run_created": meta.get("created"),
+            "note": "sha256 of the model file and its training configuration (first 16 hex)"}
 
 
 def counts_table(fields):
@@ -206,7 +225,8 @@ def main(argv=None):
     st = prepare(args)
     preds, meta, X, fields = st["preds"], st["meta"], st["X"], st["fields"]
     fp = fingerprint(preds["field_id"].unique())
-    ledger = (ledger_path(out), "external_zero_shot", fp, meta["run_id"], out, args.allow_repeat)
+    frozen = check_frozen(args.model, st["name"], meta)
+    ledger = (ledger_path(out), "external_zero_shot", fp, frozen["id"], out, args.allow_repeat)
     earlier = ledger_check_and_record(*ledger, record=False)
     groups_col, groups_note = choose_groups(fields[fields["field_id"].isin(preds["field_id"])])
     results = {}
@@ -230,6 +250,7 @@ def main(argv=None):
     metrics = {
         "mode": "zero_shot", "fit_on_evaluation_set": "nothing",
         "run_id": meta["run_id"], "model": st["name"], "threshold": st["model"].threshold,
+        "frozen_model": frozen,
         "training_synthetic": meta.get("synthetic", False),
         "evaluation_set_fingerprint": fp, "earlier_evaluations_of_this_set": earlier,
         "n_fields": int(len(fields)), "n_labelled": int(prim.shape[0]),
@@ -277,6 +298,13 @@ def write_report(out, metrics, results, st, miss, shift, title, intro, extra="",
              f"`{metrics['model']}` (chosen at training time), training threshold "
              f"{fmt(st['model'].threshold)}. Positive class = silage.\n")
     L.append(intro + "\n")
+    fz = metrics.get("frozen_model")
+    if fz:
+        L.append(f"Frozen model identifier: `{fz['id']}` (model `{fz['model']}`, trained "
+                 f"{fz.get('run_created')}; {fz['note']}; matches the value written at training: "
+                 f"{'yes' if fz.get('recorded_at_training') == fz['id'] else 'not recorded'}). "
+                 "The ledger refuses a second zero-shot evaluation of this set with the same "
+                 "frozen model.\n")
     if metrics.get("earlier_evaluations_of_this_set"):
         L.append(f"**Warning:** this field set was evaluated before "
                  f"{len(metrics['earlier_evaluations_of_this_set'])} time(s) (any run). "
@@ -340,6 +368,20 @@ def write_report(out, metrics, results, st, miss, shift, title, intro, extra="",
                                       [fmt_ci(mm, k) for k, _ in TABLE_METRICS]) + " |")
     L.append("\n".join(rows) + "\n")
     L.append("Per-year counts are tiny; read these as a check for one bad year, not as estimates.\n")
+    pc = results[st["name"]].get("per_collection")
+    if pc:
+        L.append("### By imagery source\n")
+        L.append("Each field-year is assigned the collection most of its usable dates came from "
+                 "('+mixed' if more than one). For Beltsville, 2022 comes from a different "
+                 "processing source (Planetary Computer) than 2021 and 2023; the training report's "
+                 "same-block check (Austria 2022 vs 2023) shows how much that source moves the "
+                 "features.\n")
+        rows = ["| " + " | ".join(["collection", "n (silage)"] + [h for _, h in TABLE_METRICS]) + " |",
+                "|" + "---|" * (2 + len(TABLE_METRICS))]
+        for key, mm in pc.items():
+            rows.append("| " + " | ".join([key, f"{mm['n']} ({mm['n_silage']})"] +
+                                          [fmt_ci(mm, k) for k, _ in TABLE_METRICS]) + " |")
+        L.append("\n".join(rows) + "\n")
     cal = metrics.get("calibration")
     if cal:
         L.append("## Calibration on this set\n")

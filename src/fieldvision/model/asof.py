@@ -27,7 +27,7 @@ import pandas as pd
 from ..features.build import build_features
 from ..features.loading import load_fields, load_timeseries
 from ..features.season import FeatureConfig
-from .artifacts import write_json
+from .artifacts import refuse_evaluation_fields, write_json
 from .harness import run_splits
 from .metrics import block_bootstrap_ci, classification_metrics, prevalence_weights
 from .models import make_factories
@@ -67,7 +67,8 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     t0 = time.perf_counter()
 
-    fields = load_fields(args.fields)
+    fields = load_fields(args.fields, keep_columns=["split"])
+    refuse_evaluation_fields(fields)
     fields = fields[np.isfinite(fields["y"].to_numpy(float))].reset_index(drop=True)
     if args.exclude_blocks:
         from .splits import holdout_mask

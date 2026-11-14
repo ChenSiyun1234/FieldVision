@@ -41,13 +41,56 @@ def write_json(path, obj):
         json.dump(_jsonable(obj), fh, indent=2, ensure_ascii=False)
 
 
+FORBIDDEN_SPLITS = {"external_eval"}
+FORBIDDEN_COUNTRIES = {"US"}
+
+
+def refuse_evaluation_fields(fields):
+    """Stop if any field is reserved for external evaluation.
+
+    US fields (the Beltsville set and anything else American) and any field
+    marked split=external_eval must never be trained, cross-validated or
+    tuned on; they are scored only by `evaluate`, once.
+    """
+    split = fields["split"].astype(str).str.strip().str.lower() if "split" in fields else None
+    bad = fields["country"].astype(str).str.upper().isin(FORBIDDEN_COUNTRIES)
+    if split is not None:
+        bad |= split.isin(FORBIDDEN_SPLITS)
+    if bad.any():
+        files = sorted(fields.loc[bad, "fields_file"].astype(str).unique()) \
+            if "fields_file" in fields else []
+        raise SystemExit(
+            f"refusing to train on {int(bad.sum())} fields reserved for external evaluation "
+            f"(country US or split=external_eval), from {files}. Evaluate them with "
+            "`python -m fieldvision.model.evaluate` after the model is frozen.")
+
+
+def frozen_model_id(run_dir, name):
+    """Hash of the saved model file and the training configuration it came from."""
+    run_dir = Path(run_dir)
+    h = hashlib.sha256()
+    h.update((run_dir / "models" / f"{name}.pkl").read_bytes())
+    with open(run_dir / RUN_META, encoding="utf-8") as fh:
+        meta = json.load(fh)
+    cfg = {k: meta.get(k) for k in ("feature_config", "variant", "threshold", "feature_names",
+                                    "training", "holdout_patterns")}
+    h.update(json.dumps(cfg, sort_keys=True, default=str).encode("utf-8"))
+    return h.hexdigest()[:16]
+
+
 def save_run(run_dir, models, meta):
-    """models: name -> fitted model. meta: dict with at least primary, variant, feature_config."""
+    """models: name -> fitted model. meta: dict with at least primary, variant, feature_config.
+
+    Also records a frozen identifier per model (see frozen_model_id).
+    """
     run_dir = Path(run_dir)
     (run_dir / "models").mkdir(parents=True, exist_ok=True)
     for name, model in models.items():
         with open(run_dir / "models" / f"{name}.pkl", "wb") as fh:
             pickle.dump(model, fh)
+    write_json(run_dir / RUN_META, meta)
+    meta = dict(meta)
+    meta["frozen_model_ids"] = {name: frozen_model_id(run_dir, name) for name in models}
     write_json(run_dir / RUN_META, meta)
 
 
