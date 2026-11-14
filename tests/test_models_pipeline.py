@@ -392,7 +392,7 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     assert ab["abstained"] and ab["abstained_acres"] > 0
 
 
-MACHINE_PATH = r"[A-Za-z]:[\/]|\bUsers\b|worktrees"
+MACHINE_PATH = r"[A-Za-z]:[\\/]|\bUsers\b|worktrees"
 
 
 def test_registry_export_writes_no_machine_paths(run_dir, tmp_path):
