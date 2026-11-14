@@ -6,7 +6,7 @@ Use the labels as supervised proxies and inspect harvest curves separately.
 
 ## What is available
 
-All under `C:\t\fv\data\labels\` (outside git). One line per finished file is appended to `READY.txt` there.
+All under `<data>\labels\` (outside git). One line per finished file is appended to `READY.txt` there.
 
 | Folder | Source and release | Fields per class | Blocks |
 |---|---|---:|---:|
@@ -29,12 +29,12 @@ Run from the repository root (PowerShell):
 
 ```powershell
 $env:PYTHONPATH='src'
-& C:\t\fv\venv\Scripts\python.exe -m pytest -q
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.fetch --country AT --year 2024 --out C:\t\fv\data\labels\at_2024 --target-per-class 1200
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.fetch --country AT --year 2023 --out C:\t\fv\data\labels\at_2023 --target-per-class 600 --blocks-from C:\t\fv\data\labels\at_2024\fields.geojson
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.fetch --country AT --year 2022 --out C:\t\fv\data\labels\at_2022 --target-per-class 600 --blocks-from C:\t\fv\data\labels\at_2024\fields.geojson
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.fetch --country NL --year 2025 --out C:\t\fv\data\labels\nl_2025 --target-per-class 800
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.fetch --country FR --year 2022 --out C:\t\fv\data\labels\fr_2022 --target-per-class 800
+& python -m pytest -q
+& python -m fieldvision.labels.fetch --country AT --year 2024 --out <data>\labels\at_2024 --target-per-class 1200
+& python -m fieldvision.labels.fetch --country AT --year 2023 --out <data>\labels\at_2023 --target-per-class 600 --blocks-from <data>\labels\at_2024\fields.geojson
+& python -m fieldvision.labels.fetch --country AT --year 2022 --out <data>\labels\at_2022 --target-per-class 600 --blocks-from <data>\labels\at_2024\fields.geojson
+& python -m fieldvision.labels.fetch --country NL --year 2025 --out <data>\labels\nl_2025 --target-per-class 800
+& python -m fieldvision.labels.fetch --country FR --year 2022 --out <data>\labels\fr_2022 --target-per-class 800
 ```
 
 1. **Ranking.** Each country has a few sampling windows (lon/lat boxes, one per region). In each window the
@@ -52,7 +52,7 @@ $env:PYTHONPATH='src'
 5. **Reusing blocks across years** (`--blocks-from`). Austria 2023 and 2022 use blocks of `at_2024` taken in the same
    best-first order, so both years are the same 10 blocks and the geography is comparable. Parcels are re-downloaded from each
    year's own collection and sampled again; field ids differ between years, parcels change from year to year.
-6. **Caching.** Every API page is stored in `C:\t\fv\data\labels\_cache\<folder>` (properties already whitelisted).
+6. **Caching.** Every API page is stored in `<data>\labels\_cache\<folder>` (properties already whitelisted).
    Re-running the same command reads the cache and gives byte-identical `fields.geojson`
    (checked by md5 for all five files). Delete the cache folder to refetch.
 
@@ -161,11 +161,11 @@ the converter refuses to overwrite a `fields.geojson`):
 
 ```powershell
 $env:PYTHONPATH='src'
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.from_file C:\t\fv\data\eval\barc\BARC_Corn.2021-2023.gpkg `
+& python -m fieldvision.labels.from_file <data>\eval\barc\BARC_Corn.2021-2023.gpkg `
     --layer barc_silage_grain_corn20212023 --id-column OBJECTID `
     --year-columns Corn_2021=2021 Corn_2022=2022 Corn_2023=2023 `
     --map Silage=silage --map Grain=grain --country US --source barc-gpkg-2021-2023 --prefix barc `
-    --split external_eval --block-id US-BARC --keep FARM FIELD --by-year-dirs --out C:\t\fv\data\labels\_check_barc
+    --split external_eval --block-id US-BARC --keep FARM FIELD --by-year-dirs --out <data>\labels\_check_barc
 ```
 
 Result on 2026-11-14 against the files used for extraction: same 44 field-years (2021: 18, 2022: 7, 2023: 19; 32 grain,

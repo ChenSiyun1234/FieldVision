@@ -4,8 +4,8 @@ Run from the repository root in PowerShell. No login or API key is needed.
 
 ```powershell
 $env:PYTHONPATH = Join-Path (Get-Location) 'src'
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.s2.extract --fields fields.geojson --year 2025 --start 04-01 --end 11-30 --out C:\t\fv\data\timeseries\nl_2025 --workers 16
-& C:\t\fv\venv\Scripts\python.exe -m pytest -q
+& python -m fieldvision.s2.extract --fields fields.geojson --year 2025 --start 04-01 --end 11-30 --out <data>\timeseries\nl_2025 --workers 16
+& python -m pytest -q
 ```
 
 Set `PYTHONPATH` once per shell. The package also supports an ordinary editable
@@ -134,7 +134,7 @@ the Graz basin. On block `32633_AT-E4720N2640_3`, pixels inside the fields were 
 5,613, SCL 8: 360, SCL 9: 1,070; the SCL-5 pixels had median B02 0.464 and B11 0.478.
 In `at_2022` this scene gives 106 rows on 106 fields with clear_fraction ~1 and
 median B02 0.458, B04 0.466, B08 0.499, B11 0.469, B12 0.431. Quicklook:
-`C:\t\fv\data\timeseries\qa\at2022_20221128_preview.png`. Bright SWIR rules out snow.
+`<data>\timeseries\qa\at2022_20221128_preview.png`. Bright SWIR rules out snow.
 
 **How widespread** (usable rows with median B02 > 0.25, i.e. the same signature):
 
@@ -220,9 +220,9 @@ of per-field band medians, not per-pixel index medians.
 ## Reproduce the Austrian smoke test
 
 ```powershell
-& C:\t\fv\venv\Scripts\python.exe scripts/fetch_austria_smoke.py --out C:\t\fv\data\timeseries\smoke_input
+& python scripts/fetch_austria_smoke.py --out <data>\timeseries\smoke_input
 $env:PYTHONPATH = Join-Path (Get-Location) 'src'
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.s2.extract --fields C:\t\fv\data\timeseries\smoke_input\fields.geojson --year 2024 --start 04-01 --end 11-30 --out C:\t\fv\data\timeseries\austria_2024_smoke --workers 16
+& python -m fieldvision.s2.extract --fields <data>\timeseries\smoke_input\fields.geojson --year 2024 --start 04-01 --end 11-30 --out <data>\timeseries\austria_2024_smoke --workers 16
 ```
 
 The fetcher uses the public INVEKOS API with `snar_code='109'` and bbox
@@ -245,7 +245,7 @@ finished Austrian overlap blocks (32633_AT-E4590N2800_0 and _1, 44 of 97 reads
 skipped each) changed 25 of 1,325 and 41 of 1,378 rows: Sen2Cor runs per tile, so
 the two tiles' SCL masks differ slightly and the skipped tile sometimes had more
 clear pixels for a field. All runs therefore read every tile. Evidence and the
-check script: `C:\t\fv\data\timeseries\tile_skip_check\`.
+check script: `<data>\timeseries\tile_skip_check\`.
 
 Cost is roughly 0.5–0.6 s per (scene, block) pair, nearly independent of the
 number of fields in a block, so dense blocks are what make it cheap. The Austrian

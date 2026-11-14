@@ -46,11 +46,11 @@ From the repository root in PowerShell (output goes outside the repo; the folder
 
 ```powershell
 $env:PYTHONPATH='src'
-& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.from_file your_file.gpkg `
+& python -m fieldvision.labels.from_file your_file.gpkg `
     --layer your_layer `
     --id-column field --label-column use --year 2025 `
     --map Silage=silage --map Grain=grain `
-    --country US --source team-data --prefix team --out C:\t\fv\data\labels\team_data
+    --country US --source team-data --prefix team --out <data>\labels\team_data
 ```
 
 Use `--year-column` or `--year-columns` for layouts B and C instead of `--year`. Leave out `--layer` for single-layer files. `--map` is not case-sensitive; blank labels and values you did not map are dropped and counted. Other useful options: `--keep COL COL` to carry columns along, `--split NAME` to mark a test set, `--crs EPSG:xxxx` if your file has no coordinate system, `--by-year-dirs` for one file per year. `python -m fieldvision.labels.from_file --help` lists everything.

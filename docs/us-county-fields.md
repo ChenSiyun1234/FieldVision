@@ -4,7 +4,7 @@ Unlabelled corn fields for one county and season, built from USDA NASS Crop Sequ
 Boundaries (CSB), so the frozen models can be run on a whole county and the predicted acres
 compared with the 2022 Census of Agriculture. No labels: the county check is the only test.
 
-| Folder (under `C:\t\fv\data\labels\`) | County | Fields | Corn acres (polygons) | Census grain / silage harvested | Silage share |
+| Folder (under `<data>\labels\`) | County | Fields | Corn acres (polygons) | Census grain / silage harvested | Silage share |
 |---|---|---:|---:|---:|---:|
 | `us_24021_2022` | Frederick (24021) | 2,233 | 39,030 | 31,752 / 7,748 | 19.6 % |
 | `us_24035_2022` | Queen Anne's (24035) | 1,449 | 51,533 | 53,815 / 715 | 1.3 % |
@@ -38,20 +38,20 @@ member, so the archive cannot be read partially; it was deleted after the state 
 From the repository root (PowerShell, `$env:PYTHONPATH='src'`):
 
 ```powershell
-python scripts/csb_subset.py --zip <dir>\NationalCSB_2018-2025_rev23.zip --state 24 --out C:\t\fv\data\us\csb\csb1825_md.parquet
-python -m fieldvision.labels.from_file C:\t\fv\data\us\csb\csb1825_md.parquet `
+python scripts/csb_subset.py --zip <dir>\NationalCSB_2018-2025_rev23.zip --state 24 --out <data>\us\csb\csb1825_md.parquet
+python -m fieldvision.labels.from_file <data>\us\csb\csb1825_md.parquet `
     --where STATEFIPS=24 --where CNTYFIPS=021 --where CDL2022=1 --unlabelled --year 2022 `
     --id-column CSBID --no-year-in-id --prefix csb --country US --source nass-csb `
     --crop-code-column CDL2022 --crop-name Corn --metric-crs EPSG:32618 `
-    --keep CSBACRES=acres_reported --set county_fips=24021 --out C:\t\fv\data\labels\us_24021_2022
-python scripts/county_corn_check.py --fields C:\t\fv\data\labels\us_24021_2022\fields.geojson --fips 24021 --year 2022 `
-    --counties C:\t\fv\data\us\tiger\tl_2022_md_county.geojson `
-    --quickstats C:\t\fv\data\eval\quickstats\corn_grain_silage_acres_2012_2025.csv `
-    --csb C:\t\fv\data\us\csb\csb1825_md.parquet --out C:\t\fv\data\labels\us_24021_2022\county_check.json
+    --keep CSBACRES=acres_reported --set county_fips=24021 --out <data>\labels\us_24021_2022
+python scripts/county_corn_check.py --fields <data>\labels\us_24021_2022\fields.geojson --fips 24021 --year 2022 `
+    --counties <data>\us\tiger\tl_2022_md_county.geojson `
+    --quickstats <data>\eval\quickstats\corn_grain_silage_acres_2012_2025.csv `
+    --csb <data>\us\csb\csb1825_md.parquet --out <data>\labels\us_24021_2022\county_check.json
 ```
 
 The Maryland subset (86,840 polygons, 22,888 with CDL2022 = corn) and the Maryland counties of
-TIGER/Line 2022 (`tl_2022_us_county.zip`) are kept under `C:\t\fv\data\us\`.
+TIGER/Line 2022 (`tl_2022_us_county.zip`) are kept under `<data>\us\`.
 
 County membership is CSB's own `CNTYFIPS`. Against the TIGER 2022 outline: Frederick 1 field
 whose representative point is outside the county (43 ha of polygon area outside in total),

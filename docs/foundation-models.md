@@ -4,7 +4,7 @@ A comparison experiment next to the main line (physical features + rule /
 logistic regression / LightGBM in `src/fieldvision/model/`), not a
 replacement for it. Code: `src/fieldvision/foundation/`, tests:
 `tests/test_foundation.py`. Outputs (not in git):
-`C:\t\fv\data\foundation\runs\<run>\` (REPORT.md, summary.json,
+`<data>\foundation\runs\<run>\` (REPORT.md, summary.json,
 predictions.parquet, embeddings).
 
 ## Conclusion
@@ -55,7 +55,7 @@ Downloaded: the Presto GitHub repo (shallow clone, 84 MB incl. sample data;
 the weights file `data/default_model.pt` is 3.3 MB, SHA-256 in each run's
 summary.json), the openmapflow 0.2.4 source archive (84 kB, only read to
 check Presto's Sentinel-2 product), and a CPU-only PyTorch 2.15 wheel plus
-LightGBM/scikit-learn into `C:\t\fv\venv-fm` (1.3 GB on disk after
+LightGBM/scikit-learn into `<venv>-fm` (1.3 GB on disk after
 installation; the CUDA build of PyTorch, about 3 GB, was not needed).
 
 ## Method
@@ -120,9 +120,9 @@ difference".
 
 ## Results
 
-All numbers: Austria 2024, `C:\t\fv\data\timeseries\at_2024\timeseries.parquet`
+All numbers: Austria 2024, `<data>\timeseries\at_2024\timeseries.parquet`
 (listed in READY.txt at 12:02), labels `at_2024\fields.geojson`, 2,400
-fields, 20 blocks, run `C:\t\fv\data\foundation\runs\at2024_v2`. Every
+fields, 20 blocks, run `<data>\foundation\runs\at2024_v2`. Every
 field had at least 5 usable months (1,831 had all 8), so no field was
 dropped by any model; all rows below are scored on the same 2,400 fields.
 The `phys-gbm` row reproduces the main line's own run on this data
@@ -213,7 +213,7 @@ in-fold calibration, which is why it sits at a different operating point
 
 Data: Austria 2022 (`at_2022\timeseries.parquet`, listed 13:55 local,
 1,200 fields in 10 blocks that are all also in 2024) + Austria 2024
-(2,400 fields), run `C:\t\fv\data\foundation\runs\at2022_2024`. Train on
+(2,400 fields), run `<data>\foundation\runs\at2022_2024`. Train on
 one year, test on the other, same models and settings as above; the
 training year's fields in the same blocks are kept (the main line's
 default). "AUC in" is the same held-out fields scored by the spatial-CV
