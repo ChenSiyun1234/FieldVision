@@ -115,7 +115,9 @@ class RuleModel(_Base):
     """
     name = "rule"
 
-    def __init__(self, timing="harv_days_since_peak", moisture=RULE_MOISTURE, min_gain=0.01):
+    def __init__(self, timing="harv_days_since_peak", moisture=RULE_MOISTURE, min_gain=0.01,
+                 name="rule"):
+        self.name = name
         self.timing = timing
         self.moisture = moisture
         self.min_gain = min_gain
@@ -366,7 +368,7 @@ class CalibratedModel(_Base):
         return text + f"; Platt calibration p = sigmoid({a:.2f}*logit(score) {b:+.2f})"
 
 
-MODEL_ORDER = ["majority", "rule", "logistic", "gbm"]
+MODEL_ORDER = ["majority", "timing_rule", "rule", "logistic", "gbm"]
 
 
 def make_factories(columns, variant="relative", exclude=(), use_quality=False, seed=0,
@@ -388,6 +390,10 @@ def make_factories(columns, variant="relative", exclude=(), use_quality=False, s
     timing = RULE_TIMING[variant]
     # partials, not lambdas: the calibrated wrapper keeps its base factory and must pickle
     base = {
+        # the organisers' suggested baseline: calendar date of the sustained NDVI
+        # decline, one threshold, nothing else
+        "timing_rule": partial(RuleModel, timing="harv_mid_doy", min_gain=float("inf"),
+                               name="timing_rule"),
         "rule": partial(RuleModel, timing=timing),
         "logistic": partial(LogisticModel, logit_cols),
         "gbm": partial(GBMModel, gbm_cols, seed=seed),

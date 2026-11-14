@@ -26,7 +26,8 @@ import pandas as pd
 
 from .artifacts import (fingerprint, ledger_check_and_record, ledger_path, load_run,
                         predictions_frame, write_json)
-from .metrics import block_bootstrap_ci, classification_metrics
+from .metrics import (block_bootstrap_ci, calibration_summary, classification_metrics,
+                      exact_intervals)
 from .predict import add_input_args, load_inputs
 from .report import SYNTHETIC_BANNER, TABLE_METRICS, confusion_line, fmt, fmt_ci, kv_table
 
@@ -40,7 +41,16 @@ def score_block(y, pred, p, groups, n_boot, seed):
     m = classification_metrics(y, pred, p)
     if len(y) and n_boot and len(np.unique(y)) == 2:
         m["ci95"] = block_bootstrap_ci(y, pred, p, groups, n_boot=n_boot, seed=seed)
+    m["exact95"] = exact_intervals(m["confusion"])
+    if len(y) and len(np.unique(y)) == 2:
+        m["brier"] = float(np.mean((np.asarray(p, float) - np.asarray(y, float)) ** 2))
     return m
+
+
+def physical_unit(field_ids):
+    """'barc-12-2022' -> 'barc-12': the same polygon in different years is one unit."""
+    s = pd.Series(np.asarray(field_ids, dtype=object)).astype(str)
+    return s.str.replace(r"-(19|20)\d\d$", "", regex=True).to_numpy()
 
 
 def evaluate_frame(df, n_boot, seed, groups_col):
@@ -64,9 +74,12 @@ def choose_groups(fields):
     n_blocks = fields["block_id"].nunique()
     if n_blocks >= MIN_BLOCKS_FOR_BLOCK_BOOTSTRAP:
         return "block_id", (f"block bootstrap over {n_blocks} blocks")
-    return "field_id", (f"only {n_blocks} block(s), so the bootstrap resamples single fields. "
-                        "Fields on one farm share weather and management, so these intervals "
-                        "are too narrow")
+    n_units = len(np.unique(physical_unit(fields["field_id"])))
+    return "unit", (f"only {n_blocks} 10 km block(s). Count metrics carry exact binomial "
+                    "(Clopper-Pearson) 95% intervals; ROC-AUC and PR-AUC a bootstrap over the "
+                    f"{n_units} physical fields (all years of a polygon resampled together). Both "
+                    "treat fields as independent, which fields on one farm are not, so the true "
+                    "uncertainty is larger")
 
 
 def prepare(args):
@@ -97,6 +110,7 @@ def prepare(args):
         X[["field_id", "low_evidence", "low_evidence_reason"]], on="field_id")
     preds = preds[np.isfinite(preds["y"].to_numpy(float))].copy()
     preds["y"] = preds["y"].astype(int)
+    preds["unit"] = physical_unit(preds["field_id"])
     return dict(model=model, name=name, meta=meta, cfg=cfg, fields=fields, ts=ts, X=X,
                 info=info, preds=preds, n_unlabelled=int((~lab).sum()), models=models)
 
@@ -120,6 +134,52 @@ def domain_shift_table(run_dir, X, fields, cols=KEY_FEATURES):
             r[f"eval_{cls}_nan"] = float(ev.loc[ev["label"] == cls, c].isna().mean())
         rows.append(r)
     return pd.DataFrame(rows)
+
+
+def counts_table(fields):
+    """Evaluated field(-year)s per year and class, plus unlabelled ones that are not scored."""
+    f = fields.copy()
+    f["year"] = f["year"].map(lambda v: str(int(v)) if pd.notna(v) else "unknown")
+    f["cls"] = f["label"].fillna("unlabelled (not scored)")
+    t = pd.crosstab(f["year"], f["cls"])
+    for c in ("silage", "grain", "unlabelled (not scored)"):
+        if c not in t.columns:
+            t[c] = 0
+    t["scored"] = t["silage"] + t["grain"]
+    t.loc["total"] = t.sum()
+    return t.reset_index()[["year", "silage", "grain", "scored", "unlabelled (not scored)"]]
+
+
+def abstentions(pred_frame, fields):
+    """Labelled fields the method flags as low evidence, with its call and why."""
+    lab = pred_frame[pred_frame["label"].notna()] if "label" in pred_frame else pred_frame
+    cols = [c for c in ("field_id", "year", "label", "p_silage", "predicted_label",
+                        "low_evidence_reason", "n_usable_dates", "max_gap_days",
+                        "harvest_interval_days", "reason") if c in lab.columns]
+    return lab.loc[lab["low_evidence"], cols].reset_index(drop=True)
+
+
+def transfer_evidence(run_dir):
+    """Leave-one-country/year-out numbers from the training run, for the external report."""
+    path = Path(run_dir) / "metrics.json"
+    if not path.exists():
+        return None
+    import json
+    with open(path, encoding="utf-8") as fh:
+        m = json.load(fh)
+    v = m.get("variant", "relative")
+    out = []
+    for scheme, by_var in m.get("summary", {}).items():
+        if not scheme.startswith(("loco:", "loyo:", "spatial")):
+            continue
+        for model in ("majority", "timing_rule", "gbm"):
+            r = by_var.get(v, {}).get(model, {}).get("all")
+            if r:
+                out.append({"scheme": scheme, "model": model, "n": r["n"],
+                            "balanced_accuracy": r["balanced_accuracy"], "roc_auc": r["roc_auc"],
+                            "recall": r["recall"], "fpr": r["fpr"],
+                            "grain_recall": r.get("grain_recall")})
+    return out
 
 
 def misclassified(preds_model, X, fields):
@@ -163,6 +223,8 @@ def main(argv=None):
     shift = domain_shift_table(args.model, X, fields)
     if shift is not None:
         shift.to_csv(out / "domain_shift.csv", index=False)
+    abstain = abstentions(pf, fields)
+    abstain.to_csv(out / "abstentions.csv", index=False)
 
     n = max(len(X), 1)
     metrics = {
@@ -178,6 +240,9 @@ def main(argv=None):
                           "load_seconds": st["info"]["load_seconds"]},
         "timeseries_notes": st["info"]["timeseries_notes"],
         "low_evidence_reasons": X["low_evidence_reason"].replace("", "ok").value_counts().to_dict(),
+        "counts_by_year": counts_table(fields).to_dict("records"),
+        "calibration": calibration_summary(prim["y"], prim["p"], n_bins=5),
+        "transfer_evidence_from_training": transfer_evidence(args.model),
     }
     write_json(out / "metrics.json", metrics)
     write_report(out, metrics, results, st, miss, shift, title="External evaluation: ZERO-SHOT",
@@ -203,8 +268,8 @@ def metric_rows(results, order, subset="all"):
 
 def write_report(out, metrics, results, st, miss, shift, title, intro, extra="", main_rows=None):
     meta = st["meta"]
-    main_rows = main_rows or ["majority", st["name"]]
-    others = [m for m in ("rule", "logistic", "gbm") if m not in main_rows]
+    main_rows = main_rows or ["majority", "timing_rule", st["name"]]
+    others = [m for m in ("timing_rule", "rule", "logistic", "gbm") if m not in main_rows]
     L = [f"# {title}\n"]
     if meta.get("synthetic"):
         L.append(SYNTHETIC_BANNER)
@@ -220,14 +285,53 @@ def write_report(out, metrics, results, st, miss, shift, title, intro, extra="",
              f"unlabelled ignored). Intervals: {metrics['bootstrap_note']}.\n")
     if extra:
         L.append(extra + "\n")
-    L.append("## Primary model and baseline\n")
+    L.append("## Claim and validation design\n")
+    L.append("Claim: the timing and state of the harvest drop seen by Sentinel-2 separates silage "
+             "from grain corn, and a model learned on European parcel registries (Austria 2022-24, "
+             "Netherlands 2025, France 2022) transfers to US fields without retraining.\n")
+    L.append("Design: all model choices were made on the European data with splits grouped by "
+             "10 km block (never random fields), plus leave-one-country-out and leave-one-year-out. "
+             "This set was not used for any fitting, tuning or feature choice and is scored once. "
+             "With this few fields it confirms or contradicts the European transfer results "
+             "below; it cannot replace them.\n")
+    L.append("### Fields evaluated, by year and class\n")
+    ct = metrics.get("counts_by_year") or []
+    if ct:
+        cols = list(ct[0].keys())
+        L.append(kv_table([[r[c] for c in cols] for r in ct], cols))
+        L.append("\nBlank labels are 'not labelled', not negatives, and are not scored. One "
+                 "polygon can appear in several years.\n")
+    L.append("## Results: baselines and primary model\n")
+    L.append("`majority` predicts the training majority class for every field; `timing_rule` "
+             "is the transparent baseline (silage if the sustained NDVI decline comes before a "
+             "day-of-year threshold fitted on the European training data only). Precision and "
+             "recall are given for both classes.\n")
     L.append(metric_rows(results, main_rows))
     m = results[st["name"]]["all"]
-    L.append(f"\nConfusion: {confusion_line(m)}. `majority` predicts the training majority "
-             "class for every field.\n")
-    L.append("Confident subset (low-evidence fields removed):\n")
+    c = m["confusion"]
+    L.append(f"\nConfusion matrix, `{st['name']}` (rows = declared, columns = predicted):\n")
+    L.append(kv_table([("silage", c["tp"], c["fn"]), ("grain", c["fp"], c["tn"])],
+                      ["declared \\ predicted", "silage", "grain"]))
+    if "timing_rule" in results:
+        c2 = results["timing_rule"]["all"]["confusion"]
+        L.append("\nConfusion matrix, `timing_rule`:\n")
+        L.append(kv_table([("silage", c2["tp"], c2["fn"]), ("grain", c2["fp"], c2["tn"])],
+                          ["declared \\ predicted", "silage", "grain"]))
+    L.append("\n### Abstention\n")
+    L.append("Fields flagged low evidence still get a call, but the method says it should not be "
+             "trusted. Confident subset (low-evidence fields removed):\n")
     L.append(metric_rows(results, main_rows, "confident"))
     L.append(f"\nCoverage {fmt(results[st['name']]['confident']['coverage'])}.\n")
+    ab_path = Path(out) / "abstentions.csv"
+    if ab_path.exists():
+        ab = pd.read_csv(ab_path)
+        if len(ab):
+            cols = [c_ for c_ in ("field_id", "label", "p_silage", "predicted_label",
+                                  "low_evidence_reason", "n_usable_dates", "max_gap_days")
+                    if c_ in ab.columns]
+            L.append(f"{len(ab)} labelled fields abstained on (all in `abstentions.csv`):\n")
+            L.append(kv_table([[r[c_] for c_ in cols] for r in ab.head(30).to_dict("records")], cols))
+            L.append("")
     L.append("## Per year\n")
     head = ["year", "n (silage)"] + [h for _, h in TABLE_METRICS]
     rows = ["| " + " | ".join(head) + " |", "|" + "---|" * len(head)]
@@ -235,6 +339,35 @@ def write_report(out, metrics, results, st, miss, shift, title, intro, extra="",
         rows.append("| " + " | ".join([yr, f"{mm['n']} ({mm['n_silage']})"] +
                                       [fmt_ci(mm, k) for k, _ in TABLE_METRICS]) + " |")
     L.append("\n".join(rows) + "\n")
+    L.append("Per-year counts are tiny; read these as a check for one bad year, not as estimates.\n")
+    cal = metrics.get("calibration")
+    if cal:
+        L.append("## Calibration on this set\n")
+        L.append(f"Brier {fmt(cal['brier'])}, ECE {fmt(cal['ece'])}. Probabilities are calibrated "
+                 "for the 50/50 training balance, so with fewer silage fields here they will read "
+                 "high on average. Per bin (mean predicted -> observed silage share): " +
+                 ", ".join(f"{b['mean_p']:.2f}->{b['share_silage']:.2f} (n={b['n']})"
+                           for b in cal["reliability"]) + ".\n")
+    te = metrics.get("transfer_evidence_from_training")
+    if te:
+        L.append("## Transfer evidence from the European data (main evidence)\n")
+        L.append("From the training run: spatial CV, and each country or year held out entirely. "
+                 "This is where the transfer claim is tested with hundreds of fields per split.\n")
+        L.append(kv_table([(r["scheme"], r["model"], r["n"], fmt(r["balanced_accuracy"]),
+                            fmt(r["roc_auc"]), fmt(r["recall"]), fmt(r["grain_recall"]), fmt(r["fpr"]))
+                           for r in te],
+                          ["split", "model", "n", "bal. acc.", "ROC-AUC", "silage recall",
+                           "grain recall", "FPR"]))
+        L.append("")
+    L.append("## Limits\n")
+    L.append("- Geography: one research farm in Maryland. It says nothing direct about the Corn "
+             "Belt, the South (earlier harvest calendars) or irrigated double-cropped regions.\n"
+             "- Time: 2021-2023, with imagery from more than one processing source; see the "
+             "per-year table and the training report's collection-shift check.\n"
+             "- Labels: European labels are farmer declarations; the Dutch ones are made in spring "
+             "and can differ from the actual use.\n"
+             "- The harvest date is bracketed by the last clear image before and the first after; "
+             "cloud gaps widen it, and wide brackets are what drive abstention.\n")
     L.append("## Other models in the run (secondary; not used to choose the model)\n")
     L.append(metric_rows(results, others) + "\n")
     L.append("## Misclassified fields (primary model)\n")

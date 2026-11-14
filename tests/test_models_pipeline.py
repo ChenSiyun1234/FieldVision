@@ -202,3 +202,28 @@ def test_asof_truncation_and_cli(tmp_path):
     g = tab[tab.model == "gbm"].set_index("cutoff")
     assert g.loc["12-01", "harvest_seen_share"] > g.loc["08-15", "harvest_seen_share"]
     assert (tmp_path / "a" / "asof.png").exists()
+
+
+def test_barc_field_years_and_external_report(tmp_path, run_dir):
+    import geopandas as gpd
+    from shapely.geometry import box
+    from fieldvision.model.barc import counts_by_year, field_years
+    rows = []
+    for i in range(4):
+        rows.append({"OBJECTID": i + 1, "ACRES": 20.0,
+                     "Corn_2021": ["Silage", None, "Grain", ""][i],
+                     "Corn_2022": ["Grain", "Silage", " ", "grain"][i],
+                     "geometry": box(1335000 + i * 1500, 470000, 1335900 + i * 1500, 470900)})
+    g = gpd.GeoDataFrame(rows, crs="EPSG:2248")
+    fy = field_years(g)
+    assert len(fy) == 8 and fy["field_id"].iloc[0] == "barc-1-2021"
+    assert int(fy["label"].notna().sum()) == 5
+    assert fy.crs.to_epsg() == 4326 and -77.5 < fy["centroid_lon"].iloc[0] < -76.5
+    t = counts_by_year(fy).set_index(counts_by_year(fy).index.astype(str))
+    assert t.loc["total", "total"] == 5
+    # the external report from the pipeline fixture has the required sections
+    root = run_dir[0]
+    rep = (root / "zs" / "REPORT.md").read_text(encoding="utf-8")
+    for needle in ("Claim and validation design", "by year and class", "timing_rule",
+                   "grain precision", "Confusion matrix", "Abstention", "Limits"):
+        assert needle in rep, needle

@@ -9,9 +9,10 @@ SYNTHETIC_BANNER = (
     "model does on real fields.\n"
 )
 
-TABLE_METRICS = [("precision", "precision"), ("recall", "recall"), ("fpr", "FPR"),
-                 ("f1", "F1"), ("balanced_accuracy", "bal. acc."), ("roc_auc", "ROC-AUC"),
-                 ("pr_auc", "PR-AUC")]
+TABLE_METRICS = [("precision", "silage precision"), ("recall", "silage recall"), ("fpr", "FPR"),
+                 ("grain_precision", "grain precision"), ("grain_recall", "grain recall"),
+                 ("balanced_accuracy", "bal. acc."), ("roc_auc", "ROC-AUC"),
+                 ("pr_auc", "PR-AUC (silage)")]
 
 
 def fmt(v, digits=3):
@@ -27,8 +28,9 @@ def fmt(v, digits=3):
 
 
 def fmt_ci(m, key, digits=2):
+    """Value with its interval: exact (Clopper-Pearson) when present, else bootstrap."""
     v = fmt(m.get(key), digits + 1)
-    ci = m.get("ci95", {}).get(key)
+    ci = m.get("exact95", {}).get(key) or m.get("ci95", {}).get(key)
     if ci and all(c is not None and np.isfinite(c) for c in ci):
         return f"{v} [{ci[0]:.{digits}f}, {ci[1]:.{digits}f}]"
     return v

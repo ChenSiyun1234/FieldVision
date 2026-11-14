@@ -55,7 +55,7 @@ def main(argv=None):
     ap.add_argument("--out", required=True)
     ap.add_argument("--cutoffs", nargs="*", default=DEFAULT_CUTOFFS, help="MM-DD")
     ap.add_argument("--variant", default="relative")
-    ap.add_argument("--models", nargs="*", default=["majority", "rule", "logistic", "gbm"])
+    ap.add_argument("--models", nargs="*", default=["majority", "timing_rule", "rule", "logistic", "gbm"])
     ap.add_argument("--n-splits", type=int, default=5)
     ap.add_argument("--n-boot", type=int, default=300)
     ap.add_argument("--seed", type=int, default=0)

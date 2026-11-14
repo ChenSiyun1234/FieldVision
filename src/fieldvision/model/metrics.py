@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import numpy as np
 
-COUNT_METRICS = ["precision", "recall", "fpr", "f1", "accuracy", "balanced_accuracy"]
+COUNT_METRICS = ["precision", "recall", "fpr", "f1", "accuracy", "balanced_accuracy",
+                 "grain_precision", "grain_recall"]
 SCORE_METRICS = ["roc_auc", "pr_auc"]
 ALL_METRICS = COUNT_METRICS + SCORE_METRICS
 
@@ -52,6 +53,36 @@ def metrics_from_counts(tp, fp, fn, tn):
         "f1": _div(2 * tp, 2 * tp + fp + fn),
         "accuracy": _div(tp + tn, tp + fp + fn + tn),
         "balanced_accuracy": 0.5 * (recall + specificity),
+        # the same with grain as the positive class
+        "grain_precision": _div(tn, tn + fn),
+        "grain_recall": specificity,
+    }
+
+
+def clopper_pearson(k, n, alpha=0.05):
+    """Exact binomial interval for k successes out of n (NaN when n == 0)."""
+    from scipy.stats import beta
+    if n <= 0:
+        return [float("nan"), float("nan")]
+    lo = 0.0 if k <= 0 else float(beta.ppf(alpha / 2, k, n - k + 1))
+    hi = 1.0 if k >= n else float(beta.ppf(1 - alpha / 2, k + 1, n - k))
+    return [lo, hi]
+
+
+def exact_intervals(confusion, alpha=0.05):
+    """Clopper-Pearson intervals for the count metrics of one confusion matrix.
+
+    Treats fields as independent, which fields on one farm are not; with a
+    few dozen fields it is still the most honest single number to show.
+    """
+    tp, fp, fn, tn = (int(round(confusion[k])) for k in ("tp", "fp", "fn", "tn"))
+    return {
+        "precision": clopper_pearson(tp, tp + fp, alpha),
+        "recall": clopper_pearson(tp, tp + fn, alpha),
+        "fpr": clopper_pearson(fp, fp + tn, alpha),
+        "grain_precision": clopper_pearson(tn, tn + fn, alpha),
+        "grain_recall": clopper_pearson(tn, tn + fp, alpha),
+        "accuracy": clopper_pearson(tp + tn, tp + fp + fn + tn, alpha),
     }
 
 

@@ -55,7 +55,7 @@ def parse_args(argv=None):
     ap.add_argument("--timeseries", nargs="+", required=True, help="Parquet files or directories")
     ap.add_argument("--fields", nargs="+", required=True, help="GeoJSON/GeoPackage files or dirs")
     ap.add_argument("--out", required=True, help="run directory (created)")
-    ap.add_argument("--primary", default="gbm", choices=["rule", "logistic", "gbm"],
+    ap.add_argument("--primary", default="gbm", choices=["timing_rule", "rule", "logistic", "gbm"],
                     help="model used by predict/evaluate by default (fixed before looking at results)")
     ap.add_argument("--variant", default="relative", choices=["relative", "calendar", "all"],
                     help="feature variant for the final models")
@@ -212,10 +212,15 @@ def main(argv=None):
 
     comparisons = {}
     v = args.variant
-    for a, b in (("gbm", "logistic"), ("gbm", "rule"), ("logistic", "rule"),
-                 ("gbm", "majority"), ("logistic", "majority"), ("rule", "majority")):
+    for a, b in (("gbm", "timing_rule"), ("logistic", "timing_rule"), ("rule", "timing_rule"),
+                 ("gbm", "logistic"), ("gbm", "rule"), ("logistic", "rule"),
+                 ("timing_rule", "majority"), ("gbm", "majority")):
         comparisons[f"{a} - {b} ({v})"] = compare_models(preds, a, b, "spatial", v,
                                                          n_boot=args.n_boot, seed=args.seed)
+    # the organisers' test: does the model beat the timing rule on held-out geography / years?
+    for scheme in [k for k in preds["scheme"].unique() if k.startswith(("loco:", "loyo:"))]:
+        comparisons[f"gbm - timing_rule ({scheme})"] = compare_models(
+            preds, "gbm", "timing_rule", scheme, v, n_boot=args.n_boot, seed=args.seed)
     for other in variants[1:]:
         for m in ("gbm", "logistic", "rule"):
             comparisons[f"{m}: {v} - {other}"] = compare_models(
@@ -263,7 +268,7 @@ def main(argv=None):
     rt_fields = fields[fields["field_id"].isin(rt_ids)]
     rt_ts = ts[ts["field_id"].isin(rt_ids)]
     rtime = {}
-    for name in ("rule", "logistic", "gbm"):
+    for name in ("timing_rule", "rule", "logistic", "gbm"):
         rtime[name] = response_time(lambda: build_features(rt_ts, rt_fields, cfg)[0],
                                     lambda F, m=final[name]: m.predict_proba(F), n_rt)
     rtime["note"] = ("features + prediction on already-loaded time series, single process; "
@@ -426,6 +431,21 @@ def _write_report(out, metrics, importance, shift, coll_year, figs, args, synthe
              f"`{metrics['primary']}`, feature variant `{v}`. Every table has the majority-class "
              "baseline (`majority`: predicts the training majority for every field). Intervals are "
              "95% block-bootstrap percentiles (whole 10 km blocks resampled).\n")
+    L.append("## Validation design\n")
+    L.append("- No random field splits. Spatial cross-validation keeps whole 10 km blocks "
+             "together (neighbours share weather, soil and satellite passes).\n"
+             "- Leave-one-country-out and leave-one-year-out train on everything else and test on "
+             "the held-out country or year; these are the main evidence that the model transfers "
+             "to a place or season it has not seen, which is what applying it to the US is.\n"
+             "- Every learned quantity (rule thresholds, imputation, scaling, trees, probability "
+             "calibration) is fit inside the training part of each split. No feature selection "
+             "step; hyper-parameters fixed in advance.\n"
+             "- Baselines in every table: `majority` and `timing_rule` (silage if the sustained "
+             "NDVI decline comes before a day-of-year threshold), the transparent rule the "
+             "organisers suggest. The other models have to beat `timing_rule` on held-out "
+             "geography; see the paired comparisons.\n"
+             "- A region holdout (if given) and the external US set are scored once, with a ledger.\n"
+             "- Precision and recall are reported for both classes; positive class = silage.\n")
     L.append("## Data\n")
     L.append(f"{d['n_fields']} fields, {d['n_labelled']} labelled, {d['n_holdout']} in the holdout.\n")
     L.append(kv_table([(r["country"], r["year"], r["n"], int(r["silage"]),

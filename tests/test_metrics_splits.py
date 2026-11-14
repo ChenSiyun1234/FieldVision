@@ -143,3 +143,17 @@ def test_adjusted_classify_and_count():
     # true share 7 %, recall 0.9, fpr 0.05 -> raw 0.9*0.07 + 0.05*0.93 = 0.1095
     assert adjusted_share(0.1095, 0.9, 0.05) == pytest.approx(0.07)
     assert np.isnan(adjusted_share(0.3, 0.5, 0.45))
+
+
+def test_grain_metrics_and_exact_intervals():
+    from fieldvision.model.metrics import clopper_pearson, exact_intervals
+    y = [1, 1, 1, 1, 0, 0, 0, 0, 0, 0]
+    p = [1, 1, 1, 0, 1, 1, 0, 0, 0, 0]
+    m = classification_metrics(y, p)
+    assert m["grain_precision"] == pytest.approx(4 / 5)    # tn / (tn + fn)
+    assert m["grain_recall"] == pytest.approx(4 / 6)       # tn / (tn + fp)
+    lo, hi = clopper_pearson(3, 4)
+    assert lo == pytest.approx(0.19412, abs=1e-4) and hi == pytest.approx(0.99369, abs=1e-4)
+    assert clopper_pearson(0, 5)[0] == 0.0 and clopper_pearson(5, 5)[1] == 1.0
+    ex = exact_intervals(m["confusion"])
+    assert ex["recall"][0] < 0.75 < ex["recall"][1]
