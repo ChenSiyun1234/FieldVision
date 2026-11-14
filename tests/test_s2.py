@@ -106,3 +106,85 @@ def test_field_validation_and_multiple_utm_zones(tmp_path):
     item = {"properties": {"proj:epsg": 32632}, "assets": {"red": {"proj:transform": [10, 0, 0, 0, -10, 6000000]}}}
     grid = scene_grid(blocks[0], item)
     assert grid[0] == 32632 and min(grid[2]) > 0
+
+
+def test_2022_fallback_fills_partial_c1_catalog(monkeypatch):
+    from fieldvision.s2 import catalog
+    def item(scene_id, day, tile="33UWP"):
+        return {"id": scene_id, "properties": {"datetime": f"2022-07-{day}T10:00:00Z",
+                                               "s2:mgrs_tile": tile, "platform": "sentinel-2a"}}
+    current = item("current", "01")
+    old_duplicate = item("old-duplicate", "01")
+    old_missing = item("old-missing", "06")
+    old_other_tile = item("old-tile", "01", "33UWN")
+    monkeypatch.setattr(catalog, "search", lambda collection, *args: [current] if collection == PRIMARY
+                        else [old_duplicate, old_missing, old_other_tile])
+    items, counts = catalog.find_scenes([15, 48, 16, 49], "2022-04-01", "2022-11-30")
+    assert {item["id"] for item in items} == {"current", "old-missing", "old-tile"}
+    assert counts == {"primary_scenes": 1, "fallback_scenes": 2}
+
+
+def test_local_raster_pipeline_partial_resume_and_overlap(tmp_path, monkeypatch):
+    """Exercise real raster reads, checkpoint recovery and final table assembly."""
+    import rasterio
+    from fieldvision.s2 import extract
+    from fieldvision.s2.catalog import ASSETS
+    from fieldvision.s2.geometry import project
+
+    affine = from_origin(500000, 5300000, 10, 10)
+    geometry = project(box(500010, 5299910, 500090, 5299990), 32633, 4326)
+    features = [{"type": "Feature", "geometry": mapping(geometry),
+                 "properties": {"field_id": name, "year": 2024}} for name in ("a", "b")]
+    fields = tmp_path / "fields.geojson"
+    fields.write_text(json.dumps({"type": "FeatureCollection", "features": features}))
+    assets = {}
+    for name in (*BANDS, "SCL"):
+        scl = name == "SCL"
+        asset_key = "scl" if scl else ASSETS[name]
+        # Native 20 m SCL and red-edge/SWIR grids test nearest resampling.
+        resolution = 10 if name in ("B02", "B03", "B04", "B08") else 20
+        size = 100 // resolution
+        path = tmp_path / f"{name}.tif"
+        values = np.full((size, size), 4 if scl else 6000 if name == "B08" else 1500, dtype="uint16")
+        with rasterio.open(path, "w", driver="GTiff", height=size, width=size, count=1,
+                           dtype="uint16", crs="EPSG:32633", transform=from_origin(500000, 5300000, resolution, resolution),
+                           nodata=0) as dataset:
+            dataset.write(values, 1)
+        assets[asset_key] = {"href": str(path), "proj:transform": list(affine)[:6],
+                             "raster:bands": [{"scale": 0.0001, "offset": -0.1, "nodata": 0}]}
+    items = [{"id": f"scene-{day}", "collection": PRIMARY, "geometry": mapping(geometry), "assets": assets,
+              "properties": {"datetime": f"2024-06-{day}T10:00:00Z", "proj:epsg": 32633}} for day in ("01", "11")]
+    monkeypatch.setattr(extract, "find_scenes", lambda *args: (items, {"primary_scenes": 2, "fallback_scenes": 0}))
+    real_read = extract.read_band
+    calls = []
+    fail_second = [True]
+    def read(item, name, grid):
+        calls.append(item["id"])
+        if item["id"] == "scene-11" and fail_second[0]:
+            raise OSError("temporary read failure")
+        return real_read(item, name, grid)
+    monkeypatch.setattr(extract, "read_band", read)
+    args = Namespace(fields=fields, out=tmp_path / "run", year=2024, start="04-01", end="11-30",
+                     workers=4, scene_batch=2, block_size=6000, max_cloud=80, collection=PRIMARY,
+                     no_fallback=False, min_clear_pixels=1, min_clear_fraction=0.2)
+    assert extract.run(args) == 2
+    first = pd.read_parquet(args.out / "timeseries.parquet")
+    assert len(first) == 2 and set(first.field_id) == {"a", "b"}
+    assert first.B04.tolist() == pytest.approx([0.05, 0.05])
+    assert first.n_clear.iloc[0] == first.n_clear.iloc[1] > 0
+    assert first.clear_fraction.eq(1).all()
+    fail_second[0] = False
+    calls.clear()
+    assert extract.run(args) == 0
+    assert set(calls) == {"scene-11"}
+    result = pd.read_parquet(args.out / "timeseries.parquet")
+    assert len(result) == 4
+    calls.clear()
+    assert extract.run(args) == 0
+    assert not calls
+    manifest = json.loads((args.out / "manifest.json").read_text())
+    assert manifest["scene_failures"] == 0
+    assert manifest["fields_with_usable_dates"] == 2
+    args.max_cloud = 70
+    with pytest.raises(ValueError, match="different inputs/options/code"):
+        extract.run(args)
