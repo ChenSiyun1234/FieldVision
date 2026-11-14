@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+*.egg-info/
+.ipynb_checkpoints/
+.pytest_cache/
+
+# Data and model artifacts stay out of git
+data/*
+!data/README.md
+*.tif
+*.tiff
+*.jp2
+*.nc
+*.zarr/
+*.parquet
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.zip
+
+# Secrets
+*.pem
+*.key
+credentials*.json
+token*.json
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
