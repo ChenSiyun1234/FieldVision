@@ -152,3 +152,25 @@ The RPG `id_parcel` is the anonymised parcel id; farm identifiers are not in thi
 * Dutch grain maize is rare (3,992 parcels nationally against 95,192 silage), so the Dutch blocks are small; Drenthe adds only 42 pairs.
 * The windows are targeted samples, not national probability samples; counts per block differ because the scarce class sets the pace.
 * Sentinel-2 imagery of 2022 and 2023 comes from an older processing collection than 2024-2025; Austria 2022 and 2023 exist so the model can be checked on that older imagery.
+
+## Evaluation file (Beltsville, BARC) and other external files
+
+`python -m fieldvision.labels.from_file` converts any polygon file to the same contract (see `docs/data-handoff.md`).
+The organisers' evaluation GeoPackage is reproduced with this command (do not point `--out` at the existing `barc_*` folders;
+the converter refuses to overwrite a `fields.geojson`):
+
+```powershell
+$env:PYTHONPATH='src'
+& C:\t\fv\venv\Scripts\python.exe -m fieldvision.labels.from_file C:\t\fv\data\eval\barc\BARC_Corn.2021-2023.gpkg `
+    --layer barc_silage_grain_corn20212023 --id-column OBJECTID `
+    --year-columns Corn_2021=2021 Corn_2022=2022 Corn_2023=2023 `
+    --map Silage=silage --map Grain=grain --country US --source barc-gpkg-2021-2023 --prefix barc `
+    --split external_eval --block-id US-BARC --keep FARM FIELD --by-year-dirs --out C:\t\fv\data\labels\_check_barc
+```
+
+Result on 2026-11-14 against the files used for extraction: same 44 field-years (2021: 18, 2022: 7, 2023: 19; 32 grain,
+12 silage), same ids and labels, same polygons (zero symmetric difference). Differences: `area_ha` is 0.002 ha larger at most
+(0.018 %) because the converter uses an equal-area projection while the older file used a UTM zone; centroids differ by
+under 1e-6 degrees; `crop_name` is the source value (`Grain`) instead of `Corn (Grain)`; single-part polygons are `Polygon`
+instead of `MultiPolygon`; the older files carry extra `acres_reported`, `barc_*` and `source_label` properties.
+Without `--block-id` the converter assigns 10 km grid blocks like the European files.
