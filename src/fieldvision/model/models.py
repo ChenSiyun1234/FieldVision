@@ -407,7 +407,71 @@ class CalibratedModel(_Base):
         return text + f"; Platt calibration p = sigmoid({a:.2f}*logit(score) {b:+.2f})"
 
 
-MODEL_ORDER = ["majority", "always_grain", "timing_rule", "rule", "logistic", "gbm"]
+class CompositeModel(_Base):
+    """Average of the calibrated probabilities of the low-capacity members
+    (timing rule, timing+moisture rule, six-feature logistic).
+
+    Chosen over a majority vote on Austrian spatial CV (ROC-AUC 0.766 vs 0.739). Members are
+    fit inside fit() like any other model. `disagreement(X)` flags fields where the members
+    split their votes and their probabilities are at least `spread_limit` apart; together
+    with the low-evidence flag that is when the composite should abstain.
+    """
+    name = "composite"
+
+    def __init__(self, makers, spread_limit=0.5, seed=0):
+        self.makers = dict(makers)
+        self.spread_limit = spread_limit
+        self.seed = seed
+        names = []
+        for mk in self.makers.values():
+            names += list(mk().feature_names)
+        self.feature_names = list(dict.fromkeys(names))
+
+    @classmethod
+    def from_members(cls, members, spread_limit=0.5):
+        """Build from already fitted members (e.g. the frozen models of a run), no refit."""
+        obj = cls.__new__(cls)
+        obj.makers = {}
+        obj.spread_limit = spread_limit
+        obj.seed = 0
+        obj.members_ = dict(members)
+        names = []
+        for m in obj.members_.values():
+            names += list(m.feature_names)
+        obj.feature_names = list(dict.fromkeys(names))
+        return obj
+
+    def fit(self, X, y):
+        self.members_ = {n: CalibratedModel(mk, seed=self.seed).fit(X, y)
+                         for n, mk in self.makers.items()}
+        return self
+
+    def member_proba(self, X):
+        return pd.DataFrame({n: m.predict_proba(X) for n, m in self.members_.items()}, index=X.index)
+
+    def predict_proba(self, X):
+        return self.member_proba(X).mean(axis=1).to_numpy()
+
+    def disagreement(self, X):
+        P = self.member_proba(X)
+        votes = (P >= 0.5).sum(axis=1).to_numpy()
+        spread = (P.max(axis=1) - P.min(axis=1)).to_numpy()
+        return (votes > 0) & (votes < P.shape[1]) & (spread >= self.spread_limit)
+
+    def explain(self, X):
+        parts = []
+        for n, m in self.members_.items():
+            e = m.explain(X)
+            if e is not None:
+                parts.append(e.add_prefix(f"{n}:") / len(self.members_))
+        return pd.concat(parts, axis=1) if parts else None
+
+    def describe(self):
+        return "mean of calibrated probabilities of: " + "; ".join(
+            f"{n} [{m.describe()}]" for n, m in self.members_.items())
+
+
+MODEL_ORDER = ["majority", "always_grain", "timing_rule", "rule", "logistic", "gbm", "composite"]
 
 
 def make_factories(columns, variant="relative", exclude=(), use_quality=False, seed=0,
@@ -440,4 +504,6 @@ def make_factories(columns, variant="relative", exclude=(), use_quality=False, s
     out = {"majority": MajorityModel, "always_grain": AlwaysGrainModel}
     for name, make in base.items():
         out[name] = (lambda m=make: CalibratedModel(m, seed=seed)) if calibrate else make
+    members = {k: base[k] for k in ("timing_rule", "rule", "logistic")}
+    out["composite"] = partial(CompositeModel, members, seed=seed)
     return out

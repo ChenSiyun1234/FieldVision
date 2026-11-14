@@ -56,7 +56,7 @@ def parse_args(argv=None):
     ap.add_argument("--timeseries", nargs="+", required=True, help="Parquet files or directories")
     ap.add_argument("--fields", nargs="+", required=True, help="GeoJSON/GeoPackage files or dirs")
     ap.add_argument("--out", required=True, help="run directory (created)")
-    ap.add_argument("--primary", default="gbm", choices=["timing_rule", "rule", "logistic", "gbm"],
+    ap.add_argument("--primary", default="gbm", choices=["timing_rule", "rule", "logistic", "gbm", "composite"],
                     help="model used by predict/evaluate by default (fixed before looking at results)")
     ap.add_argument("--variant", default="relative", choices=["relative", "calendar", "all"],
                     help="feature variant for the final models")
@@ -274,7 +274,7 @@ def main(argv=None):
     rt_fields = fields[fields["field_id"].isin(rt_ids)]
     rt_ts = ts[ts["field_id"].isin(rt_ids)]
     rtime = {}
-    for name in ("timing_rule", "rule", "logistic", "gbm"):
+    for name in ("timing_rule", "rule", "logistic", "gbm", "composite"):
         rtime[name] = response_time(lambda: build_features(rt_ts, rt_fields, cfg)[0],
                                     lambda F, m=final[name]: m.predict_proba(F), n_rt)
     rtime["note"] = ("features + prediction on already-loaded time series, single process; "

@@ -282,7 +282,19 @@ def main(argv=None):
     e.add_argument("--description", default="")
     e.add_argument("--confidence-tier", default="medium")
     e.add_argument("--note", default="", help="statement printed in bold at the top of the card")
+    c = sub.add_parser("composite")
+    c.add_argument("--run", required=True)
+    c.add_argument("--name", required=True)
+    c.add_argument("--registry", required=True)
+    c.add_argument("--training-files", nargs="+", required=True)
+    c.add_argument("--git-commit", required=True)
+    c.add_argument("--family-runs", nargs="*", default=[])
     a = ap.parse_args(argv)
+    if a.cmd == "composite":
+        folder = export_composite(a.run, a.name, a.registry, a.training_files, a.git_commit,
+                                  a.family_runs)
+        print(f"exported composite -> {folder}")
+        return
     folder = export(a.run, a.which, a.name, a.registry, a.training_files, a.git_commit, a.eval,
                     a.description, a.confidence_tier, a.note)
     print(f"exported {a.which} -> {folder}")
@@ -290,3 +302,121 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+
+
+COMPOSITE_MEMBERS = ("timing_rule", "rule", "logistic")
+
+
+def composite_oof_metrics(run_dir, members=COMPOSITE_MEMBERS, spread_limit=0.5):
+    """Held-out metrics of the member-average, rebuilt from a run's out-of-fold predictions.
+
+    Each member was fit inside the training part of every split, so the average of their
+    out-of-fold probabilities is an out-of-fold prediction of the composite.
+    """
+    from .metrics import classification_metrics, exact_intervals
+    import pandas as pd
+    cv = pd.read_parquet(Path(run_dir) / "cv_predictions.parquet")
+    with open(Path(run_dir) / "run.json", encoding="utf-8") as fh:
+        variant = json.load(fh)["variant"]
+    out = {}
+    for scheme, g in cv[(cv["variant"] == variant) & cv["model"].isin(members)].groupby("scheme"):
+        if scheme == "holdout":
+            continue
+        P = g.pivot(index="field_id", columns="model", values="p")
+        meta = g.drop_duplicates("field_id").set_index("field_id").loc[P.index]
+        y = meta["y"].to_numpy(int)
+        p = P.mean(axis=1).to_numpy()
+        votes = (P.to_numpy() >= 0.5).sum(axis=1)
+        spread = (P.max(axis=1) - P.min(axis=1)).to_numpy()
+        abstain = meta["low_evidence"].to_numpy(bool) | ((votes > 0) & (votes < P.shape[1])
+                                                         & (spread >= spread_limit))
+        m = classification_metrics(y, (p >= 0.5).astype(int), p)
+        mc = classification_metrics(y[~abstain], (p[~abstain] >= 0.5).astype(int), p[~abstain])
+        mc["exact95"] = exact_intervals(mc["confusion"])
+        m["exact95"] = exact_intervals(m["confusion"])
+        out[scheme] = {"all": m, "confident": mc, "abstain_rate": float(abstain.mean())}
+    return out
+
+
+def export_composite(run_dir, name, registry_dir, training_files, git_commit, family_runs=(),
+                     spread_limit=0.5, description=""):
+    """composite_v1: the frozen members of `run_dir`, averaged; no refit."""
+    import joblib
+    import pickle
+    from .models import CompositeModel
+    run_dir, registry_dir = Path(run_dir), Path(registry_dir)
+    final = registry_dir / name
+    if final.exists():
+        raise SystemExit(f"{final} exists; frozen folders are written once. Use a new version.")
+    members = {}
+    for m in COMPOSITE_MEMBERS:
+        with open(run_dir / "models" / f"{m}.pkl", "rb") as fh:
+            members[m] = pickle.load(fh)
+    comp = CompositeModel.from_members(members, spread_limit=spread_limit)
+    _, meta, cfg, _ = load_run(run_dir, "logistic")
+    folder = final.with_name(final.name + ".partial")
+    if folder.exists():
+        import shutil
+        shutil.rmtree(folder)
+    folder.mkdir(parents=True)
+    joblib.dump(comp, folder / "model.joblib")
+    write_json(folder / "model.json", {
+        "name": name, "class": "CompositeModel", "positive_class": "silage",
+        "decision": "silage if the mean of the members' calibrated probabilities >= 0.5",
+        "threshold": 0.5, "members": {k: model_json(v, k, "") for k, v in members.items()},
+        "member_frozen_ids": {k: frozen_model_id(run_dir, k) for k in members},
+        "abstain": f"low evidence, or members split their votes with probabilities at least "
+                   f"{spread_limit} apart", "spread_limit": spread_limit,
+        "why_mean_not_vote": "Austria 2024 spatial CV: ROC-AUC 0.766 for the mean vs 0.739 for "
+                             "a majority vote"})
+    write_json(folder / "feature_schema.json", {
+        "computed_by": "fieldvision.features.build.build_features",
+        "feature_config": cfg.to_dict(),
+        "features": [{"name": c, "kind": feature_kind(c), "unit": feature_unit(c)}
+                     for c in comp.feature_names],
+        "gaps": "each member handles gaps its own way (rules: fixed score without a harvest; "
+                "logistic: training median)"})
+    write_json(folder / "applicability.json", {
+        "model": name,
+        "requires": {"sensors": ["Sentinel-2 L2A surface reflectance, bands B02-B12"],
+                     "optical_clear_obs_in_harvest_window": 1,
+                     "clear_obs_before_and_after_drop": True,
+                     "min_usable_dates_jul_nov_for_confident": cfg.low_evidence_min_usable,
+                     "max_harvest_bracket_days_for_confident": cfg.low_evidence_max_interval_days},
+        "abstains_when": ["low evidence (see the members)", "members disagree strongly"],
+        "confidence_tier": "medium",
+        "validated_on": ["European data only; not scored on Beltsville before Evaluation 2"]})
+    write_json(folder / "provenance.json", {
+        "name": name, "exported": dt.datetime.now().isoformat(timespec="seconds"),
+        "members_from_run": str(run_dir), "run_id": meta["run_id"],
+        "git_commit_of_code": git_commit,
+        "training_data": [{"path": str(p), "sha256": file_sha256(p)} for p in training_files],
+        "note": "added after Evaluation 1 as a fifth family for Evaluation 2 (see ACCESS_LOG.md)"})
+    L = [f"# {name}\n", (description or "Average of the calibrated probabilities of three "
+                         "low-capacity models trained on European registry labels: the timing "
+                         "rule, the timing+moisture rule and the six-feature logistic.") + "\n",
+         "**Not scored on the Beltsville evaluation set. It was added after Evaluation 1 and joins "
+         "the Evaluation 2 candidates under the rule written in ACCESS_LOG.md.**\n",
+         f"Members (frozen, from run `{meta['run_id']}`, trained on {meta['training']['n_fields']} "
+         f"fields of {meta['training']['countries']} {meta['training']['years']}):\n"]
+    L += [f"- {k}: {v.describe()}" for k, v in members.items()]
+    L.append("\nAbstains when a field is low evidence or the members split their votes with "
+             f"probabilities at least {spread_limit} apart.\n")
+    for label, rd in [("this model's training run", run_dir)] + [("family, other run", r) for r in family_runs]:
+        res = composite_oof_metrics(rd, spread_limit=spread_limit)
+        L.append(f"## Held-out results of the member average ({label}: `{Path(rd).name}`)\n")
+        L.append("Rebuilt from the members' out-of-fold predictions; exact 95 % intervals.\n")
+        for scheme, r in res.items():
+            L.append(f"- {scheme}: {_metrics_line(r['all'])}, accuracy {r['all']['accuracy']:.3f}; "
+                     f"abstain rate {r['abstain_rate']:.2f}; not abstained: "
+                     f"{_metrics_line(r['confident'])}")
+        L.append("")
+    L.append("## Known limits\n")
+    L.append("- On Austria 2024 spatial CV the average is slightly below the logistic alone "
+             "(ROC-AUC 0.766 vs 0.783); its case is robustness across places and years, which "
+             "leave-one-country-out has to show.\n- The members' strong-disagreement flag rarely "
+             "fires on Austrian data (about 0.4 % of fields); most abstentions come from low "
+             "evidence.\n- Probabilities assume a 50/50 class balance.\n")
+    (folder / "model_card.md").write_text("\n".join(L), encoding="utf-8")
+    folder.rename(final)
+    return final

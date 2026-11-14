@@ -289,7 +289,7 @@ def coverage_table(preds_model, X, cfg, limits=(10, 15, 20, 30, 45, None)):
 
 
 def prevalence_table(preds, prevalences, train_prevalence, n_boot=1000, seed=0,
-                     models=("timing_rule", "rule", "logistic", "gbm")):
+                     models=("timing_rule", "rule", "logistic", "gbm", "composite")):
     """Held-out metrics re-weighted to realistic silage shares.
 
     For each share: every model at its own threshold (probabilities as

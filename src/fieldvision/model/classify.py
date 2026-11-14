@@ -53,6 +53,9 @@ def results(fields, ts, model, name, cfg, threshold):
     X, info = build_features(ts, fields, cfg)
     p = model.predict_proba(X)
     pf = predictions_frame(X, fields.drop(columns=["label", "y"], errors="ignore"), p, threshold, name)
+    # composite models also abstain when their members disagree strongly
+    disagree = model.disagreement(X) if hasattr(model, "disagreement") else np.zeros(len(X), bool)
+    member_p = model.member_proba(X) if hasattr(model, "member_proba") else None
     rows = []
     for i, r in pf.iterrows():
         x = X.iloc[i]
@@ -71,12 +74,17 @@ def results(fields, ts, model, name, cfg, threshold):
             "largest_gap_days": _num(r["max_gap_days"], 0),
             "abstain_reason": r["low_evidence_reason"] or None,
         }
+        if member_p is not None:
+            ev["members_p_silage"] = {k: _num(v, 3) for k, v in member_p.iloc[i].items()}
+            if disagree[i]:
+                ev["abstain_reason"] = "+".join(filter(None, [ev["abstain_reason"],
+                                                              "members_disagree"]))
         year = r.get("year")
         rows.append({"field_id": team_field_id(r["field_id"]),
                      "year": int(year) if pd.notna(year) else None,
                      "source_field_id": r["field_id"], "model": name,
                      "p_silage": _num(r["p_silage"], 4), "label": r["predicted_label"],
-                     "abstain": bool(r["low_evidence"]), "evidence": ev})
+                     "abstain": bool(r["low_evidence"] or disagree[i]), "evidence": ev})
     return rows, info
 
 
