@@ -272,3 +272,52 @@ def test_access_log_quoted_and_appended(tmp_path):
     i = next(k for k, ln in enumerate(lines) if "abc123" in ln)
     assert lines[i - 1].startswith("| 11:29") and lines[-1] == "Rule text."
     assert access_log_rows(None) is None
+
+
+def test_registry_export_classify_roundtrip(run_dir, tmp_path):
+    import json
+    from fieldvision.model import classify, registry
+    root, out, fdir, tdir, _ = run_dir
+    reg = tmp_path / "registry"
+    files = sorted(str(p) for p in fdir.iterdir())
+    folder = registry.export(out, "gbm", "ts_model_test_v1", reg, files, "abc1234",
+                             eval_dir=root / "zs", description="test")
+    for f in ("model.json", "model.joblib", "feature_schema.json", "applicability.json",
+              "model_card.md", "provenance.json"):
+        assert (folder / f).exists(), f
+    with pytest.raises(SystemExit):
+        registry.export(out, "gbm", "ts_model_test_v1", reg, files, "abc1234")
+    registry.export(out, "timing_rule", "rule_test_v1", reg, files, "abc1234")
+    mj = json.loads((reg / "rule_test_v1" / "model.json").read_text(encoding="utf-8"))
+    from fieldvision.model.models import RuleModel
+    r = RuleModel.from_dict(mj["rule"])
+    assert r.t_time_ == mj["rule"]["t_time_"] and r.mode_ == "timing_only"
+    res = classify.main(["--registry", str(reg), "--model", "ts_model_test_v1", "--timeseries",
+                         str(tdir), "--fields", str(fdir), "--state", "XX", "--out",
+                         str(tmp_path / "res")])
+    classify.main(["--registry", str(reg), "--model", "rule_test_v1", "--timeseries",
+                   str(tdir), "--fields", str(fdir), "--state", "XX", "--out", str(tmp_path / "res")])
+    t = pd.read_parquet(next((tmp_path / "res").glob("XX_*.parquet")))
+    assert set(t["model"]) == {"ts_model_test_v1", "rule_test_v1"}
+    rec = json.loads((tmp_path / "res").joinpath(f"XX_{int(t['year'].iloc[0])}.jsonl")
+                     .read_text(encoding="utf-8").splitlines()[0])
+    assert set(rec) >= {"field_id", "year", "model", "p_silage", "label", "abstain", "evidence"}
+    assert {"drop_date", "ndvi_before", "ndvi_after", "days_to_drop"} <= set(rec["evidence"])
+    assert classify.team_field_id("barc-112-2023") == "BARC-112"
+
+
+def test_beltsville_timing_rule_loyo_on_synthetic():
+    from synthetic import make_dataset
+    from fieldvision.beltsville.timing_rule import loyo
+    from fieldvision.features.build import build_features
+    frames = [make_dataset(n_fields=60, seed=s, countries=("NL",), year=yr, blocks_per_country=2)
+              for s, yr in ((1, 2021), (2, 2022), (3, 2023))]
+    f = pd.concat([a for a, _ in frames], ignore_index=True)
+    f["field_id"] = f["field_id"] + "-" + f["year"].astype(str)
+    ts = pd.concat([b.assign(field_id=b["field_id"] + "-" + str(a["year"].iloc[0]))
+                    for a, b in frames], ignore_index=True)
+    X, _ = build_features(ts, f)
+    y = (f["label"] == "silage").astype(int).to_numpy()
+    oof, folds = loyo(X, y, f["year"].to_numpy())
+    assert len(folds) == 3 and oof["p"].notna().all()
+    assert (oof["pred"] == oof["y"]).mean() > 0.7
