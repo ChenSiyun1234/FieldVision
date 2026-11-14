@@ -123,9 +123,11 @@ def _confusion(m):
             f"| silage | {c['tp']} | {c['fn']} |\n| grain | {c['fp']} | {c['tn']} |")
 
 
-def model_card(name, which, meta, run_metrics, eval_metrics, description):
+def model_card(name, which, meta, run_metrics, eval_metrics, description, note=""):
     v = meta["variant"]
     L = [f"# {name}\n", description + "\n"]
+    if note:
+        L.append(f"**{note}**\n")
     t = meta["training"]
     L.append(f"Trained on European parcel registry labels only: {t['n_fields']} fields "
              f"({t['n_silage']} silage), countries {t['countries']}, years {t['years']}, imagery "
@@ -149,9 +151,11 @@ def model_card(name, which, meta, run_metrics, eval_metrics, description):
             L.append(f"Calibration on held-out folds: Brier {cal['brier']:.3f}, ECE {cal['ece']:.3f}.\n")
         prev = [r for r in run_metrics.get("prevalence_table", []) if r["model"] == which
                 and abs(r["prevalence"] - 0.07) < 1e-9]
+        def _f(v):
+            return "n/a" if v is None or (isinstance(v, float) and not np.isfinite(v)) else f"{v:.3f}"
         for r in prev:
-            L.append(f"At a 7 % silage share ({r['operating_point']}): precision {r['precision']:.3f}, "
-                     f"recall {r['recall']:.3f}.")
+            L.append(f"At a 7 % silage share ({r['operating_point']}): precision {_f(r['precision'])}, "
+                     f"recall {_f(r['recall'])}.")
         L.append("")
     if eval_metrics and which in eval_metrics.get("results", {}):
         r = eval_metrics["results"][which]
@@ -179,7 +183,7 @@ def model_card(name, which, meta, run_metrics, eval_metrics, description):
 
 
 def export(run_dir, which, name, registry_dir, training_files, git_commit, eval_dir=None,
-           description="", confidence_tier="medium"):
+           description="", confidence_tier="medium", note=""):
     run_dir, registry_dir = Path(run_dir), Path(registry_dir)
     folder = registry_dir / name
     if folder.exists():
@@ -192,6 +196,13 @@ def export(run_dir, which, name, registry_dir, training_files, git_commit, eval_
     if eval_dir:
         with open(Path(eval_dir) / "metrics.json", encoding="utf-8") as fh:
             eval_metrics = json.load(fh)
+    # write into a temporary folder and rename at the end, so a failure never leaves a
+    # half-written "frozen" folder behind
+    final = folder
+    folder = final.with_name(final.name + ".partial")
+    if folder.exists():
+        import shutil
+        shutil.rmtree(folder)
     folder.mkdir(parents=True)
     import joblib
     joblib.dump(model, folder / "model.joblib")
@@ -231,8 +242,9 @@ def export(run_dir, which, name, registry_dir, training_files, git_commit, eval_
         prov["evaluated"] = {"dir": str(eval_dir), "frozen_model_id": eval_metrics["frozen_model"]["id"]}
     write_json(folder / "provenance.json", prov)
     (folder / "model_card.md").write_text(model_card(name, which, meta, run_metrics, eval_metrics,
-                                                     description), encoding="utf-8")
-    return folder
+                                                     description, note), encoding="utf-8")
+    folder.rename(final)
+    return final
 
 
 def load(registry_dir, name):
@@ -269,9 +281,10 @@ def main(argv=None):
     e.add_argument("--eval", default=None)
     e.add_argument("--description", default="")
     e.add_argument("--confidence-tier", default="medium")
+    e.add_argument("--note", default="", help="statement printed in bold at the top of the card")
     a = ap.parse_args(argv)
     folder = export(a.run, a.which, a.name, a.registry, a.training_files, a.git_commit, a.eval,
-                    a.description, a.confidence_tier)
+                    a.description, a.confidence_tier, a.note)
     print(f"exported {a.which} -> {folder}")
 
 

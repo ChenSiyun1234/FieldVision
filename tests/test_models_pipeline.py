@@ -321,3 +321,21 @@ def test_beltsville_timing_rule_loyo_on_synthetic():
     oof, folds = loyo(X, y, f["year"].to_numpy())
     assert len(folds) == 3 and oof["p"].notna().all()
     assert (oof["pred"] == oof["y"]).mean() > 0.7
+
+
+def test_app_predictions_format(run_dir, tmp_path):
+    from fieldvision.model import app_predictions, registry
+    root, out, fdir, tdir, _ = run_dir
+    reg = tmp_path / "reg"
+    registry.export(out, "logistic", "logit_test_v1", reg, sorted(str(p) for p in fdir.iterdir()),
+                    "abc1234", note="a note")
+    assert "**a note**" in (reg / "logit_test_v1" / "model_card.md").read_text(encoding="utf-8")
+    assert not any(p.name.endswith(".partial") for p in reg.iterdir())
+    app = app_predictions.main(["--registry", str(reg), "--model", "logit_test_v1", "--timeseries",
+                                str(tdir), "--fields", str(fdir), "--region-prefix", "syn",
+                                "--out", str(tmp_path / "app")])
+    need = {"field_id", "p_silage", "harvest_start", "harvest_end", "pre_ndvi", "pre_ndmi",
+            "low_evidence"}
+    f = next((tmp_path / "app").glob("syn-*/predictions.parquet"))
+    assert need <= set(pd.read_parquet(f).columns)
+    assert app["flip_reason"].str.len().min() > 0
