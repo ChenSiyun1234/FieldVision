@@ -286,3 +286,67 @@ def coverage_table(preds_model, X, cfg, limits=(10, 15, 20, 30, 45, None)):
                  "precision": m["precision"], "recall": m["recall"], "fpr": m["fpr"],
                  "roc_auc": m["roc_auc"]})
     return pd.DataFrame(rows)
+
+
+def prevalence_table(preds, prevalences, train_prevalence, n_boot=1000, seed=0,
+                     models=("rule", "logistic", "gbm")):
+    """Held-out metrics re-weighted to realistic silage shares.
+
+    For each share: every model at its own threshold (probabilities as
+    calibrated on balanced training data), the same model with the
+    threshold moved by Bayes' rule to that share ("prior-shifted"), and the
+    baseline that always predicts the class that is the majority at that share.
+    Recall and FPR are unchanged by re-weighting; precision, F1, accuracy and
+    PR-AUC are what move.
+    """
+    from .metrics import prevalence_weights, shifted_threshold
+    rows = []
+    for prev in prevalences:
+        for name in models:
+            g = preds[preds["model"] == name]
+            if g.empty:
+                continue
+            y = g["y"].to_numpy(int)
+            p = g["p"].to_numpy(float)
+            w = prevalence_weights(y, prev)
+            blocks = g["block_id"].to_numpy()
+            ops = [("own threshold", float(g["threshold"].iloc[0]))]
+            ops.append(("prior-shifted", shifted_threshold(prev, train_prevalence,
+                                                           float(g["threshold"].iloc[0]))))
+            for op, thr in ops:
+                pred = (p >= thr).astype(int)
+                m = classification_metrics(y, pred, p, weights=w)
+                ci = block_bootstrap_ci(y, pred, p, blocks, n_boot=n_boot, seed=seed, weights=w)
+                rows.append({"prevalence": prev, "model": name, "operating_point": op,
+                             "threshold": thr, **{k: m[k] for k in ALL_METRICS},
+                             **{k + "_ci": ci[k] for k in ALL_METRICS}})
+        g = preds[preds["model"] == models[0]]
+        if not g.empty:
+            y = g["y"].to_numpy(int)
+            const = int(prev >= 0.5)
+            m = classification_metrics(y, np.full(len(y), const), np.full(len(y), 0.5),
+                                       weights=prevalence_weights(y, prev))
+            rows.append({"prevalence": prev, "model": f"always {'silage' if const else 'grain'}",
+                         "operating_point": "baseline", "threshold": float("nan"),
+                         **{k: m[k] for k in ALL_METRICS}})
+    return pd.DataFrame(rows)
+
+
+def label_disagreement(preds, by="country", strong=0.9):
+    """Share of fields whose held-out score strongly contradicts the declared label.
+
+    A field declared grain with p >= strong (or silage with p <= 1 - strong)
+    has a curve that looks like the other class. Concentrated in one country
+    with spring declarations, that points at label noise more than at the model.
+    """
+    rows = []
+    for key, g in preds.groupby(by):
+        y, p = g["y"].to_numpy(int), g["p"].to_numpy(float)
+        sg = (y == 0) & (p >= strong)
+        ss = (y == 1) & (p <= 1 - strong)
+        err = (g["pred"].to_numpy(int) != y)
+        rows.append({by: key, "n": len(g), "error_rate": float(err.mean()),
+                     "grain_looks_silage": float(sg.sum() / max((y == 0).sum(), 1)),
+                     "silage_looks_grain": float(ss.sum() / max((y == 1).sum(), 1)),
+                     "share_of_errors_that_are_strong": float((sg | ss).sum() / max(err.sum(), 1))})
+    return pd.DataFrame(rows)

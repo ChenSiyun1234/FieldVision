@@ -184,3 +184,23 @@ def importance_bars(imp, path, top=20, title=""):
     fig.tight_layout()
     fig.savefig(path, dpi=90)
     plt.close(fig)
+
+
+def reliability(calib, path, title=""):
+    """Reliability diagram: mean predicted probability vs observed silage share per bin."""
+    fig, ax = plt.subplots(figsize=(4.8, 4.4))
+    ax.plot([0, 1], [0, 1], color="0.7", lw=0.8)
+    for name, c in calib.items():
+        r = c["reliability"]
+        if not r:
+            continue
+        x = [b["mean_p"] for b in r]
+        y = [b["share_silage"] for b in r]
+        ax.plot(x, y, "o-", ms=4, label=f"{name} (Brier {c['brier']:.3f}, ECE {c['ece']:.3f})")
+    ax.set_xlabel("predicted probability of silage")
+    ax.set_ylabel("share that is silage")
+    ax.legend(fontsize=7)
+    ax.set_title(title or "calibration on held-out folds", fontsize=9)
+    fig.tight_layout()
+    fig.savefig(path, dpi=90)
+    plt.close(fig)

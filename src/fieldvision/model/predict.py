@@ -65,6 +65,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="Predict silage vs grain per field.")
     add_input_args(ap)
     ap.add_argument("--out", required=True, help="output Parquet file")
+    ap.add_argument("--prevalence", type=float, default=None,
+                    help="also give probabilities moved to this silage share (e.g. 0.07 for the US)")
     args = ap.parse_args(argv)
 
     model, meta, cfg, _ = load_run(args.model, args.which)
@@ -73,7 +75,10 @@ def main(argv=None):
     p = model.predict_proba(X)
     pred_s = time.perf_counter() - t0
     name = args.which or meta["primary"]
-    out = predictions_frame(X, fields, p, model.threshold, name, keep_columns=args.keep_columns)
+    out = predictions_frame(X, fields, p, model.threshold, name, keep_columns=args.keep_columns,
+                            model=model, reference=meta.get("evidence_reference"),
+                            prevalence=args.prevalence,
+                            train_prevalence=meta.get("train_prevalence"))
     out["run_id"] = meta["run_id"]
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     out.to_parquet(args.out, index=False)

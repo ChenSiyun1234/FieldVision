@@ -36,10 +36,13 @@ from ..features.season import FeatureConfig, feature_group, signal_features
 from . import plots
 from .artifacts import (fingerprint, ledger_check_and_record, ledger_path, save_run,
                         write_json)
+from .explain import reference_values
 from .harness import (collection_shift, compare_models, coverage_table, field_collection,
+                      label_disagreement, prevalence_table,
                       importance_groups,
                       response_time, run_splits, summarize_importance, summarize_predictions)
-from .metrics import block_bootstrap_ci, classification_metrics, precision_at_prevalence
+from .metrics import (block_bootstrap_ci, calibration_summary, classification_metrics,
+                      precision_at_prevalence)
 from .models import MODEL_ORDER, make_factories
 from .report import SYNTHETIC_BANNER, confusion_line, fmt, kv_table, metrics_table
 from .splits import holdout_mask, leave_one_group_out, spatial_folds
@@ -72,6 +75,9 @@ def parse_args(argv=None):
                     help="low-evidence limit on the harvest interval width (days)")
     ap.add_argument("--peak-window", nargs=2, type=float, default=None, metavar=("START", "END"),
                     help="day-of-year window for the corn peak (default 160 280)")
+    ap.add_argument("--prevalences", nargs="*", type=float, default=[0.07, 0.85],
+                    help="silage shares to re-weight held-out metrics to (US average ~0.07; "
+                         "a dairy-heavy county ~0.85)")
     ap.add_argument("--allow-repeat", action="store_true",
                     help="allow evaluating the same holdout twice with the same run id")
     return ap.parse_args(argv)
@@ -224,6 +230,13 @@ def main(argv=None):
     sp_prim = preds[(preds.scheme == "spatial") & (preds.variant == v)
                     & (preds.model == args.primary)]
     coverage = coverage_table(sp_prim, Xd, cfg)
+    sp_all = preds[(preds.scheme == "spatial") & (preds.variant == v)
+                   & preds.model.isin(MODEL_ORDER)]
+    calib = {m: calibration_summary(g["y"], g["p"]) for m, g in sp_all.groupby("model", sort=False)
+             if m != "majority"}
+    prev_tab = prevalence_table(sp_all, args.prevalences, float(yd.mean()), args.n_boot, args.seed)
+    sp_prim_cy = sp_prim.assign(country_year=sp_prim["country"] + " " + sp_prim["year"])
+    disagree = label_disagreement(sp_prim_cy, "country_year")
 
     # ------------------------------------------------- collection shift
     shift_cols = [c for c in signal_features(X.columns, "all")] + \
@@ -286,6 +299,9 @@ def main(argv=None):
     if not shift.empty:
         shift.to_csv(out / "collection_shift.csv", index=False)
 
+    plots.reliability(calib, out / "figures" / "calibration.png",
+                      title="calibration on held-out spatial folds" +
+                      (" (SYNTHETIC)" if synthetic else ""))
     figs = _figures(out / "figures", ts, X, meta, Xd, yd, preds, importance, cfg, v, args.seed,
                     synthetic)
 
@@ -301,6 +317,8 @@ def main(argv=None):
                      "collections": sorted(md["collection"].unique()),
                      "fields_files": sorted(meta["fields_file"].unique())},
         "holdout_patterns": args.holdout_blocks, "synthetic": synthetic,
+        "train_prevalence": float(yd.mean()),
+        "evidence_reference": reference_values(Xd, yd),
         "command": " ".join(sys.argv),
     }
     save_run(out, final, meta_run)
@@ -316,6 +334,9 @@ def main(argv=None):
         "collection_by_country_year": {str(k): v_ for k, v_ in coll_year.to_dict().items()},
         "final_models": meta_run["models"],
         "coverage_vs_interval_limit": coverage.to_dict("records"),
+        "calibration": calib, "train_prevalence": float(yd.mean()),
+        "prevalence_table": prev_tab.to_dict("records"),
+        "label_disagreement": disagree.to_dict("records"),
         "seconds_total": time.perf_counter() - t_start,
     }
     write_json(out / "metrics.json", metrics)
@@ -429,6 +450,57 @@ def _write_report(out, metrics, importance, shift, coll_year, figs, args, synthe
                 L.append(f"Pooled CV by {col[4:]} ({metrics['primary']}): " + "; ".join(
                     f"{k} P {fmt(x['precision'], 2)} R {fmt(x['recall'], 2)} "
                     f"FPR {fmt(x['fpr'], 2)} (n={x['n']})" for k, x in prim[col].items()) + "\n")
+
+    L.append("### At realistic silage shares\n")
+    L.append(f"The training labels are balanced by design ({metrics['train_prevalence']:.0%} silage); "
+             "about 6-8 % of US corn is silage, so 'always grain' is right 93 % of the time and "
+             "precision at 50/50 overstates what a user would see. The held-out spatial-CV "
+             "predictions are re-weighted so silage makes up the stated share. Recall and FPR "
+             "do not change; precision, F1, accuracy and PR-AUC do. 'prior-shifted' moves the "
+             "threshold by Bayes' rule to that share (fewer silage calls, higher precision, "
+             "lower recall).\n")
+    pt = metrics["prevalence_table"]
+    head = ["silage share", "model", "operating point", "threshold", "precision", "recall", "FPR",
+            "F1", "accuracy", "PR-AUC"]
+    rows = []
+    for r in pt:
+        def cell(k, r=r):
+            v_ = fmt(r[k])
+            ci = r.get(k + "_ci")
+            if isinstance(ci, (list, tuple)) and len(ci) == 2 and all(
+                    c is not None and np.isfinite(c) for c in ci):
+                v_ += f" [{ci[0]:.2f}, {ci[1]:.2f}]"
+            return v_
+        rows.append((f"{r['prevalence']:.0%}", r["model"], r["operating_point"], fmt(r["threshold"]),
+                     cell("precision"), cell("recall"), cell("fpr"), cell("f1"), cell("accuracy"),
+                     cell("pr_auc")))
+    L.append(kv_table(rows, head))
+    L.append("")
+    L.append("### Calibration on held-out folds\n")
+    L.append("Probabilities are Platt-calibrated inside each training fold (inner CV grouped by "
+             "block), so they mean 'share of silage among similar fields at the training class "
+             "balance'. Use `predict --prevalence` to move them to another share.\n")
+    L.append(kv_table([(n, fmt(c["brier"]), fmt(c["ece"]),
+                        ", ".join(f"{b['mean_p']:.2f}->{b['share_silage']:.2f} (n={b['n']})"
+                                  for b in c["reliability"]))
+                       for n, c in metrics["calibration"].items()],
+                      ["model", "Brier", "ECE", "mean predicted -> observed silage share per bin"]))
+    L.append("\nFigure: `figures/calibration.png`.\n")
+    L.append("### Label check by country and year\n")
+    L.append(f"Share of held-out fields where `{metrics['primary']}` strongly contradicts the "
+             "declared label (p >= 0.9 for a declared grain field, p <= 0.1 for declared "
+             "silage). Austrian labels are the end-of-year registry revision; Dutch labels are "
+             "spring declarations, so late switches between silage and grain show up there as "
+             "fields whose curve looks like the other class. A higher strong-disagreement share "
+             "in NL than in AT, with similar overall error elsewhere, is evidence of label noise "
+             "rather than of model error. It is not proof: some of these are real model mistakes.\n")
+    L.append(kv_table([(r["country_year"], r["n"], fmt(r["error_rate"]),
+                        fmt(r["grain_looks_silage"]), fmt(r["silage_looks_grain"]),
+                        fmt(r["share_of_errors_that_are_strong"]))
+                       for r in metrics["label_disagreement"]],
+                      ["country, year", "n", "error rate", "declared grain, p>=0.9",
+                       "declared silage, p<=0.1", "share of errors that are strong"]))
+    L.append("")
 
     for other in [k for k in s.get("spatial", {}) if k != v]:
         L.append(f"### Feature variant `{other}` (spatial CV, all fields)\n")

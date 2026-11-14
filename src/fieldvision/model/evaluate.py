@@ -157,7 +157,8 @@ def main(argv=None):
     miss = misclassified(prim, X, fields)
     miss.to_csv(out / "misclassified.csv", index=False)
     pf = predictions_frame(X, fields, st["model"].predict_proba(X), st["model"].threshold,
-                           st["name"], keep_columns=args.keep_columns)
+                           st["name"], keep_columns=args.keep_columns, model=st["model"],
+                           reference=meta.get("evidence_reference"))
     pf.to_parquet(out / "predictions.parquet", index=False)
     shift = domain_shift_table(args.model, X, fields)
     if shift is not None:

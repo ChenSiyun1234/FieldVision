@@ -98,13 +98,36 @@ def _doy_to_date(year, doy):
     return out.to_numpy()
 
 
-def predictions_frame(features, fields, p, threshold, model_name, keep_columns=()):
+def predictions_frame(features, fields, p, threshold, model_name, keep_columns=(), model=None,
+                      reference=None, prevalence=None, train_prevalence=None):
     """One row per field for the demo and for county aggregation.
 
     harvest_start / harvest_end bracket the harvest: the last usable
     observation still standing and the first one clearly harvested. The
     true date is somewhere in between.
+
+    p_silage is calibrated for the class share of the training data
+    (balanced). With `prevalence` (e.g. 0.07 for the US average) the table
+    also gets p_silage_at_prevalence, the same probability moved to that
+    share by Bayes' rule, and the label it implies at 0.5.
+    With `model` and `reference` (from run.json) it gets the readable
+    evidence and a reason sentence per field (see explain.py).
     """
+    out = _base_predictions(features, fields, p, threshold, model_name, keep_columns)
+    if prevalence is not None and train_prevalence:
+        from .metrics import prior_shift
+        ps = prior_shift(p, prevalence, train_prevalence)
+        out["p_silage_at_prevalence"] = ps
+        out["predicted_label_at_prevalence"] = np.where(ps >= 0.5, "silage", "grain")
+        out["assumed_prevalence"] = float(prevalence)
+    if model is not None and reference:
+        from .explain import explanation_columns
+        ex = explanation_columns(out, features, model, reference)
+        out = pd.concat([out.reset_index(drop=True), ex], axis=1)
+    return out
+
+
+def _base_predictions(features, fields, p, threshold, model_name, keep_columns=()):
     f = fields.set_index("field_id").reindex(features["field_id"])
     p = np.asarray(p, dtype=float)
     reason = features["low_evidence_reason"].astype(str).to_numpy().copy()
