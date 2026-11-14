@@ -238,6 +238,15 @@ The fetcher uses the public INVEKOS API with `snar_code='109'` and bbox
 | Beltsville 2022 | 25 / 2 | 61 (all PC: 36 b04.00, 25 b05.10) | 0 | 39 / 43 / 48 | 15 / 17 / 22 | 163 s |
 | Beltsville 2023 | 25 / 2 | 72 (C1) | 0 | 39 / 50 / 55 | 13 / 15 / 27 | 85 s |
 
+Tried and rejected (2026-11-14): reading only one MGRS tile per acquisition when
+another tile in the same UTM zone covers the whole block would save 41% of the
+Netherlands reads, but it does not reproduce the full read. Re-extracting two
+finished Austrian overlap blocks (32633_AT-E4590N2800_0 and _1, 44 of 97 reads
+skipped each) changed 25 of 1,325 and 41 of 1,378 rows: Sen2Cor runs per tile, so
+the two tiles' SCL masks differ slightly and the skipped tile sometimes had more
+clear pixels for a field. All runs therefore read every tile. Evidence and the
+check script: `C:\t\fv\data\timeseries\tile_skip_check\`.
+
 Cost is roughly 0.5–0.6 s per (scene, block) pair, nearly independent of the
 number of fields in a block, so dense blocks are what make it cheap. The Austrian
 smoke fields in the western blocks are covered by one MGRS tile/orbit (24 scenes);
