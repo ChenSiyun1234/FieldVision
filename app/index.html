@@ -9,29 +9,38 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">
-      <div class="logo">Field<span>Vision</span></div>
-      <div class="tagline">Silage or grain? Read from public satellite data.</div>
-    </div>
+    <button type="button" class="brand" id="brand" title="What this tool answers">
+      <span class="logo">Field<span>Vision</span></span>
+      <span class="tagline">Chopped for silage or combined for grain? Read from space.</span>
+    </button>
     <nav class="regions" id="regions" aria-label="Region and year"></nav>
     <div class="badge" id="badge" hidden title="Synthetic fields and a toy model so the app has something to show. Not a result.">Sample data · synthetic</div>
   </header>
 
   <main class="layout">
     <section class="mapwrap" aria-label="Map">
-      <div id="map"></div>
-      <div class="map-tools">
-        <div class="seg" role="group" aria-label="Colour fields by">
-          <button type="button" data-mode="pred" class="on">Prediction</button>
-          <button type="button" data-mode="check">Check vs declared</button>
+      <div class="mapstage">
+        <div id="map"></div>
+        <div class="map-tools">
+          <div class="seg" role="group" aria-label="Colour fields by">
+            <button type="button" data-mode="pred" class="on">Prediction</button>
+            <button type="button" data-mode="check">Check vs declared</button>
+          </div>
+          <div class="seg small" role="group" aria-label="Basemap">
+            <button type="button" data-base="sat" class="on">Satellite</button>
+            <button type="button" data-base="plain">Plain</button>
+          </div>
         </div>
-        <div class="seg small" role="group" aria-label="Basemap">
-          <button type="button" data-base="sat" class="on">Satellite</button>
-          <button type="button" data-base="plain">Plain</button>
+        <div class="legend" id="legend"></div>
+        <div class="map-note" id="map-note" hidden></div>
+      </div>
+      <div class="timeline" id="timeline" hidden></div>
+      <div class="opening" id="intro" hidden role="dialog" aria-label="What this tool answers">
+        <div class="opening-card">
+          <p class="opening-q">FieldVision tells, from space, which corn fields were <span class="s">chopped for silage</span> and which were <span class="g">combined for grain</span>, and shows the evidence behind every call.</p>
+          <button type="button" class="opening-go">Show the map →</button>
         </div>
       </div>
-      <div class="legend" id="legend"></div>
-      <div class="map-note" id="map-note" hidden></div>
     </section>
 
     <aside class="panel">
@@ -39,7 +48,7 @@
       <nav class="tabs" id="tabs" role="tablist">
         <button type="button" role="tab" data-tab="check">Check these first</button>
         <button type="button" role="tab" data-tab="wrong">Model wrong</button>
-        <button type="button" role="tab" data-tab="counties">Counties</button>
+        <button type="button" role="tab" data-tab="counties">Totals check</button>
       </nav>
       <section class="view" id="view"></section>
     </aside>

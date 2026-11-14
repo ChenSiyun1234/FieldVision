@@ -64,3 +64,16 @@ export function esc(s) {
 }
 
 export const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
+
+export const acres = (v) => (isNum(v) ? `${Math.round(v).toLocaleString("en-US")} ac` : DASH);
+
+/** Relative gap of ours against a reference, e.g. +0.13 for 13 % more. Null when undefined. */
+export function relGap(ours, ref) {
+  return isNum(ours) && isNum(ref) && ref > 0 ? (ours - ref) / ref : null;
+}
+
+export function signedPct(v) {
+  if (!isNum(v)) return DASH;
+  const p = Math.round(v * 100);
+  return `${p > 0 ? "+" : p < 0 ? "\u2212" : ""}${Math.abs(p)}%`;
+}

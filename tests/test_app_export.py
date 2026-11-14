@@ -77,7 +77,32 @@ def test_build_series_quality_codes_and_duplicates():
     assert s["t"][0] == (pd.Timestamp("2024-06-01") - pd.Timestamp("2024-01-01")).days
     assert s["ndvi"][0] == pytest.approx(0.6)
     assert s["ndvi"][2] is None and s["ndmi"][2] is None
-    assert cov["a"] == {"n_obs": 4, "n_usable": 2, "max_gap": 40}
+    # no B12 column in this input: the residue index is missing, not zero
+    assert s["ndti"] == [None, None, None, None]
+    peak_day = (pd.Timestamp("2024-06-01") - pd.Timestamp("2024-01-01")).days
+    assert cov["a"] == {"n_obs": 4, "n_usable": 2, "max_gap": 40, "peak_ndvi": 0.6, "peak_day": peak_day}
+
+
+def test_residue_index_and_post_harvest_values():
+    ts = pd.DataFrame([
+        dict(field_id="a", date="2024-09-01", n_pixels=50, n_clear=50, clear_fraction=1.0, B04=0.03, B08=0.40, B8A=0.40, B11=0.20, B12=0.12),
+        # cut between Sep 1 and Sep 6; bare soil afterwards: NDTI = (0.30 - 0.27) / 0.57
+        dict(field_id="a", date="2024-09-06", n_pixels=50, n_clear=50, clear_fraction=1.0, B04=0.20, B08=0.25, B8A=0.25, B11=0.30, B12=0.27),
+        dict(field_id="a", date="2024-09-11", n_pixels=50, n_clear=10, clear_fraction=0.2, B04=0.20, B08=0.25, B8A=0.25, B11=0.30, B12=0.10),
+        dict(field_id="a", date="2024-09-16", n_pixels=50, n_clear=50, clear_fraction=1.0, B04=0.20, B08=0.26, B8A=0.26, B11=0.30, B12=0.26),
+        dict(field_id="a", date="2024-11-30", n_pixels=50, n_clear=50, clear_fraction=1.0, B04=0.20, B08=0.26, B8A=0.26, B11=0.30, B12=0.10),
+    ])
+    ts["date"] = pd.to_datetime(ts["date"])
+    series, _ = export.build_series(ts, 2024, min_clear=0.7)
+    s = series["a"]
+    assert s["ndti"][0] == pytest.approx(0.25, abs=1e-3)
+    he = (pd.Timestamp("2024-09-06") - pd.Timestamp("2024-01-01")).days
+    post_ndvi, post_ndti = export.post_harvest(s, he)
+    assert post_ndvi == pytest.approx(0.111, abs=1e-3)
+    # median over usable views within 30 days: Sep 6 and Sep 16; the hazy Sep 11 and late Nov 30 are left out
+    assert post_ndti == pytest.approx((0.053 + 0.071) / 2, abs=2e-3)
+    assert export.post_harvest(s, None) == (None, None)
+    assert export.post_harvest(None, he) == (None, None)
 
 
 # ---------------------------------------------------------------- whole export
@@ -147,6 +172,56 @@ def test_us_counties(built):
     shapes = strict_load(app / "us-2022" / "counties.geojson")
     assert len(shapes["features"]) == 10
 
+    # acres: silage + grain = area of the predicted fields; the state row sums the counties
+    props = [f["properties"] for f in strict_load(app / "us-2022" / "fields.geojson")["features"]]
+    by_fips = {}
+    for p in props:
+        if p["pred"]:
+            by_fips[p["county_fips"]] = by_fips.get(p["county_fips"], 0) + p["area_ha"] * export.ACRES_PER_HA
+    for r in c["rows"]:
+        assert r["pred_silage_acres"] + r["pred_grain_acres"] == pytest.approx(by_fips.get(r["fips"], 0), abs=0.5)
+    (st,) = c["states"]
+    assert st["state"] == "WI" and st["n_counties"] == 10
+    for k in ("pred_silage_acres", "pred_grain_acres", "usda_silage_acres", "usda_grain_acres"):
+        assert st[k] == pytest.approx(sum(r[k] for r in c["rows"]), abs=1)
+
+
+def test_asof_tables(built):
+    app, metas = built
+    for rid in ("at-2024", "us-2022"):
+        assert metas[rid]["has_asof"]
+        a = strict_load(app / rid / "asof.json")
+        n = len(a["cutoffs"])
+        assert n >= 3 and a["cutoffs"] == sorted(a["cutoffs"])
+        assert len(a["metrics"]) == n
+        assert [m["cutoff"] for m in a["metrics"]] == a["cutoffs"]
+        assert set(a["fields"]) == {f["properties"]["field_id"] for f in strict_load(app / rid / "fields.geojson")["features"]}
+        for f in a["fields"].values():
+            assert len(f["p"]) == len(f["low"]) == n
+    # labelled region: accuracy per cutoff exists; unlabelled: no accuracy, only coverage
+    at = strict_load(app / "at-2024" / "asof.json")
+    assert all(m["all"] is not None for m in at["metrics"])
+    us = strict_load(app / "us-2022" / "asof.json")
+    assert all(m["all"] is None and m["low_evidence_share"] is not None for m in us["metrics"])
+    assert metas["barc-2023"]["has_asof"] is False
+    assert not (app / "barc-2023" / "asof.json").exists()
+
+
+def test_harvest_reference_and_evidence_fields(built):
+    app, metas = built
+    ref = metas["at-2024"]["harvest_ref"]
+    assert ref["silage_mid"] < ref["grain_mid"]
+    props = [f["properties"] for f in strict_load(app / "at-2024" / "fields.geojson")["features"]]
+    cut = [p for p in props if p["he"]]
+    # the generator leaves stalks after grain and bare soil after silage
+    assert any(p["post_ndti"] is not None for p in cut)
+    sil = [p["post_ndti"] for p in cut if p["label"] == "silage" and p["post_ndti"] is not None]
+    grn = [p["post_ndti"] for p in cut if p["label"] == "grain" and p["post_ndti"] is not None]
+    assert np.median(sil) < 0.1 < np.median(grn)
+    assert any(p["explanation"] for p in props) and any(p["explanation"] is None and p["pred"] for p in props)
+    for p in props:
+        assert set(p) >= {"peak_ndvi", "peak_day", "post_ndvi", "post_ndti", "explanation", "flip"}
+
 
 # ---------------------------------------------------------------- small hand-made inputs
 
@@ -192,6 +267,43 @@ def test_predictions_csv_with_nulls_and_validation(tmp_path):
     bad.write_text("field_id,p_silage,harvest_start,harvest_end,pre_ndvi,pre_ndmi,low_evidence\na,1.5,,,,,False\n", encoding="utf-8")
     with pytest.raises(ValueError, match="between 0 and 1"):
         export.export_region(fields, tmp_path / "out" / "r3", predictions_path=bad)
+
+
+def test_optional_prediction_columns_and_asof_input(tmp_path):
+    fields = write_fields(tmp_path / "f.geojson", [
+        {"field_id": "a", "label": "silage", "year": 2024},
+        {"field_id": "b", "label": "grain", "year": 2024},
+    ])
+    pd.DataFrame({
+        "field_id": ["a", "b"], "p_silage": [0.9, 0.2],
+        "harvest_start": ["2024-09-01", "2024-10-10"], "harvest_end": ["2024-09-06", "2024-10-15"],
+        "pre_ndvi": [0.8, 0.4], "pre_ndmi": [0.3, 0.0], "low_evidence": [False, False],
+        "explanation": ["green and wet at the cut", None], "flip_reason": [None, "would be silage if cut earlier"],
+        "post_ndti": [0.04, None],
+    }).to_parquet(tmp_path / "p.parquet", index=False)
+    asof = tmp_path / "asof.csv"
+    asof.write_text(
+        "field_id,cutoff_date,p_silage,low_evidence\n"
+        "a,2024-08-15,0.5,True\nb,2024-08-15,0.6,True\n"
+        "a,2024-09-15,0.85,False\nb,2024-09-15,,\n", encoding="utf-8")
+    meta = export.export_region(fields, tmp_path / "app" / "r", predictions_path=tmp_path / "p.parquet", asof_path=asof)
+    props = {f["properties"]["field_id"]: f["properties"] for f in strict_load(tmp_path / "app" / "r" / "fields.geojson")["features"]}
+    assert props["a"]["explanation"] == "green and wet at the cut" and props["a"]["flip"] is None
+    assert props["b"]["flip"] == "would be silage if cut earlier"
+    assert props["a"]["post_ndti"] == 0.04          # the model's own number wins
+    assert props["b"]["post_ndti"] is None          # no series to read it from: stays missing
+    a = strict_load(tmp_path / "app" / "r" / "asof.json")
+    assert a["cutoffs"] == ["2024-08-15", "2024-09-15"]
+    assert a["fields"]["b"]["p"] == [0.6, None]
+    m0, m1 = a["metrics"]
+    assert (m0["all"]["tp"], m0["all"]["fp"]) == (1, 1) and m0["low_evidence_share"] == 1.0
+    assert m1["n_predicted"] == 1 and m1["all"]["n"] == 1
+    assert meta["has_asof"] is True
+
+    bad = tmp_path / "bad.csv"
+    bad.write_text("field_id,cutoff_date,p_silage\na,2024-08-15,0.5\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="as-of predictions are missing"):
+        export.export_region(fields, tmp_path / "app" / "r2", asof_path=bad)
 
 
 def test_max_fields_keeps_metrics_on_all_fields(tmp_path):

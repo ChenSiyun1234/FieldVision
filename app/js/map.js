@@ -99,14 +99,16 @@ export class FieldMap {
     this.countyById = new Map();
   }
 
-  setFields(features) {
+  /** padding: {topLeft:[x,y], bottomRight:[x,y]} keeps fields clear of overlays */
+  setFields(features, padding = null) {
     this.clear();
     const valid = features.filter((f) => f.geometry);
     this.polys = L.geoJSON({ type: "FeatureCollection", features: valid }, {
       renderer: this.fieldRenderer,
       style: (f) => fieldStyle(f.properties, this.mode),
       onEachFeature: (f, layer) => {
-        layer.bindTooltip(() => tipHtml(f.properties), { className: "fv-tip", sticky: true, direction: "top" });
+        const id = f.properties.field_id;
+        layer.bindTooltip(() => tipHtml(this.byId.get(id).props), { className: "fv-tip", sticky: true, direction: "top" });
         layer.on("click", () => this.onSelect(f.properties.field_id));
         this.byId.set(f.properties.field_id, { poly: layer, props: f.properties });
       },
@@ -116,7 +118,7 @@ export class FieldMap {
       const p = f.properties;
       if (typeof p.lat !== "number" || typeof p.lon !== "number") continue;
       const dot = L.circleMarker([p.lat, p.lon], { pane: "dots", renderer: this.dotRenderer, radius: 6.5, ...fieldStyle(p, this.mode) });
-      dot.bindTooltip(() => tipHtml(p), { className: "fv-tip", direction: "top", offset: [0, -6] });
+      dot.bindTooltip(() => tipHtml(this.byId.get(p.field_id).props), { className: "fv-tip", direction: "top", offset: [0, -6] });
       dot.on("click", () => this.onSelect(p.field_id));
       this.dots.addLayer(dot);
       const entry = this.byId.get(p.field_id);
@@ -126,7 +128,8 @@ export class FieldMap {
     this.layers.push(this.polys, this.dots);
     if (valid.length) {
       const b = this.polys.getBounds();
-      if (b.isValid()) this.map.fitBounds(b, { padding: [40, 40], maxZoom: 15 });
+      const pad = padding ? { paddingTopLeft: padding.topLeft, paddingBottomRight: padding.bottomRight } : { padding: [40, 40] };
+      if (b.isValid()) this.map.fitBounds(b, { ...pad, maxZoom: 15 });
     }
     this._toggleDots();
   }
@@ -137,6 +140,15 @@ export class FieldMap {
     if (show && !this.map.hasLayer(this.dots)) this.dots.addTo(this.map);
     if (!show && this.map.hasLayer(this.dots)) this.map.removeLayer(this.dots);
     this._drawHighlight();
+  }
+
+  /** Swap the properties used for styling and tooltips (e.g. predictions as of a cutoff). */
+  setProps(byId) {
+    for (const [id, e] of this.byId) {
+      const p = byId.get(id);
+      if (p) e.props = p;
+    }
+    this.setMode(this.mode);
   }
 
   setMode(mode) {
