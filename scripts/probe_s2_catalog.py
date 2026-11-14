@@ -16,15 +16,16 @@ REGIONS = {
 
 
 def probe(task):
-    region, bbox, year, collection = task
+    region, bbox, year, collection, start, end = task
     params = {"collections": collection, "bbox": ",".join(map(str, bbox)),
-              "datetime": f"{year}-01-01T00:00:00Z/{year}-12-31T23:59:59Z", "limit": 1}
+              "datetime": f"{year}-{start}T00:00:00Z/{year}-{end}T23:59:59Z", "limit": 1}
     for attempt in range(4):
         try:
             response = requests.get("https://earth-search.aws.element84.com/v1/search", params=params, timeout=90)
             response.raise_for_status()
             data = response.json()
             result = {"region": region, "bbox": bbox, "year": year, "collection": collection,
+                      "start": start, "end": end,
                       "matched": data.get("numberMatched", data.get("context", {}).get("matched")),
                       "available": bool(data.get("features")), "item": next(iter(data.get("features", [])), None)}
             print(json.dumps({k: v for k, v in result.items() if k != "item"}), flush=True)
@@ -38,9 +39,11 @@ def probe(task):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument("--start", default="01-01", help="Inclusive MM-DD")
+    parser.add_argument("--end", default="12-31", help="Inclusive MM-DD")
     args = parser.parse_args()
     args.out.mkdir(parents=True, exist_ok=True)
-    tasks = [(region, bbox, year, collection) for region, bbox in REGIONS.items()
+    tasks = [(region, bbox, year, collection, args.start, args.end) for region, bbox in REGIONS.items()
              for year in (2022, 2024, 2025)
              for collection in ("sentinel-2-c1-l2a", "sentinel-2-l2a")]
     with ThreadPoolExecutor(max_workers=8) as pool:
