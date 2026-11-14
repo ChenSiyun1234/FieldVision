@@ -123,6 +123,18 @@ NIR > red + 0.02, and NIR < 1 before writing. A failed check records the scene e
 After that check, out-of-range reflectance is marked missing rather than clipped.
 This conservative test may reject unusual vegetation/illumination; inspect errors.
 
+### Known gap: fog and cloud that SCL calls clear
+
+SCL sometimes labels low stratus/fog as class 5 (not vegetated), so it survives the
+mask. Example: S2A_MSIL2A_20221128T095341_R079_T33TWM (Graz basin fog): 5613 field
+pixels in SCL 5 with median B02 0.46 and B11 0.48. It happens in both sources and
+all years, mostly October-November in Austria. A row with median B02 > 0.25 is
+almost certainly such a case (B11 ~0.47, so not snow): 0.67% of usable rows in
+at_2022, 0.83% in at_2024, ~0 elsewhere. Thresholds of 0.15-0.18 would also remove
+spring bare-soil/haze rows, so 0.25 is the suggested floor. The extractor does not
+drop these rows; `scripts/report_s2_run.py` counts them in each READY line, and the
+filter belongs in feature building where it stays reversible.
+
 ### Difference from the organisers' starter notebook
 
 The starter notebook reads Planetary Computer `sentinel-2-l2a` with scene cloud

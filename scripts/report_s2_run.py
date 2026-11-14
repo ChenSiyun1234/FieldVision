@@ -33,6 +33,9 @@ def summarize(run):
                    "missing_asset" if message.startswith("KeyError") else "read/other"] += 1
     attempted = len(scenes) + sum(errors.values())
     sources = usable.collection.value_counts()
+    # Cloud/fog that SCL passes as clear shows up as very bright blue (see docs).
+    bright = usable[usable.B02 > 0.25]
+    bright_months = pd.to_datetime(bright.date).dt.month
     return {
         "path": str(run), "status": manifest["status"], "fields": len(coverage),
         "fields_status": dict(Counter(coverage.status)),
@@ -43,6 +46,8 @@ def summarize(run):
         "sources": "; ".join(f"{name} {count / len(usable):.0%}" for name, count in sources.items()),
         "scene_block_pairs_ok": len(scenes), "scene_failures": dict(errors), "attempted": attempted,
         "started": manifest["started_at"], "ended": manifest["ended_at"],
+        "bright_rows": len(bright), "bright_share": len(bright) / max(len(usable), 1),
+        "bright_oct_nov": int(bright_months.isin([10, 11]).sum()),
         "failed_blocks": sum(b["status"] == "failed" for b in manifest["blocks"].values()),
         "invalid_fields": len(manifest.get("invalid_fields", {})),
     }
@@ -71,6 +76,7 @@ def line(s):
             f"median_usable_dates={s['median_usable_dates']:g} share_ge8_usable_jul_nov={s['share_ge8_jul_nov']:.2f} "
             f"sources=[{s['sources']}] scene_failures=[{failures}] field_status={s['fields_status']} "
             f"fields_under_20px={s['small_fields']} min_pixels={s['min_pixels']} "
+            f"bright_rows_B02gt0.25={s['bright_rows']} ({s['bright_share']:.2%}, {s['bright_oct_nov']} in Oct-Nov; likely fog/cloud passed by SCL) "
             f"run_hours={hours:.2f}{flag}")
 
 
