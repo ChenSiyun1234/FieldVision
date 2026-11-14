@@ -38,6 +38,16 @@ Python packages needed at run time: `numpy`, `pandas`, `pyarrow`, `scikit-learn`
 `centroid_lon`, `centroid_lat` and `area_ha`). Checked by running every method with those
 packages blocked.
 
+## Try it in one command
+
+```
+python3 /workspace/FieldVision/scripts/toolbox_demo.py 24033 2022
+```
+
+It calls `scout`, `route_options`, `extract_features`, `classify` and `aggregate` on the demo
+county and prints each return value and the first two per-field results. The arguments are
+`fips year policy`; the script sets the two paths itself.
+
 ## Data layout
 
 ```
