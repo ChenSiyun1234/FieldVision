@@ -27,6 +27,8 @@ registry/<name>/
 | `ts_model_v1` | same model as `eu_gbm_v1` (earlier name, kept for the team's links) | Austria 2024 | as above | as above |
 | `composite_v1` | mean of the calibrated probabilities of the two rules and the logistic, abstains on strong disagreement | Austria 2024 | Austrian spatial CV and year hold-out | **not scored before Evaluation 2** |
 | `timing_rule_v1` | the team's rule: thresholds on drop date and pre-drop NDVI | Beltsville labels (in-site) | Beltsville leave-one-year-out | 40 of 44 out-of-fold |
+| `barc_logistic_v1` | six-feature logistic fitted on Beltsville only (the team's plan) | Beltsville labels (in-site) | Beltsville leave-one-field-out and leave-one-year-out | 43 of 44 out-of-fold (both designs); shuffled labels: median 23, max 40 |
+| `eu_barc_logistic_v1` | six-feature logistic on Austria 2024 plus Beltsville, sources weighted equally; toolbox `in_site` policy, FIPS 24033 only | Austria 2024 + Beltsville labels (in-site) | as above | 43 of 44 out-of-fold (both designs); shuffled Beltsville labels still reach 42, so Beltsville adds about one field over the European model |
 
 Classify a county-year from a time-series file (run from the repo root, `src` on the path;
 in PowerShell `$env:PYTHONPATH="src"`):

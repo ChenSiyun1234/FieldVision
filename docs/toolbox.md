@@ -134,6 +134,7 @@ The stub's `run_critic` is not here; it belongs to the agent.
 | `standard` | `composite_v1`: mean of the calibrated probabilities of the timing rule, the timing+moisture rule and the six-feature logistic, all trained on Austrian registry labels | low evidence (harvest bracket over 20 days, fewer than 6 usable dates, no or unconfirmed drop) or the three members split their votes and are at least 0.5 apart |
 | `radar_first` | the same as `standard`. There is no radar model behind it; the policy exists so the agent's routing logic runs, and its note says so | as `standard` |
 | `regional_threshold` | `eu_timing_rule_v1` with its drop-date threshold moved by (this county's median drop day minus Austria's median drop day, 252.5) | low evidence |
+| `in_site` | `eu_barc_logistic_v1`, fitted on the Beltsville fields themselves plus Austria 2024 (equal weight). Only for FIPS 24033; elsewhere `route_options` lists it as not available and `classify` refuses it. On 24033 its calls are in-sample; its out-of-fold accuracy (43 of 44) is in its model card | low evidence |
 
 ## Result files
 

@@ -27,6 +27,9 @@ What each model's rows are:
 | `eu_logistic_v1` | Austria 2024 only | yes: never saw Beltsville (secondary model in Evaluation 1) |
 | `timing_rule_v1` | Beltsville labels | **out-of-fold**: each year is predicted by the rule fitted on the other two years (`evidence.fold = "test-<year>"`). The frozen `timing_rule_v1` folder is fitted on all three years; its predictions on these same fields would be in-sample and are not shown here |
 
+| `barc_logistic_v1` | Beltsville labels only (in-site) | **out-of-fold**: each field predicted by the model fitted without any season of that field (leave-one-field-out, `evidence.fold = "test-field-<OBJECTID>"`). The frozen folder is fitted on all 44 field-years |
+| `eu_barc_logistic_v1` | Austria 2024 plus Beltsville labels (in-site) | **out-of-fold**, same design as the row above |
+
 Produced with `python -m fieldvision.model.classify` (see `registry/README.md`); the
 `timing_rule_v1` rows come from `fieldvision.beltsville.timing_rule`'s leave-one-year-out
 predictions.
