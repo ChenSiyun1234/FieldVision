@@ -34,6 +34,8 @@ def summarize(run):
     return {
         "path": str(run), "status": manifest["status"], "fields": len(coverage),
         "fields_status": dict(Counter(coverage.status)),
+        "small_fields": int(((coverage.n_pixels > 0) & (coverage.n_pixels < 20)).sum()),
+        "min_pixels": int(coverage.n_pixels.min()),
         "median_usable_dates": float(coverage.usable_dates.median()),
         "share_ge8_jul_nov": float((late_counts >= 8).mean()),
         "sources": "; ".join(f"{name} {count / len(usable):.0%}" for name, count in sources.items()),
@@ -54,6 +56,7 @@ def line(s):
     return (f"{ended.strftime('%Y-%m-%dT%H:%MZ')} {s['path']} status={s['status']} fields={s['fields']} "
             f"median_usable_dates={s['median_usable_dates']:g} share_ge8_usable_jul_nov={s['share_ge8_jul_nov']:.2f} "
             f"sources=[{s['sources']}] scene_failures=[{failures}] field_status={s['fields_status']} "
+            f"fields_under_20px={s['small_fields']} min_pixels={s['min_pixels']} "
             f"run_hours={hours:.2f}{flag}")
 
 

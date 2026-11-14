@@ -123,6 +123,27 @@ NIR > red + 0.02, and NIR < 1 before writing. A failed check records the scene e
 After that check, out-of-range reflectance is marked missing rather than clipped.
 This conservative test may reject unusual vegetation/illumination; inspect errors.
 
+### Difference from the organisers' starter notebook
+
+The starter notebook reads Planetary Computer `sentinel-2-l2a` with scene cloud
+cover < 40% and keeps SCL classes 4, 5, 6, 7. The mask here is the same, but the
+scene-level filter is looser (`--max-cloud 80`): masking is per pixel, so a scene
+that is 60% cloudy over the tile can still be clear over a field, and harvest dates
+are the signal. To reproduce the starter's scene set, pass `--max-cloud 40`. Our
+default source for 2021 and 2023 is Earth Search Collection 1 (ESA reprocessed
+baselines 05.xx); 2022 comes from Planetary Computer like the starter. On identical
+products the two sources agree to 0.0000 reflectance (table above).
+
+### Beltsville evaluation fields
+
+The evaluation GeoPackage holds 83 multipolygons in Maryland State Plane (US feet);
+convert to EPSG:4326 per the contract. Small or oddly shaped research plots are
+never dropped: every `field_id` appears in `fields_coverage.csv` with `n_pixels`
+and a status (`no_pixels` for parcels with no 10 m pixel centre inside). The 5 m
+inset is skipped for a field when fewer than four pixel centres would remain.
+Expected sources: 2021 Collection 1 (70 dates) plus a few PC scenes, 2022 PC
+(61 dates), 2023 Collection 1 (72 dates).
+
 ## Spatial and operational behavior
 
 Fields are grouped in their centroid's local UTM zone (and label `block_id` if
