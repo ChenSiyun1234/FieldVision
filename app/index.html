@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FieldVision</title>
+  <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">Field<span>Vision</span></div>
+      <div class="tagline">Silage or grain? Read from public satellite data.</div>
+    </div>
+    <nav class="regions" id="regions" aria-label="Region and year"></nav>
+    <div class="badge" id="badge" hidden title="Synthetic fields and a toy model so the app has something to show. Not a result.">Sample data · synthetic</div>
+  </header>
+
+  <main class="layout">
+    <section class="mapwrap" aria-label="Map">
+      <div id="map"></div>
+      <div class="map-tools">
+        <div class="seg" role="group" aria-label="Colour fields by">
+          <button type="button" data-mode="pred" class="on">Prediction</button>
+          <button type="button" data-mode="check">Check vs declared</button>
+        </div>
+        <div class="seg small" role="group" aria-label="Basemap">
+          <button type="button" data-base="sat" class="on">Satellite</button>
+          <button type="button" data-base="plain">Plain</button>
+        </div>
+      </div>
+      <div class="legend" id="legend"></div>
+      <div class="map-note" id="map-note" hidden></div>
+    </section>
+
+    <aside class="panel">
+      <section class="metrics" id="metrics" aria-live="polite"></section>
+      <nav class="tabs" id="tabs" role="tablist">
+        <button type="button" role="tab" data-tab="check">Check these first</button>
+        <button type="button" role="tab" data-tab="wrong">Model wrong</button>
+        <button type="button" role="tab" data-tab="counties">Counties</button>
+      </nav>
+      <section class="view" id="view"></section>
+    </aside>
+  </main>
+
+  <script src="vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
