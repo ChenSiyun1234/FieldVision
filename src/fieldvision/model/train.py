@@ -38,6 +38,7 @@ from .artifacts import (fingerprint, ledger_check_and_record, ledger_path, refus
                         save_run,
                         write_json)
 from .explain import reference_values
+from .registry import portable_command
 from .harness import (collection_shift, compare_models, coverage_table, field_collection,
                       label_disagreement, prevalence_table,
                       importance_groups,
@@ -339,7 +340,7 @@ def main(argv=None):
         "holdout_patterns": args.holdout_blocks, "synthetic": synthetic,
         "train_prevalence": float(yd.mean()),
         "evidence_reference": reference_values(Xd, yd),
-        "command": " ".join(sys.argv),
+        "command": portable_command(sys.argv),
     }
     save_run(out, final, meta_run)
 

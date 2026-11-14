@@ -390,3 +390,44 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     assert a1["silage_acres_low"] <= a1["silage_acres"] <= a1["silage_acres_high"]
     ab = tb.abstain_region("24033", 2023, "test")
     assert ab["abstained"] and ab["abstained_acres"] > 0
+
+
+MACHINE_PATH = r"[A-Za-z]:[\/]|\bUsers\b|worktrees"
+
+
+def test_registry_export_writes_no_machine_paths(run_dir, tmp_path):
+    import re
+    import sys
+    from fieldvision.beltsville import timing_rule as tr
+    from fieldvision.model import registry
+    from fieldvision.model.registry import portable_command, portable_text
+    root, out, fdir, tdir, _ = run_dir
+    reg = tmp_path / "reg"
+    files = sorted(str(p) for p in fdir.iterdir())
+    registry.export(out, "gbm", "gbm_t_v1", reg, files, "abc1234", eval_dir=root / "zs")
+    registry.export_composite(out, "comp_t_v1", reg, files, "abc1234")
+    bad = re.compile(MACHINE_PATH)
+    for p in reg.rglob("*"):
+        if p.suffix in {".json", ".md", ".txt", ".jsonl"}:
+            for line in p.read_text(encoding="utf-8").splitlines():
+                assert not bad.search(line), (p.name, line)
+    fake = r"C:\Users\someone\proj\.work\worktrees\x\src\fieldvision\model\train.py"
+    cmd = portable_command([fake, "--fields", r"C:\t\fv\data\labels\a\fields.geojson",
+                            "--out", r"D:\scratch\run"])
+    assert cmd == ("python -m fieldvision.model.train --fields data/labels/a/fields.geojson "
+                   "--out <external>/run")
+    assert not bad.search(portable_text(fake + " /home/me/x/y.parquet"))
+    assert portable_text("0.766/0.783 and https://example.org/a") == "0.766/0.783 and https://example.org/a"
+
+
+def test_committed_registry_and_results_have_no_machine_paths():
+    import re
+    from pathlib import Path
+    root = Path(__file__).resolve().parents[1]
+    bad = re.compile(MACHINE_PATH)
+    for folder in ("registry", "results", "docs"):
+        for p in (root / folder).rglob("*"):
+            if p.is_file() and p.suffix in {".json", ".md", ".jsonl", ".txt"}:
+                for line in p.read_text(encoding="utf-8").splitlines():
+                    hit = bad.search(line.replace("https://", "").replace("http://", ""))
+                    assert not hit, (str(p.relative_to(root)), line[:120])

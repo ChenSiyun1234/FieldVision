@@ -1,8 +1,12 @@
 # Model registry
 
-Frozen model folders, loaded read-only. Each is written once by code and not edited (the only
-later addition is `eu_timing_rule_v1/training_reference.json`, a reference value the toolbox
-uses, which the model itself does not read).
+Frozen model folders, loaded read-only. Each is written once by code and the model files are
+never edited. Added after export, as reference values the models themselves do not read:
+`eu_timing_rule_v1/training_reference.json` (Austria's median drop day, for the toolbox's
+regional threshold) and `evidence_reference.json` in the European folders (class medians of the
+evidence features, for explanation sentences). New exports put both into `model.json`. Paths in
+`provenance.json` are written relative to the data folder (`data/...`) and commands as
+`python -m ...`; no machine-specific path is ever written.
 
 ```
 registry/<name>/

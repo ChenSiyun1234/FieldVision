@@ -107,14 +107,14 @@ class Toolbox:
         model, mj, cfg = load_model(self.registry, self.rule_model)
         base = getattr(model, "base_", model)
         ref = self.registry / self.rule_model / "training_reference.json"
-        if ref.exists():
+        if mj.get("training_median_timing") is not None:
+            train_median = float(mj["training_median_timing"])
+        elif ref.exists():
             train_median = float(json.loads(ref.read_text(encoding="utf-8"))
                                  ["training_median_harv_mid_doy"])
         else:
-            prov = json.loads((self.registry / self.rule_model / "provenance.json")
-                              .read_text(encoding="utf-8"))
-            train = pd.read_parquet(Path(prov["training_run"]) / "features.parquet")
-            train_median = float(train.loc[train["split"] == "development", base.timing].median())
+            raise FileNotFoundError(f"{self.rule_model} has no training median drop day "
+                                    "(training_median_timing in model.json or training_reference.json)")
         here = float(np.nanmedian(X[base.timing].to_numpy(float)))
         shift = here - train_median if np.isfinite(here) else 0.0
         Xs = X.copy()

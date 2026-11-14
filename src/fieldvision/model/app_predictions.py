@@ -97,8 +97,15 @@ def main(argv=None):
 
 
 def _reference(registry, name):
-    """Class medians for the reason sentence: from the training run named in provenance."""
-    prov = json.loads((Path(registry) / name / "provenance.json").read_text(encoding="utf-8"))
+    """Class medians for the reason sentence: from the registry folder, else the training run."""
+    folder = Path(registry) / name
+    mj = json.loads((folder / "model.json").read_text(encoding="utf-8"))
+    if mj.get("evidence_reference"):
+        return mj["evidence_reference"]
+    side = folder / "evidence_reference.json"
+    if side.exists():
+        return json.loads(side.read_text(encoding="utf-8"))["evidence_reference"]
+    prov = json.loads((folder / "provenance.json").read_text(encoding="utf-8"))
     run = prov.get("training_run")
     if run and (Path(run) / "run.json").exists():
         return json.loads((Path(run) / "run.json").read_text(encoding="utf-8")).get("evidence_reference")

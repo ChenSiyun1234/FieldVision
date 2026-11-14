@@ -27,7 +27,7 @@ from ..features.season import FeatureConfig
 from ..model.artifacts import write_json
 from ..model.metrics import classification_metrics, exact_intervals
 from ..model.models import RuleModel
-from ..model.registry import feature_unit, file_sha256
+from ..model.registry import feature_unit, file_sha256, portable, portable_text
 
 NAME = "timing_rule_v1"
 TIMING = "harv_mid_doy"
@@ -185,12 +185,12 @@ def main(argv=None):
                           "no drop found", "drop seen only once"],
         "confidence_tier": "high (simple, explainable) within Beltsville; untested elsewhere",
         "validated_on": "Beltsville 2021-2023, leave-one-year-out (3 folds), %d field-years" % len(fields)})
-    write_json(folder / "provenance.json", {
+    write_json(folder / "provenance.json", portable({
         "name": NAME, "created": dt.datetime.now().isoformat(timespec="seconds"),
         "git_commit_of_code": a.git_commit,
         "training_data": [{"path": str(p), "sha256": file_sha256(p)} for p in a.fields + a.timeseries],
-        "note": "fitted on Beltsville labels; kept separate from the European models"})
-    (folder / "model_card.md").write_text(text, encoding="utf-8")
+        "note": "fitted on Beltsville labels; kept separate from the European models"}))
+    (folder / "model_card.md").write_text(portable_text(text), encoding="utf-8")
     write_json(out / "metrics.json", {"pooled": pooled, "pooled_not_abstained": pc,
                                       "always_grain": ag, "folds": folds,
                                       "abstain_rate": float(oof["low_evidence"].mean())})

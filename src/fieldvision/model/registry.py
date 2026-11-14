@@ -30,7 +30,61 @@ from ..features.season import FeatureConfig, feature_kind
 from .artifacts import frozen_model_id, load_run, write_json
 
 # the repo's registry/ folder (src/fieldvision/model/registry.py -> repo root)
-DEFAULT_REGISTRY = Path(__file__).resolve().parents[3] / "registry"
+REPO_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_REGISTRY = REPO_ROOT / "registry"
+
+# --------------------------------------------------------------------------
+# nothing written into the repo may carry a machine-specific path
+# --------------------------------------------------------------------------
+import re as _re
+
+_ABS_PATH = _re.compile(r"(?<![\w])(?:[A-Za-z]:[\\/]|/(?:home|Users|tmp|workspace|mnt)/)[^\s\"'`|,;)]*")
+
+
+def portable_path(p):
+    """An absolute path made safe to publish.
+
+    .../src/fieldvision/<pkg>/<module>.py -> python -m fieldvision.<pkg>.<module>
+    anything inside the repo                -> repo-relative
+    anything under a 'data' folder          -> data/<rest>
+    anything else                           -> <external>/<file name>
+    """
+    s = str(p).replace("\\", "/")
+    m = _re.search(r"/src/fieldvision/([\w/]+)\.py$", s)
+    if m:
+        return "python -m fieldvision." + m.group(1).replace("/", ".")
+    root = str(REPO_ROOT).replace("\\", "/").rstrip("/")
+    if s.lower().startswith(root.lower() + "/"):
+        return s[len(root) + 1:]
+    i = s.lower().find("/data/")
+    if i >= 0:
+        return "data/" + s[i + len("/data/"):]
+    return "<external>/" + s.rstrip("/").split("/")[-1]
+
+
+def portable_text(text):
+    return _ABS_PATH.sub(lambda m: portable_path(m.group(0)), str(text))
+
+
+def portable(obj):
+    """Apply portable_text to every string in a JSON-like object."""
+    if isinstance(obj, str):
+        return portable_text(obj)
+    if isinstance(obj, dict):
+        return {k: portable(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [portable(v) for v in obj]
+    return obj
+
+
+def portable_command(argv):
+    """`python -m <module> <args>` with every path argument made portable."""
+    if not argv:
+        return None
+    head = portable_path(argv[0]) if str(argv[0]).endswith(".py") else str(argv[0])
+    if not head.startswith("python -m"):
+        head = "python " + head
+    return " ".join([head] + [portable_text(a) for a in argv[1:]])
 
 
 def file_sha256(path, chunk=1 << 20):
@@ -209,7 +263,16 @@ def export(run_dir, which, name, registry_dir, training_files, git_commit, eval_
     folder.mkdir(parents=True)
     import joblib
     joblib.dump(model, folder / "model.joblib")
-    write_json(folder / "model.json", model_json(model, name, description))
+    mj = model_json(model, name, description)
+    # class medians of the evidence features, so explanations work without the training run
+    mj["evidence_reference"] = meta.get("evidence_reference")
+    base = getattr(model, "base_", model)
+    if type(base).__name__ == "RuleModel" and (run_dir / "features.parquet").exists():
+        import pandas as pd
+        tr = pd.read_parquet(run_dir / "features.parquet", columns=[base.timing, "split"])
+        # the regional-threshold policy shifts the rule by (region median - this median)
+        mj["training_median_timing"] = float(tr.loc[tr["split"] == "development", base.timing].median())
+    write_json(folder / "model.json", portable(mj))
     write_json(folder / "feature_schema.json", {
         "computed_by": "fieldvision.features.build.build_features (time series -> one row per field)",
         "input_contract": "long Sentinel-2 table: field_id, date, clear_fraction, B02..B12 "
@@ -243,9 +306,9 @@ def export(run_dir, which, name, registry_dir, training_files, git_commit, eval_
     }
     if eval_metrics:
         prov["evaluated"] = {"dir": str(eval_dir), "frozen_model_id": eval_metrics["frozen_model"]["id"]}
-    write_json(folder / "provenance.json", prov)
-    (folder / "model_card.md").write_text(model_card(name, which, meta, run_metrics, eval_metrics,
-                                                     description, note), encoding="utf-8")
+    write_json(folder / "provenance.json", portable(prov))
+    (folder / "model_card.md").write_text(portable_text(model_card(
+        name, which, meta, run_metrics, eval_metrics, description, note)), encoding="utf-8")
     folder.rename(final)
     return final
 
@@ -387,12 +450,12 @@ def export_composite(run_dir, name, registry_dir, training_files, git_commit, fa
         "abstains_when": ["low evidence (see the members)", "members disagree strongly"],
         "confidence_tier": "medium",
         "validated_on": ["European data only; not scored on Beltsville before Evaluation 2"]})
-    write_json(folder / "provenance.json", {
+    write_json(folder / "provenance.json", portable({
         "name": name, "exported": dt.datetime.now().isoformat(timespec="seconds"),
         "members_from_run": str(run_dir), "run_id": meta["run_id"],
         "git_commit_of_code": git_commit,
         "training_data": [{"path": str(p), "sha256": file_sha256(p)} for p in training_files],
-        "note": "added after Evaluation 1 as a fifth family for Evaluation 2 (see ACCESS_LOG.md)"})
+        "note": "added after Evaluation 1 as a fifth family for Evaluation 2 (see ACCESS_LOG.md)"}))
     L = [f"# {name}\n", (description or "Average of the calibrated probabilities of three "
                          "low-capacity models trained on European registry labels: the timing "
                          "rule, the timing+moisture rule and the six-feature logistic.") + "\n",
@@ -418,7 +481,7 @@ def export_composite(run_dir, name, registry_dir, training_files, git_commit, fa
              "leave-one-country-out has to show.\n- The members' strong-disagreement flag rarely "
              "fires on Austrian data (about 0.4 % of fields); most abstentions come from low "
              "evidence.\n- Probabilities assume a 50/50 class balance.\n")
-    (folder / "model_card.md").write_text("\n".join(L), encoding="utf-8")
+    (folder / "model_card.md").write_text(portable_text("\n".join(L)), encoding="utf-8")
     folder.rename(final)
     return final
 
