@@ -154,10 +154,13 @@ def ledger_path(out_dir):
     return Path(out_dir).resolve().parent / "single_use_ledger.jsonl"
 
 
-def ledger_check_and_record(path, kind, set_fingerprint, model_id, out_dir, allow_repeat=False):
-    """Record that an evaluation set was used; refuse a second use unless allowed.
+def ledger_check_and_record(path, kind, set_fingerprint, model_id, out_dir, allow_repeat=False,
+                            record=True):
+    """Refuse a second use of an evaluation set unless allowed, and record this one.
 
-    kind is e.g. 'holdout', 'external_zero_shot', 'external_recalibrated'.
+    kind is e.g. 'holdout', 'external_zero_shot', 'external_adapted_...'.
+    Call once with record=False before computing anything and once with
+    record=True after the results are written, so a crash does not burn the set.
     Returns the list of earlier uses of the same set (any model).
     """
     path = Path(path)
@@ -177,6 +180,8 @@ def ledger_check_and_record(path, kind, set_fingerprint, model_id, out_dir, allo
             f"this {kind} set ({set_fingerprint}) was already evaluated with this model on "
             f"{same_model[0].get('time')} -> {same_model[0].get('out')}. It is single-use. "
             "Pass --allow-repeat only if you know why, and say so in the report.")
+    if not record:
+        return earlier
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "a", encoding="utf-8") as fh:
         fh.write(json.dumps({"time": dt.datetime.now().isoformat(timespec="seconds"),
