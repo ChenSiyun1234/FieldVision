@@ -431,7 +431,7 @@ def test_registry_export_writes_no_machine_paths(run_dir, tmp_path):
     root, out, fdir, tdir, _ = run_dir
     reg = tmp_path / "reg"
     files = sorted(str(p) for p in fdir.iterdir())
-    registry.export(out, "gbm", "gbm_t_v1", reg, files, "abc1234", eval_dir=root / "zs")
+    registry.export(out, "gbm", "gbm_t_v1", reg, files, "abc1234")
     registry.export_composite(out, "comp_t_v1", reg, files, "abc1234")
     bad = re.compile(MACHINE_PATH)
     for p in reg.rglob("*"):
