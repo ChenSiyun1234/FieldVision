@@ -67,7 +67,7 @@ def test_normalization_area_privacy_and_geometry_repair():
 
 
 def test_dutch_filter_year_and_axis_order():
-    query = get_adapter('NL', 2025).query((5, 51, 6, 52))
+    query = get_adapter('NL', 2025).query((5, 51, 6, 52), ['silage', 'grain'])
     assert '<gml:lowerCorner>51 5</gml:lowerCorner>' in query['filter']
     assert '<Literal>2025</Literal>' in query['filter']
     assert '<Literal>259</Literal>' in query['filter']

@@ -25,6 +25,16 @@ def block_id(country, x, y):
     return f"{country}-E{math.floor(x / 10000) * 10}N{math.floor(y / 10000) * 10}"
 
 
+def block_bbox(block):
+    """Lon/lat bounding box (west, south, east, north) of a block id's 10 km cell."""
+    body = block.split('-E', 1)[1]
+    e, n = body.split('N')
+    x0, y0 = int(e) * 1000, int(n) * 1000
+    corners = [TO_WGS84(x, y) for x in (x0, x0 + 10000) for y in (y0, y0 + 10000)]
+    lons, lats = [c[0] for c in corners], [c[1] for c in corners]
+    return min(lons), min(lats), max(lons), max(lats)
+
+
 def normalize(feature, adapter, region, counters, boundary):
     counters['received'] += 1
     p = feature['properties']
@@ -72,8 +82,12 @@ def normalize(feature, adapter, region, counters, boundary):
     }}
 
 
-def balance(features, target, seed=42, cap=60, rare_label='silage'):
-    """Rank by rare-class count within regions; rotate regions for coverage."""
+def balance(features, target, seed=42, cap=60, min_n=1, priority=None):
+    """Pick the same number of silage and grain fields in each block, up to `target` per class.
+
+    Blocks are ranked inside their region by the count of the scarcer class (or by
+    `priority`, a block -> rank map, lower first) and taken round-robin over regions.
+    """
     grouped = defaultdict(lambda: defaultdict(list))
     seen = set()
     for f in features:
@@ -85,18 +99,19 @@ def balance(features, target, seed=42, cap=60, rare_label='silage'):
     regions = defaultdict(list)
     for block, classes in grouped.items():
         n = min(cap, len(classes['silage']), len(classes['grain']))
-        if n:
+        if n and n >= min_n:
             region = classes['silage'][0]['properties']['region']
-            regions[region].append((block, classes, n))
+            rank = priority[block] if priority and block in priority else -min(len(classes['silage']), len(classes['grain']))
+            regions[region].append((rank, block, classes, n))
     for blocks in regions.values():
-        blocks.sort(key=lambda item: (-len(item[1][rare_label]), item[0]))
+        blocks.sort(key=lambda item: (item[0], item[1]))
     rng = random.Random(seed)
     result, count = [], 0
     while count < target and any(regions.values()):
         for region in sorted(regions):
             if not regions[region] or count >= target:
                 continue
-            _, classes, n = regions[region].pop(0)
+            _, _, classes, n = regions[region].pop(0)
             n = min(n, target - count)
             for label in ('silage', 'grain'):
                 candidates = sorted(classes[label], key=lambda f: f['properties']['field_id'])
