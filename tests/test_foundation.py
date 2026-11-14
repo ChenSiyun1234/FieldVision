@@ -164,3 +164,27 @@ def test_comparison_factories_use_main_line_physical_models():
                       "emb-gbm", "both-logistic", "both-gbm"}
     assert f["both-logistic"]().feature_names == f["phys-logistic"]().feature_names + ["e1", "e2"]
     assert f["emb-gbm"]().feature_names == ["e1", "e2"]
+
+
+def test_transfer_table_pairs_on_held_out_fields():
+    from fieldvision.foundation.compare import transfer_table
+    rng = np.random.default_rng(0)
+    n = 80
+    y = np.r_[np.ones(n // 2), np.zeros(n // 2)].astype(int)
+    base = pd.DataFrame({"field_id": [f"f{i}" for i in range(n)], "y": y,
+                         "block_id": [f"b{i % 8}" for i in range(n)], "variant": "relative"})
+    rows = []
+    for scheme in ("spatial", "loyo:2022"):
+        for model, noise in (("phys-logistic", 0.3), ("raw-gbm", 1.5)):
+            if scheme == "spatial":
+                noise = 0.3
+            p = 1 / (1 + np.exp(-(2 * y - 1) / noise - rng.normal(0, 1, n)))
+            rows.append(base.assign(scheme=scheme, model=model, p=p, pred=(p >= 0.5).astype(int)))
+    preds = pd.concat(rows, ignore_index=True)
+    t = transfer_table(preds, "loyo:2022", models=["phys-logistic", "raw-gbm"], n_boot=200)
+    assert t["model"].tolist() == ["phys-logistic", "raw-gbm"]
+    r = t.set_index("model")
+    assert r.loc["raw-gbm", "auc_loss"] > r.loc["phys-logistic", "auc_loss"]
+    assert r.loc["raw-gbm", "auc_diff_vs_ref"] < 0
+    lo, hi = r.loc["raw-gbm", "auc_diff_vs_ref_ci"]
+    assert lo <= r.loc["raw-gbm", "auc_diff_vs_ref"] <= hi

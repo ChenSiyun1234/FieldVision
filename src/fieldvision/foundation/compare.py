@@ -130,6 +130,46 @@ def paired_fold_diffs(preds, a, b, scheme="spatial", metric="roc_auc"):
     return out
 
 
+TRANSFER_REF = "phys-logistic"     # the 6-feature logistic regression of the main line
+TRANSFER_MODELS = ["phys-logistic", "phys-rule", "phys-gbm", "emb-logistic", "emb-gbm",
+                   "raw-logistic", "raw-gbm", "both-logistic", "both-gbm", "physraw-logistic",
+                   "physraw-gbm", "majority"]
+
+
+def transfer_table(preds, scheme, models=TRANSFER_MODELS, ref=TRANSFER_REF, n_boot=1000, seed=0):
+    """One row per model for a held-out group (e.g. 'loyo:2022').
+
+    auc_out   trained without that year/country
+    auc_in    the same fields as scored in spatial CV (their year was in training)
+    auc_loss  auc_in - auc_out: what the model loses when the group is new
+    auc_diff_vs_ref  paired difference to `ref` on the held-out fields, block-bootstrap CI
+    """
+    from ..model.metrics import classification_metrics
+    out = preds[preds["scheme"] == scheme]
+    test_ids = set(out["field_id"])
+    sp = preds[(preds["scheme"] == "spatial") & preds["field_id"].isin(test_ids)]
+    rows = []
+    for m in models:
+        g = out[out["model"] == m]
+        if g.empty:
+            continue
+        mo = classification_metrics(g["y"], g["pred"], g["p"])
+        gi = sp[sp["model"] == m]
+        auc_in = classification_metrics(gi["y"], gi["pred"], gi["p"])["roc_auc"] if len(gi) else np.nan
+        row = {"scheme": scheme, "model": m, "n": mo["n"], "accuracy": mo["accuracy"],
+               "balanced_accuracy": mo["balanced_accuracy"], "recall": mo["recall"],
+               "fpr": mo["fpr"], "precision": mo["precision"], "auc_out": mo["roc_auc"],
+               "auc_in": auc_in, "auc_loss": auc_in - mo["roc_auc"],
+               "auc_diff_vs_ref": 0.0, "auc_diff_vs_ref_ci": [0.0, 0.0]}
+        if m != ref:
+            c = compare_models(preds, m, ref, scheme, "relative", n_boot=n_boot, seed=seed)
+            if c is not None:
+                row["auc_diff_vs_ref"] = c["roc_auc"]["diff"]
+                row["auc_diff_vs_ref_ci"] = c["roc_auc"]["ci"]
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
 def verdict(diffs, boot):
     """Plain wording for a difference: only 'better'/'worse' when it beats the fold spread
     and the block-bootstrap interval excludes zero."""
@@ -283,15 +323,21 @@ def main(argv=None):
             comparisons[f"{a} vs {b}"] = {"auc_diff_pooled": boot["diff"], "auc_diff_ci95": boot["ci"],
                                           "auc_diff_per_fold": diffs, "verdict": verdict(diffs, boot)}
     other = {}
+    transfer = []
     for s in schemes[1:]:
         t = fold_table(summary, s)
         other[s] = {r["model"]: {m: r[m] for m in TABLE_METRICS} for _, r in t.iterrows()}
+        transfer.append(transfer_table(preds, s, n_boot=args.n_boot, seed=args.seed))
+    transfer = pd.concat(transfer, ignore_index=True) if transfer else pd.DataFrame()
+    if len(transfer):
+        transfer.to_csv(out / "transfer_table.csv", index=False)
 
     result = {"args": vars(args), "weights_sha256": file_sha256(args.weights), "counts": counts,
               "timing_seconds": {"features": t_feat, "presto_inputs": t_adapt, "embeddings": t_embed,
                                  "n_fields": len(fields)},
               "folds": [{k: v for k, v in r.items() if k != "models"} for r in info if r["scheme"] == "spatial"],
               "spatial": tab.to_dict(orient="records"), "comparisons": comparisons, "other_schemes": other,
+              "transfer": transfer.to_dict(orient="records"),
               "load_notes": notes, "log": log}
     (out / "summary.json").write_text(json.dumps(result, indent=1, default=str), encoding="utf-8")
 
@@ -309,6 +355,21 @@ def main(argv=None):
                "|---|" + "---:|" * len(TABLE_METRICS)]
         for mname, r in rows.items():
             md.append(f"| {mname} | " + " | ".join(_fmt(r[m]) for m in TABLE_METRICS) + " |")
+    if len(transfer):
+        md += ["", "## Transfer (held-out year / country)", "",
+               "AUC out = trained on the other groups; AUC in = the same fields scored by the spatial "
+               "CV models (trained on all groups, other blocks); diff vs phys-logistic is paired on the "
+               "held-out fields with a block-bootstrap 95% CI.", "",
+               "| held out | model | n | accuracy | recall | fpr | AUC out | AUC in | loss | "
+               "AUC diff vs phys-logistic [95% CI] |",
+               "|---|---|---:|---:|---:|---:|---:|---:|---:|---|"]
+        for _, r in transfer.iterrows():
+            ci = r["auc_diff_vs_ref_ci"]
+            diff = ("ref" if r["model"] == TRANSFER_REF else
+                    f"{r['auc_diff_vs_ref']:+.3f} [{ci[0]:+.3f}, {ci[1]:+.3f}]")
+            md.append(f"| {r['scheme']} | {r['model']} | {r['n']} | {_fmt(r['accuracy'])} | "
+                      f"{_fmt(r['recall'])} | {_fmt(r['fpr'])} | {_fmt(r['auc_out'])} | "
+                      f"{_fmt(r['auc_in'])} | {_fmt(r['auc_loss'])} | {diff} |")
     (out / "REPORT.md").write_text("\n".join(md) + "\n", encoding="utf-8")
     say("\n".join(md))
     return result
