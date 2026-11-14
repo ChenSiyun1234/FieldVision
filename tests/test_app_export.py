@@ -355,6 +355,88 @@ def test_always_grain_yardstick(tmp_path):
     assert m["all"]["accuracy"] == 0.75
 
 
+def test_model_evidence_and_display_options(tmp_path):
+    """--evidence-reference: the export recomputes the evidence numbers with the project's
+    feature code and marks which training-class median each value is closer to."""
+    sample_data.build(["at-2024"], work=tmp_path / "work", app_data=tmp_path / "app0", n=12)
+    src = tmp_path / "work" / "at-2024"
+    ref = {
+        "harv_days_since_peak": {"silage": 46.5, "grain": 55.5},
+        "sen_ndvi_slope_rel": {"silage": -0.005, "grain": -0.014},
+        "pre_ndvi_frac": {"silage": 0.83, "grain": 0.52},
+        "pre_ndmi": {"silage": 0.32, "grain": 0.12},
+        "post_ndti": {"silage": 0.14, "grain": 0.16},
+    }
+    (tmp_path / "run.json").write_text(json.dumps({"evidence_reference": ref}), encoding="utf-8")
+    meta = export.export_region(
+        src / "fields.geojson", tmp_path / "app" / "x", src / "timeseries.parquet", src / "predictions.parquet",
+        evidence_reference=tmp_path / "run.json", label_name="Organisers' truth",
+        model_name="toy_v1", trained_on="nothing real", min_clear=0.6,
+    )
+    assert meta["label_name"] == "Organisers' truth"
+    assert meta["model"] == {"name": "toy_v1", "trained_on": "nothing real"}
+    assert meta["evidence_ref"]["post_ndti"] == {"silage": 0.14, "grain": 0.16, "label": "residue after the cut"}
+    props = [f["properties"] for f in strict_load(tmp_path / "app" / "x" / "fields.geojson")["features"]]
+    with_ev = [p for p in props if p.get("ev")]
+    assert len(with_ev) == len(props)
+    for p in with_ev:
+        assert set(p["ev"]) == set(ref)
+        for k, e in p["ev"].items():
+            assert e["s"] in (-1, 0, 1)
+            if e["v"] is None:
+                assert e["s"] == 0
+            else:   # the side is the nearer class median, as in the model's explanation
+                r = ref[k]
+                assert e["s"] == (1 if abs(e["v"] - r["silage"]) < abs(e["v"] - r["grain"]) else -1)
+    # a field that was cut shows a measured greenness fraction
+    assert any(p["ev"]["pre_ndvi_frac"]["v"] is not None for p in with_ev if p["he"])
+
+    # without the option nothing changes
+    meta2 = export.export_region(src / "fields.geojson", tmp_path / "app" / "y", src / "timeseries.parquet",
+                                 src / "predictions.parquet")
+    assert meta2["evidence_ref"] is None and meta2["label_name"] == "Declared" and meta2["model"] is None
+
+
+def test_display_name():
+    assert export._display_name({"barc_farm": "Central Farm", "barc_field": "1-11"}) == "Central Farm, field 1-11"
+    assert export._display_name({"name": "North 40", "barc_farm": "X", "barc_field": "1"}) == "North 40"
+    assert export._display_name({}) is None
+
+
+def test_run_demo_builds_from_a_data_root(tmp_path):
+    """app/run_demo.py --no-serve with a data root laid out like the team's folder."""
+    import importlib.util
+    import shutil
+
+    root = tmp_path / "root"
+    sample_data.build(["barc-2021", "barc-2022", "barc-2023"], work=tmp_path / "work", app_data=tmp_path / "app0", n=8)
+    for y in (2021, 2022, 2023):
+        w = tmp_path / "work" / f"barc-{y}"
+        (root / "labels" / f"barc_{y}").mkdir(parents=True)
+        shutil.copy(w / "fields.geojson", root / "labels" / f"barc_{y}" / "fields.geojson")
+        (root / "timeseries" / f"barc_{y}").mkdir(parents=True)
+        shutil.copy(w / "timeseries.parquet", root / "timeseries" / f"barc_{y}" / "timeseries.parquet")
+        d = root / "app" / "predictions_toy" / f"barc-{y}"
+        d.mkdir(parents=True)
+        if (w / "predictions.parquet").exists():
+            shutil.copy(w / "predictions.parquet", d / "predictions.parquet")
+        else:   # the 2023 sample has no predictions: write an all-null file in the right shape
+            fids = [f["properties"]["field_id"] for f in json.loads((w / "fields.geojson").read_text())["features"]]
+            pd.DataFrame({"field_id": fids, "p_silage": np.nan, "harvest_start": None, "harvest_end": None,
+                          "pre_ndvi": np.nan, "pre_ndmi": np.nan, "low_evidence": None}).to_parquet(d / "predictions.parquet")
+
+    spec = importlib.util.spec_from_file_location("run_demo", Path(__file__).resolve().parents[1] / "app" / "run_demo.py")
+    run_demo = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(run_demo)
+    out = tmp_path / "app_data"
+    run_demo.build_beltsville(root, "toy", out)
+    regions = strict_load(out / "regions.json")["regions"]
+    assert [r["id"] for r in regions] == ["barc-2021", "barc-2022", "barc-2023"]
+    assert all(r["group"] == "Beltsville, Maryland" and r["synthetic"] is False for r in regions)
+    meta = strict_load(out / "barc-2021" / "meta.json")
+    assert meta["label_name"] == "Organisers' truth" and meta["min_clear"] == 0.6
+
+
 def test_cli_runs(tmp_path):
     fields = write_fields(tmp_path / "f.geojson", [{"field_id": "a", "label": "grain", "year": 2023}])
     export.main(["--fields", str(fields), "--out", str(tmp_path / "app" / "x"), "--title", "X 2023", "--synthetic"])

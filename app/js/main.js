@@ -2,10 +2,10 @@
 
 import { FieldMap, COLORS, RAMP } from "./map.js";
 import { seasonChart, chartLegendHtml } from "./chart.js";
-import { defendRows, tally, flipConditions, traps, certainty, confidence, cuesOf, settledFrom, regionSettled } from "./evidence.js";
+import { defendRows, tally, flipConditions, traps, certainty, confidence, cuesOf, settledFrom, regionSettled, hasModelEvidence, plainModelText } from "./evidence.js";
 import { scatterSvg, countyTableHtml, stateCardsHtml } from "./counties.js";
 import { Timeline } from "./timeline.js";
-import { pct, int, ha, fixed, shortDate, isoToDay, esc, cap, isNum, DASH } from "./format.js";
+import { pct, int, ha, fixed, shortDate, isoToDay, dayToLabel, esc, cap, isNum, DASH } from "./format.js";
 
 const DATA = "data";
 const LIST_LEN = 12;
@@ -153,13 +153,34 @@ async function boot() {
   await loadRegion(first.id, h.f, h.asof);
 }
 
+/** Sum of the scored results over every region in the same group, e.g. three years of one farm. */
+async function loadGroupSummary(region) {
+  const members = state.regions.filter((r) => r.group === region.group);
+  if (members.length < 2) return null;
+  const metas = await Promise.all(members.map((r) => getJson(`${DATA}/${r.path}/meta.json`).catch(() => null)));
+  if (metas.some((m) => !m || !m.metrics?.all)) return null;
+  const sum = (f) => metas.reduce((a, m) => a + f(m), 0);
+  const tp = sum((m) => m.metrics.all.tp), fp = sum((m) => m.metrics.all.fp);
+  const tn = sum((m) => m.metrics.all.tn), fn = sum((m) => m.metrics.all.fn);
+  return {
+    group: region.group,
+    years: members.map((r) => r.year),
+    n: tp + fp + tn + fn, right: tp + tn, tp, fp, tn, fn,
+    silage: tp + fn, grain: tn + fp,
+    low: sum((m) => m.metrics.n_low_evidence || 0),
+    synthetic: metas.some((m) => m.synthetic),
+    model: metas[0].model,
+    labelName: metas[0].label_name,
+  };
+}
+
 async function loadRegion(id, fieldId = null, asofIso = null) {
   const region = state.regions.find((r) => r.id === id);
   if (!region) return;
   const token = ++loadToken;
   Object.assign(state, {
     region, selected: null, county: null, series: null, seriesError: false,
-    counties: null, countyShapes: null, asof: null, cut: null,
+    counties: null, countyShapes: null, asof: null, cut: null, group: null,
   });
   renderRegions();
   $("view").innerHTML = `<p class="empty">Loading ${esc(region.title)}…</p>`;
@@ -181,6 +202,8 @@ async function loadRegion(id, fieldId = null, asofIso = null) {
   }
   if (token !== loadToken) return;
   state.meta = meta;
+  state.group = await loadGroupSummary(region);
+  if (token !== loadToken) return;
   state.fields = fc.features.map((f) => f.properties);
   state.byId = new Map(state.fields.map((p) => [p.field_id, p]));
 
@@ -251,6 +274,7 @@ function renderOpening() {
   let early;
   if (s && meta.has_labels) early = `Calls settle by <b>${shortDate(s.iso)}</b>: ${pct(s.value)} accurate, against ${pct(s.full)} with the whole season. NASS publishes the split in January.`;
   else if (s) early = `By <b>${shortDate(s.iso)}</b>, ${pct(s.value)} of calls are confident. NASS publishes the split in January.`;
+  else if (meta.season) early = `Each call uses imagery only up to ${dayToLabel(meta.season.end, meta.year)}. NASS publishes the split in January.`;
   else early = "Each call is made as soon as the harvest drop is seen. NASS publishes the split in January.";
   const skeptic = "Every call shows its curve: silage falls off a cliff, grain fades out; after harvest, bare soil or stalk residue.";
   $("yardsticks").innerHTML = [
@@ -259,6 +283,25 @@ function renderOpening() {
     ["Explainable to a skeptic", skeptic],
   ].map(([h, t]) => `<div class="yard"><div class="yard-h"><span class="tick">\u2713</span>${h}</div><div class="yard-t">${t}</div></div>`).join("");
   $("opening-region").textContent = `Showing ${meta.title}${meta.synthetic ? " \u00b7 synthetic sample data" : ""}`;
+  $("result").innerHTML = resultHtml();
+  $("result").hidden = !$("result").innerHTML;
+}
+
+/** Ten-second summary of a real, scored test: how many right, against always-grain, and how small it is. */
+function resultHtml() {
+  const g = state.group;
+  if (!g || g.synthetic || !g.n) return "";
+  const model = g.model?.name ? `<code>${esc(g.model.name)}</code>` : "The model";
+  const trained = g.model?.trained_on ? `Trained on ${esc(g.model.trained_on)}.` : "";
+  const years = g.years.length > 1 ? `${Math.min(...g.years)}\u2013${Math.max(...g.years)}` : `${g.years[0]}`;
+  return `<div class="result-big"><b>${g.right} of ${g.n}</b> ${esc(g.group.split(",")[0])} field-years called right <span>(${years})</span></div>
+    <div class="result-row">
+      <div><b>${g.tn} of ${g.grain}</b>grain fields right</div>
+      <div><b>${g.tp} of ${g.silage}</b>silage fields found</div>
+      <div class="vs"><b>${g.grain} of ${g.n}</b>"always grain" baseline</div>
+    </div>
+    <p class="result-note">${model}: ${trained}</p>
+    <p class="result-note small">A small test: ${g.n} field-years on one farm, ${g.silage} of them silage. ${g.low ? `${g.low} calls are flagged low evidence. ` : ""}The truth comes from the organisers.</p>`;
 }
 
 $("intro").addEventListener("click", () => showIntro(false));
@@ -325,9 +368,10 @@ function renderMetrics() {
     foot = `<div class="foot">No declared labels here, so no accuracy numbers.${meta.note ? `<br>${esc(meta.note)}` : ""}</div>`;
   } else {
     const c = m.confident;
-    const parts = [`Silage = positive class \u00b7 scored on <b>${int(a.n)}</b> declared fields`];
+    const parts = [`Silage = positive class \u00b7 scored on <b>${int(a.n)}</b> fields with ${esc((meta.label_name || "declared").toLowerCase())}`];
     if (m.always_grain) parts.push(`Accuracy <b>${pct(a.accuracy)}</b>; "always grain" would score <b>${pct(m.always_grain.accuracy)}</b> here and find no silage at all`);
     if (c && c.n !== a.n) parts.push(`Confident fields only (${int(c.n)}): precision <b>${pct(c.precision)}</b>, recall <b>${pct(c.recall)}</b>, FPR <b>${pct(c.fpr)}</b>`);
+    if (state.group && !state.group.synthetic) parts.unshift(`<span class="group-line">All ${state.group.years.length} years: <b>${state.group.right} of ${state.group.n}</b> right \u00b7 always grain ${state.group.grain} of ${state.group.n}</span>`);
     if (meta.note) parts.push(esc(meta.note));
     foot = `<div class="foot">${parts.join("<br>")}</div>`;
   }
@@ -347,7 +391,7 @@ function renderLegend() {
   let rows;
   if (state.mode === "check") {
     rows = [
-      [`<span class="sw" style="background:${COLORS.ok}"></span>`, "Matches declared", count((p) => p.correct === true)],
+      [`<span class="sw" style="background:${COLORS.ok}"></span>`, `Matches ${esc((meta.label_name || "declared").toLowerCase())}`, count((p) => p.correct === true)],
       [`<span class="sw" style="background:${COLORS.wrong}"></span>`, "Model wrong", count((p) => p.correct === false)],
       [`<span class="sw hollow"></span>`, "No label or no prediction", count((p) => p.correct == null)],
     ];
@@ -355,12 +399,13 @@ function renderLegend() {
     rows = [
       [`<span class="sw" style="background:${COLORS.silage}"></span>`, "Silage (chopped)", count((p) => p.pred === "silage" && p.low !== true)],
       [`<span class="sw" style="background:${COLORS.grain}"></span>`, "Grain (combined)", count((p) => p.pred === "grain" && p.low !== true)],
-      [`<span class="sw dashed" style="border-color:${COLORS.silage}"></span>`, "Silage, low evidence", count((p) => p.pred === "silage" && p.low === true)],
-      [`<span class="sw dashed" style="border-color:${COLORS.grain}"></span>`, "Grain, low evidence", count((p) => p.pred === "grain" && p.low === true)],
+      [`<span class="sw dashed" style="border-color:${COLORS.silage}"></span>`, "Silage, abstains (low evidence)", count((p) => p.pred === "silage" && p.low === true)],
+      [`<span class="sw dashed" style="border-color:${COLORS.grain}"></span>`, "Grain, abstains (low evidence)", count((p) => p.pred === "grain" && p.low === true)],
+      [`<span class="sw miss-sw"></span>`, `Miss: ${esc((meta.label_name || "declared label").toLowerCase())} differs`, count((p) => p.correct === false)],
       [`<span class="sw hollow"></span>`, "No prediction", count((p) => !p.pred)],
-    ].filter((r) => (meta.has_predictions ? r[2] > 0 || r[1] !== "No prediction" : r[1] === "No prediction"));
+    ].filter((r) => (meta.has_predictions ? (r[2] > 0 || (r[1] !== "No prediction" && !r[1].startsWith("Miss"))) : r[1] === "No prediction"));
   }
-  const title = state.mode === "check" ? "Model vs declared label" : "Predicted harvest use";
+  const title = state.mode === "check" ? `Model vs ${esc((meta.label_name || "declared label").toLowerCase())}` : "Predicted harvest use";
   let html = `<h4>${title}</h4>` +
     rows.map(([sw, name, n]) => `<div class="row">${sw}<span>${name}</span><span class="count">${n}</span></div>`).join("");
   if (state.tab === "counties" && state.countyShapes && !state.selected) {
@@ -425,7 +470,7 @@ function renderCheckList() {
     if (tr.length) bits.push(tr.map((t) => `<span class="tag">${esc(t.tag)}</span>`).join(" "));
     else if (p.low === true) bits.push(`<span class="tag">low evidence</span>`);
     if (p.correct === false) bits.push(`<span class="tag wrong">wrong</span>`);
-    else if (p.label) bits.push(`declared ${p.label}`);
+    else if (p.label) bits.push(`${esc((state.meta.label_name || "declared").toLowerCase())}: ${p.label}`);
     return itemRow(p, i, bits.join(" · "));
   }).join("");
   return `<p class="intro">The ${ranked.length} least certain predictions${asofActive() ? ` as of ${shortDate(cutoffIso())}` : ""}: where a survey call or field visit tells us the most (${ha(area)} in total).</p><ol class="list">${rows}</ol>`;
@@ -435,12 +480,12 @@ function renderWrongList() {
   const wrong = state.view.filter((p) => p.correct === false).sort((a, b) => (confidence(b) ?? 0) - (confidence(a) ?? 0));
   if (!wrong.length) return `<p class="empty">The model agrees with every declared label here.</p>`;
   const rows = wrong.map((p, i) => {
-    const bits = [`declared <b>${p.label}</b>`];
+    const bits = [`${esc((state.meta.label_name || "declared").toLowerCase())}: <b>${p.label}</b>`];
     if (p.hs && p.he) bits.push(`cut ${shortDate(p.hs)}–${shortDate(p.he)}`);
     if (p.low === true) bits.push(`<span class="tag">low evidence</span>`);
     return itemRow(p, i, bits.join(" · "));
   }).join("");
-  return `<p class="intro">${wrong.length} field${wrong.length === 1 ? "" : "s"} where the declared label disagrees with the model. Most confident mistakes first.</p><ol class="list">${rows}</ol>`;
+  return `<p class="intro">${wrong.length} field${wrong.length === 1 ? "" : "s"} where the ${esc((state.meta.label_name || "declared label").toLowerCase())} disagrees with the model. Most confident mistakes first.</p><ol class="list">${rows}</ol>`;
 }
 
 function renderCounties() {
@@ -489,18 +534,25 @@ function defendHtml(p) {
       <div class="ev-text">${esc(r.sentence)} <span class="ev-chart">see ${r.chart}</span></div>
     </div>`).join("");
   const other = p.pred === "silage" ? "grain" : "silage";
-  const summary = `${t[p.pred]} of 3 point to ${p.pred}${t[other] ? `, ${t[other]} to ${other}` : ""}${t.unknown ? `, ${t.unknown} not seen` : ""}`;
-  const model = p.explanation ? `<p class="model-says"><b>Model's reason:</b> ${esc(p.explanation)}</p>` : "";
+  const sig = rows.signals;
+  const summary = sig
+    ? `${sig.silage} of ${sig.seen} signals look like silage`
+    : `${t[p.pred]} of 3 point to ${p.pred}${t[other] ? `, ${t[other]} to ${other}` : ""}${t.unknown ? `, ${t.unknown} not seen` : ""}`;
+  const model = p.explanation ? `<p class="model-says"><b>The model's own summary:</b> ${esc(plainModelText(p.explanation))}</p>` : "";
 
   const flip = flipConditions(p, meta);
   let flipHtml = "";
   if (p.flip || (flip && (flip.needed.length || flip.already.length))) {
     const lines = [];
-    if (p.flip) lines.push(`<p class="model-says"><b>Model:</b> ${esc(p.flip)}</p>`);
+    if (p.flip) lines.push(`<p class="model-says"><b>Biggest pull the other way:</b> ${esc(plainModelText(p.flip))}</p>`);
     if (flip?.already.length) lines.push(`<p>Already pointing to ${flip.other}: ${flip.already.join("; ")}.</p>`);
-    if (flip?.needed.length) lines.push(`<p>A ${flip.other} call would also expect ${flip.needed.join("; ")}.</p>`);
+    if (flip?.needed.length) lines.push(hasModelEvidence(p, meta)
+      ? `<p>Still pointing to ${p.pred}, closest to flipping first: ${flip.needed.join("; ")}.</p>`
+      : `<p>A ${flip.other} call would also expect ${flip.needed.join("; ")}.</p>`);
     flipHtml = `<div class="flip"><h5>What would have made it ${flip?.other || other}</h5>${lines.join("")}
-      <p class="fine">Lines from the display thresholds behind these sentences${meta.harvest_ref ? " and this region's typical cutting dates" : ""}, not the model's internal rule.</p></div>`;
+      <p class="fine">${hasModelEvidence(p, meta)
+        ? "Typical values are the medians of silage and grain fields the model was trained on; a signal points to whichever is closer, as in the model's own summary."
+        : `Lines from the display thresholds behind these sentences${meta.harvest_ref ? " and this region's typical cutting dates" : ""}, not the model's internal rule.`}</p></div>`;
   }
   return `<section class="defend"><h4>Explainable to a skeptic <span class="tally">${summary}</span></h4>
     <p class="slogan">Silage falls off a cliff. Grain fades out.</p>${rowHtml}${model}${flipHtml}</section>`;
@@ -529,7 +581,7 @@ function renderDetail(p) {
   const s = state.series === null ? undefined : state.series[p.field_id];
   const conf = confidence(p);
   const head = `<div class="detail-head">
-      <div><h3>${esc(p.field_id)}</h3><div class="sub">${ha(p.area_ha)}${p.block_id ? ` · block ${esc(p.block_id)}` : ""} · ${int(p.n_usable)} clear of ${int(p.n_obs)} dates${isNum(p.max_gap) ? `, longest gap ${p.max_gap} d` : ""}</div></div>
+      <div><h3>${esc(p.name || p.field_id)}</h3><div class="sub">${p.name ? `${esc(p.field_id)} \u00b7 ` : ""}${ha(p.area_ha)}${p.block_id ? ` · block ${esc(p.block_id)}` : ""} · ${int(p.n_usable)} clear of ${int(p.n_obs)} dates${isNum(p.max_gap) ? `, longest gap ${p.max_gap} d` : ""}</div></div>
       <button type="button" class="back" data-action="back" title="Back to the list (Esc)">← Back</button>
     </div>`;
   let asofLine = "";
@@ -545,16 +597,17 @@ function renderDetail(p) {
   if (p.low === true || tr.length) {
     const lines = asofActive() && p.asofHidden ? ["The harvest has not been seen yet at this date."] : tr.map((x) => x.text);
     if (!lines.length) lines.push(p.reason || "The model flagged this call as low evidence.");
-    const flag = p.reason && !lines.includes(p.reason) ? `<div class="fine">Model's flag: ${esc(p.reason)}</div>` : "";
+    const flag = p.reason && !lines.includes(p.reason) ? `<div class="fine">Model's flag: ${esc(plainModelText(p.reason))}</div>` : "";
     const title = p.low === true ? "Why this is low evidence" : "Traps to keep in mind";
     lowBox = `<div class="lowbox"><b>${title}</b><ul>${lines.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>${flag}</div>`;
   }
   const strip = p.pred ? yardstickStrip(p) : "";
   let declared;
-  if (!p.label) declared = `<div class="declared">No declared label for this field.</div>`;
-  else if (p.correct === false) declared = `<div class="declared">Declared: <b>${p.label}</b> <span class="miss">✗ model says ${p.pred}</span></div>`;
-  else if (p.correct === true) declared = `<div class="declared">Declared: <b>${p.label}</b> <span class="match">✓ matches</span></div>`;
-  else declared = `<div class="declared">Declared: <b>${p.label}</b></div>`;
+  const ln = state.meta.label_name || "Declared";
+  if (!p.label) declared = `<div class="declared">No ${esc(ln.toLowerCase())} for this field.</div>`;
+  else if (p.correct === false) declared = `<div class="declared">${esc(ln)}: <b>${p.label}</b> <span class="miss">\u2717 model says ${p.pred}</span></div>`;
+  else if (p.correct === true) declared = `<div class="declared">${esc(ln)}: <b>${p.label}</b> <span class="match">\u2713 model is right</span></div>`;
+  else declared = `<div class="declared">${esc(ln)}: <b>${p.label}</b></div>`;
 
   let charts;
   if (!meta.has_series) charts = `<div class="chart-empty">No satellite time series was exported for this region.</div>`;
@@ -569,7 +622,9 @@ function renderDetail(p) {
     const common = { width, year, domain, series: s, band, gapDays: meta.gap_days ?? 20, cutoff: cutoffDay() };
     const noClear = p.n_usable === 0 ? `<div class="chart-empty">No cloud-free observation all season: every acquisition below is cloudy or excluded, so nothing is plotted as a curve.</div>` : "";
     const hasNdti = Array.isArray(s.ndti) && s.ndti.some(isNum);
-    const res = cuesOf(meta).residue_ndti;
+    // with the model's evidence, the line sits halfway between its typical silage and grain values
+    const rr = meta.evidence_ref?.post_ndti;
+    const res = rr && isNum(rr.silage) && isNum(rr.grain) ? (rr.silage + rr.grain) / 2 : cuesOf(meta).residue_ndti;
     charts = noClear +
       `<div class="chart">${seasonChart({ ...common, height: 165, key: "ndvi", label: "Greenness (NDVI)", color: "#8fd17f", yMin: -0.1, yMax: 1, yTicks: [0, 0.2, 0.4, 0.6, 0.8, 1],
         pre: isNum(hs) ? { t: hs, v: p.pre_ndvi } : null, post: isNum(he) ? { t: he, v: p.post_ndvi } : null })}</div>` +
@@ -660,6 +715,7 @@ function renderModeButtons() {
   for (const b of document.querySelectorAll("[data-mode]")) {
     b.classList.toggle("on", b.dataset.mode === state.mode);
     if (b.dataset.mode === "check") {
+      b.textContent = /truth/i.test(state.meta?.label_name || "") ? "Check vs truth" : "Check vs declared";
       b.disabled = !canCheck;
       b.title = canCheck ? "Colour fields by whether the model agrees with the declared label" : "Needs predictions and declared labels";
     }

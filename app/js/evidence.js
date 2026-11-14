@@ -18,6 +18,7 @@ const WIDE_WINDOW = 21;     // harvest window wider than this many days
 const TIMING_MARGIN = 4;    // minimum days around the silage/grain midpoint called "in between"
 
 export const cuesOf = (meta) => ({ ...DEFAULT_CUES, ...(meta?.cues || {}) });
+const cap1 = (s) => (s ? s[0].toUpperCase() + s.slice(1) : s);
 
 function cutWindow(f) {
   if (!f.hs || !f.he) return null;
@@ -150,9 +151,141 @@ function groundRow(f, meta) {
   return row;
 }
 
+// ---------------------------------------------------------------- the model's own evidence
+// When the export ran with --evidence-reference, each field carries `ev`: the numbers the
+// model's explanation uses and which training-class median each is closer to (+1 silage,
+// -1 grain, 0 not observed). The rows below then say exactly what the model's text says.
+
+export const hasModelEvidence = (f, meta) => Boolean(f.ev && meta?.evidence_ref && Object.keys(f.ev).length);
+
+const sideCue = (s) => (s === 1 ? "silage" : s === -1 ? "grain" : null);
+function joinCues(...cues) {
+  const seen = cues.filter(Boolean);
+  if (!seen.length) return null;
+  return seen.every((c) => c === seen[0]) ? seen[0] : "mixed";
+}
+const pctOf = (v) => `${Math.round(v * 100)}%`;
+
+function refText(meta, key, fmt) {
+  const r = meta.evidence_ref?.[key];
+  if (!r || !isNum(r.silage) || !isNum(r.grain)) return "";
+  return `typical silage ${fmt(r.silage)}, grain ${fmt(r.grain)}`;
+}
+
+function modelRows(f, meta) {
+  const ev = f.ev;
+  const g = (k) => ev[k] || { v: null, s: 0 };
+  const days = g("harv_days_since_peak"), slope = g("sen_ndvi_slope_rel");
+  const frac = g("pre_ndvi_frac"), ndmi = g("pre_ndmi"), ndti = g("post_ndti");
+  const src = "medians of the Austrian training fields";
+
+  // 1. the drop
+  const drop = { key: "drop", title: "The drop: cliff or fade?", chart: "greenness", value: "—", cue: null };
+  if (!f.hs || !f.he) {
+    drop.sentence = "No drop seen between clear views, so the shape and date of the harvest are unknown.";
+  } else {
+    drop.detail = `${cutWindow(f)}${isNum(f.pre_ndvi) && isNum(f.post_ndvi) ? ` · NDVI ${f.pre_ndvi.toFixed(2)} → ${f.post_ndvi.toFixed(2)}` : ""}`;
+    const sc = sideCue(slope.s);
+    drop.value = sc === "silage" ? "Cliff" : sc === "grain" ? "Fade" : "—";
+    const parts = [];
+    if (sc === "silage") parts.push("Stayed green until the drop, then fell off a cliff");
+    else if (sc === "grain") parts.push("Browned for weeks before the drop: a fade");
+    if (isNum(days.v)) parts.push(`cut ${Math.round(days.v)} days after its own peak (${refText(meta, "harv_days_since_peak", (x) => `${Math.round(x)} d`)})`);
+    drop.sentence = parts.length ? `${cap1(parts.join("; "))}.` : `Cut ${cutWindow(f)}.`;
+    drop.cue = joinCues(sc, sideCue(days.s));
+  }
+
+  // 2. right before the drop
+  const state = { key: "state", title: "Right before the drop", chart: "greenness · moisture", value: "—", cue: null };
+  if (!isNum(frac.v) && !isNum(ndmi.v)) {
+    state.sentence = f.hs ? "No clear look right before the drop." : "Unknown without a detected drop.";
+  } else {
+    const words = [];
+    if (isNum(frac.v)) words.push(frac.s === 1 ? "green" : frac.s === -1 ? "browned" : "greenness unclear");
+    if (isNum(ndmi.v)) words.push(ndmi.s === 1 ? "moist" : ndmi.s === -1 ? "dry" : "moisture unclear");
+    state.value = cap1(words.join(", "));
+    state.detail = [isNum(frac.v) ? `${pctOf(frac.v)} of own peak` : null, isNum(ndmi.v) ? `NDMI ${ndmi.v.toFixed(2)}` : null].filter(Boolean).join(" · ");
+    const bits = [];
+    if (isNum(frac.v)) bits.push(`${pctOf(frac.v)} of its own peak greenness (${refText(meta, "pre_ndvi_frac", pctOf)})`);
+    if (isNum(ndmi.v)) bits.push(`leaf moisture NDMI ${ndmi.v.toFixed(2)} (${refText(meta, "pre_ndmi", (x) => x.toFixed(2))})`);
+    state.sentence = `${cap1(bits.join("; "))}.`;
+    state.cue = joinCues(sideCue(frac.s), sideCue(ndmi.s));
+  }
+
+  // 3. after harvest
+  const ground = { key: "ground", title: "After harvest: bare soil or residue?", chart: "ground residue", value: "—", cue: null };
+  if (!f.he) ground.sentence = "Unknown without a detected drop.";
+  else if (!isNum(ndti.v)) ground.sentence = "No clear look soon after harvest, so the ground was not seen.";
+  else {
+    ground.cue = sideCue(ndti.s);
+    ground.value = ground.cue === "silage" ? "Bare soil" : ground.cue === "grain" ? "Stalk residue" : "—";
+    ground.detail = `NDTI ${ndti.v.toFixed(2)}`;
+    const r = meta.evidence_ref?.post_ndti;
+    const weak = r && isNum(r.silage) && isNum(r.grain) && Math.abs(r.grain - r.silage) < 0.05;
+    ground.sentence = `${ground.cue === "silage" ? "Closer to bare soil, what a chopper leaves" : "Closer to stalk residue, what a combine leaves"} (${refText(meta, "post_ndti", (x) => x.toFixed(2))}).${weak ? " The two typical values are close, so this is the weakest of the signals." : ""}`;
+  }
+
+  const rows = [drop, state, ground];
+  const sides = [days, slope, frac, ndmi, ndti].map((x) => x.s);
+  rows.signals = {
+    silage: sides.filter((s) => s === 1).length,
+    grain: sides.filter((s) => s === -1).length,
+    seen: sides.filter((s) => s !== 0).length,
+  };
+  rows.source = src;
+  return rows;
+}
+
+/** For the model path: which signals already point the other way, and which would have to move. */
+function modelFlip(f, meta) {
+  const other = f.pred === "silage" ? "grain" : "silage";
+  const want = other === "silage" ? 1 : -1;
+  const ref = meta.evidence_ref || {};
+  const fmt = {
+    harv_days_since_peak: (x) => `${Math.round(x)} days`,
+    sen_ndvi_slope_rel: (x) => x.toFixed(4),
+    pre_ndvi_frac: pctOf,
+    pre_ndmi: (x) => x.toFixed(2),
+    post_ndti: (x) => x.toFixed(2),
+  };
+  const already = [], needed = [];
+  for (const [k, e] of Object.entries(f.ev)) {
+    const r = ref[k];
+    if (!r || !isNum(e.v) || !isNum(r.silage) || !isNum(r.grain) || e.s === 0) continue;
+    const f2 = fmt[k] || ((x) => x.toFixed(2));
+    const target = r[other];
+    const line = `${r.label}: ${f2(e.v)} (typical ${other}: ${f2(target)})`;
+    if (e.s === want) already.push(esc(line));
+    else needed.push({ d: Math.abs(e.v - target) / Math.max(1e-9, Math.abs(r.silage - r.grain)), t: esc(line) });
+  }
+  needed.sort((a, b) => a.d - b.d);
+  return { other, already, needed: needed.map((x) => x.t) };
+}
+
 /** The three evidence rows, each {key,title,value,detail?,sentence,cue,chart}. */
 export function defendRows(f, meta) {
+  if (hasModelEvidence(f, meta)) return modelRows(f, meta);
   return [dropRow(f, meta), stateRow(f, meta), groundRow(f, meta)];
+}
+
+/** Model terms in its own explanation strings, said in plain words. */
+const PLAIN = {
+  pre_ndvi_frac: "greenness before the cut",
+  pre_ndmi: "leaf moisture before the cut",
+  post_ndti: "residue after the cut",
+  harv_days_since_peak: "days from peak to cut",
+  harv_decline_days: "days of decline before the cut",
+  sen_ndvi_slope_rel: "dry-down slope",
+  wide_harvest_interval: "harvest window too wide",
+  few_usable_dates: "too few clear dates",
+  no_harvest_found: "no harvest drop found",
+  single_drop_obs: "drop seen only once",
+};
+export function plainModelText(s) {
+  if (!s) return s;
+  let out = String(s);
+  for (const [k, v] of Object.entries(PLAIN)) out = out.split(k).join(v);
+  return out;
 }
 
 export function tally(rows) {
@@ -181,10 +314,16 @@ export function traps(f, meta) {
   if (!f.hs && f.pred && !(isNum(f.n_usable) && f.n_usable === 0)) {
     out.push({ key: "nodrop", tag: "no drop seen", text: "No harvest drop seen between clear looks." });
   }
-  if (isNum(f.regreen_ndvi) && f.regreen_ndvi >= c.regreen_ndvi) {
-    out.push({ key: "regreen", tag: "second green-up", text: `A second green-up after harvest (greenness back to ${f.regreen_ndvi.toFixed(2)}${isNum(f.regreen_day) ? ` by ${dayToLabel(f.regreen_day, meta.year)}` : ""}): a double crop or cover crop, which can hide the bare-soil-or-residue signal.` });
+  const regreen = typeof f.regreen_model === "boolean" ? f.regreen_model : isNum(f.regreen_ndvi) && f.regreen_ndvi >= c.regreen_ndvi;
+  if (regreen) {
+    const level = isNum(f.regreen_ndvi) ? ` (greenness back to ${f.regreen_ndvi.toFixed(2)}${isNum(f.regreen_day) ? ` by ${dayToLabel(f.regreen_day, meta.year)}` : ""})` : "";
+    out.push({ key: "regreen", tag: "second green-up", text: `A second green-up after harvest${level}: a double crop or cover crop, which can hide the bare-soil-or-residue signal.` });
   }
-  if (timingCue(f, meta) === "silage" && isNum(f.pre_ndvi) && f.pre_ndvi < c.dry_ndvi) {
+  if (hasModelEvidence(f, meta)) {
+    if (f.ev.harv_days_since_peak?.s === 1 && f.ev.pre_ndvi_frac?.s === -1) {
+      out.push({ key: "early", tag: "early ≠ silage", text: "Early does not mean silage: this field was cut soon after its peak but had already browned, the way grain is combined in summer in hot regions." });
+    }
+  } else if (timingCue(f, meta) === "silage" && isNum(f.pre_ndvi) && f.pre_ndvi < c.dry_ndvi) {
     out.push({ key: "early", tag: "early ≠ silage", text: "Early does not mean silage: this field was cut early but had already browned, the way grain is combined in summer in hot regions." });
   }
   return out;
@@ -196,6 +335,7 @@ export function traps(f, meta) {
  */
 export function flipConditions(f, meta) {
   if (!f.pred) return null;
+  if (hasModelEvidence(f, meta)) return modelFlip(f, meta);
   const c = cuesOf(meta);
   const other = f.pred === "silage" ? "grain" : "silage";
   const toGrain = other === "grain";

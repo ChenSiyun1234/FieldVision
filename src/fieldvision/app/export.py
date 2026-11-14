@@ -379,6 +379,56 @@ def region_metrics(props: list[dict]):
     }
 
 
+# ---------------------------------------------------------------- the model's own evidence
+
+EVIDENCE_LABELS = {
+    "harv_days_since_peak": "days from peak to cut",
+    "sen_ndvi_slope_rel": "dry-down before the cut",
+    "pre_ndvi_frac": "greenness before the cut",
+    "pre_ndmi": "leaf moisture before the cut",
+    "post_ndti": "residue after the cut",
+}
+
+
+def load_evidence_reference(path):
+    """Per-feature class medians of the training fields: a training run's run.json
+    (key `evidence_reference`) or a plain {feature: {silage, grain}} JSON."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    ref = data.get("evidence_reference", data)
+    if not isinstance(ref, dict) or not ref:
+        raise ValueError(f"{path}: no evidence_reference found")
+    return ref
+
+
+def model_evidence(timeseries_path, field_rows, reference):
+    """The evidence numbers the model's explanations use, computed with the project's
+    unchanged feature code, and which class median each value is closer to
+    (+1 silage, -1 grain, 0 not observed), exactly as the model's explanation does."""
+    from fieldvision.features.build import build_features
+    from fieldvision.model.explain import EVIDENCE, evidence_sides
+
+    path = Path(timeseries_path)
+    files = sorted(path.rglob("*.parquet")) if path.is_dir() else [path]
+    ts = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+    ts["field_id"] = ts["field_id"].astype(str)
+    ts["date"] = pd.to_datetime(ts["date"]).dt.tz_localize(None)
+    fr = pd.DataFrame(field_rows)
+    X, _ = build_features(ts, fr)
+    X.index = fr["field_id"].astype(str).to_numpy()
+    sides = evidence_sides(X, reference)
+    out = {}
+    for fid in X.index:
+        ev = {}
+        for c, *_ in EVIDENCE:
+            if c in X.columns:
+                v = _num(X.at[fid, c], 4)
+                side = int(sides.at[fid, c]) if c in sides.columns and v is not None else 0
+                ev[c] = {"v": v, "s": side}
+        flag = _num(X.at[fid, "post_regreen_flag"]) if "post_regreen_flag" in X.columns else None
+        out[fid] = {"ev": ev, "regreen_model": None if flag is None else bool(flag)}
+    return out
+
+
 def harvest_reference(props, year):
     """Median harvest-window midpoint of confident silage and grain calls (day offsets).
 
@@ -577,6 +627,10 @@ def export_region(
     counties=None,
     county_shapes=None,
     seed=0,
+    evidence_reference=None,
+    label_name=None,
+    model_name=None,
+    trained_on=None,
 ):
     from shapely.geometry import mapping, shape
 
@@ -599,6 +653,13 @@ def export_region(
         ts = load_timeseries(timeseries_path, field_ids)
         series, coverage = build_series(ts, year, min_clear)
 
+    reference = mevidence = None
+    if evidence_reference is not None:
+        reference = load_evidence_reference(evidence_reference)
+        if timeseries_path is not None:
+            rows = [{"field_id": f["properties"]["field_id"], "year": year} for f in features]
+            mevidence = model_evidence(timeseries_path, rows, reference)
+
     preds = None
     if predictions_path is not None:
         preds = load_predictions(predictions_path)
@@ -620,6 +681,7 @@ def export_region(
             "area_ha": _num(src.get("area_ha"), 2),
             "block_id": None if src.get("block_id") is None else str(src.get("block_id")),
             "county_fips": src.get("county_fips"),
+            "name": _display_name(src),
             **cov,
             "p": None, "pred": None, "low": None, "reason": None,
             "hs": None, "he": None, "pre_ndvi": None, "pre_ndmi": None,
@@ -658,6 +720,9 @@ def export_region(
             p["post_ndti"] = given_r if given_r is not None else post_r
             if p["label"] is not None and p["pred"] is not None:
                 p["correct"] = p["label"] == p["pred"]
+        if mevidence is not None and fid in mevidence:
+            p["ev"] = mevidence[fid]["ev"]
+            p["regreen_model"] = mevidence[fid]["regreen_model"]
         props.append(p)
 
     metrics = region_metrics(props)
@@ -726,6 +791,13 @@ def export_region(
         "harvest_ref": harvest_reference(props, year) if preds is not None else None,
         "metrics": metrics,
         "note": note,
+        "label_name": label_name or "Declared",
+        "model": {"name": model_name, "trained_on": trained_on} if (model_name or trained_on) else None,
+        "evidence_ref": (
+            {c: {"silage": _num(v.get("silage"), 4), "grain": _num(v.get("grain"), 4),
+                 "label": EVIDENCE_LABELS.get(c, c)} for c, v in reference.items()}
+            if reference is not None else None
+        ),
     }
 
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -739,6 +811,15 @@ def export_region(
             (out_dir / name).unlink()
     update_index(out_dir.parent / "regions.json", out_dir.name, meta)
     return meta
+
+
+def _display_name(src):
+    for k in ("name", "field_name"):
+        if src.get(k):
+            return str(src[k])
+    if src.get("barc_farm") and src.get("barc_field"):
+        return f"{src['barc_farm']}, field {src['barc_field']}"
+    return None
 
 
 def _area_ha(geom):
@@ -796,6 +877,12 @@ def main(argv=None):
     ap.add_argument("--counties", help="USDA county table CSV: county_fips,county_name,state,silage_acres,grain_acres")
     ap.add_argument("--county-shapes", help="County polygons (GeoJSON/GPKG with county_fips or GEOID)")
     ap.add_argument("--synthetic", action="store_true", help="Mark the region as synthetic sample data")
+    ap.add_argument("--evidence-reference",
+                    help="Training run's run.json (or a {feature: {silage, grain}} JSON): show the model's own "
+                         "evidence numbers and which class each is closer to")
+    ap.add_argument("--label-name", help='What the label column is called in the app, e.g. "Organisers\' truth"')
+    ap.add_argument("--model-name", help='Model shown in the app, e.g. "eu_logistic_v1"')
+    ap.add_argument("--trained-on", help='One line on the training data, e.g. "Austrian 2024 registry labels only"')
     args = ap.parse_args(argv)
 
     meta = export_region(
@@ -804,6 +891,8 @@ def main(argv=None):
         synthetic=args.synthetic, min_clear=args.min_clear, threshold=args.threshold,
         gap_days=args.gap_days, max_fields=args.max_fields, note=args.note,
         counties=args.counties, county_shapes=args.county_shapes,
+        evidence_reference=args.evidence_reference, label_name=args.label_name,
+        model_name=args.model_name, trained_on=args.trained_on,
     )
     m = meta["metrics"]
     print(f"{meta['region_id']}: {m['n_fields']} fields, {m['n_predicted']} predicted, "

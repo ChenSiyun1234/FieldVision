@@ -4,15 +4,48 @@ A static map of corn fields coloured by predicted harvest use (silage or grain),
 
 ## Run it
 
-From the repository root:
+From the repository root of a fresh clone:
 
 ```bash
-python -m http.server 8000 -d app
+python app/run_demo.py
 ```
 
-Then open <http://localhost:8000>. Opening `index.html` straight from disk does not work, because browsers block `fetch` on `file://`.
+Then open <http://localhost:8000>. This one command:
+1. reads the Beltsville files from the team data folder (`C:\t\fv\data`; use `--data-root` for another location);
+2. writes the small JSON files the app loads into `app/data/`;
+3. serves the app on port 8000.
 
-The committed data in `app/data/` is **synthetic**. Every synthetic region shows a yellow "Sample data · synthetic" badge, so nobody takes it for a result. When a real export overwrites a region folder, the badge for that region disappears.
+Needs Python with numpy, pandas, pyarrow, geopandas and shapely (`pip install -e .` installs them). No npm, no build step.
+
+| Read (read-only) | What |
+|---|---|
+| `labels/barc_<year>/fields.geojson` | field outlines and the organisers' truth (2021: 18, 2022: 7, 2023: 19) |
+| `timeseries/barc_<year>/timeseries.parquet` | Sentinel-2 per field |
+| `app/predictions_eu_logistic_v1/barc-<year>/predictions.parquet` | the stored predictions, with `explanation` and `flip_reason` |
+| `registry/eu_logistic_v1/provenance.json` → its training run's `run.json` | the class medians of the Austrian training fields, for the evidence rows (optional) |
+
+**The Beltsville-derived files are not in git.** `app/data/` is ignored and rebuilt by the command above. Other options:
+- `--no-serve` only rebuilds the data;
+- `--serve-only` serves what is already built;
+- `--sample` builds synthetic sample regions instead, for a machine without the team's data. These regions are marked "Sample data · synthetic".
+
+**Network.** Leaflet and everything else are in the repo, so the app runs without network access. The one exception is the satellite base map: Esri World Imagery tiles from `server.arcgisonline.com` over HTTPS, with no key or account. Without them the fields are drawn on a plain dark background, and the "Plain" button switches to that background deliberately. Opening `index.html` straight from disk does not work, because browsers block `fetch` on `file://`; use the command above.
+
+### What the Beltsville view shows
+
+- **Opening card**: the organisers' question, then the result in one block:
+  - 42 of 44 field-years right, against 32 of 44 for "always grain";
+  - 11 of 12 silage fields found;
+  - the model and what it was trained on;
+  - one sentence that this is a small test (44 field-years on one farm, 12 of them silage).
+
+  The three requirements follow underneath.
+- **Year switch** (2021, 2022, 2023) in the top bar.
+- **Map**: fields are coloured by the stored prediction. A **miss** (prediction differs from the organisers' truth) keeps its colour but gets a thick magenta edge; the legend counts them. Calls the model abstains on (`low_evidence`) are drawn with a dashed outline. "Check vs truth" recolours every field as right or wrong.
+- **Click a field**: the call with a probability bar, and the organisers' truth next to it. Then the traps that apply, and three evidence rows (cliff or fade, green or browned before the drop, bare soil or residue after).
+  - Each row gives the field's own number next to the typical silage and grain values of the training fields. A row points to whichever value is closer: the same rule and the same numbers the model's own summary uses, recomputed with the unchanged feature code. The model's summary and its biggest counter-pull are shown below the rows, in plain words.
+  - Below that come the greenness, leaf-moisture and residue curves, with the detected drop marked as a band.
+- There are no cut-off-date predictions for Beltsville, so the as-of slider is hidden.
 
 ## Demo path for a five-minute talk
 
@@ -145,6 +178,9 @@ Run it with `src` on the import path (in PowerShell `$env:PYTHONPATH="src"`; in 
 | `--note` | none | short line under the metrics, e.g. how the predictions were produced |
 | `--counties`, `--county-shapes` | none | US totals check |
 | `--synthetic` | off | marks the region as sample data |
+| `--evidence-reference` | none | a training run's `run.json` (or `{feature: {silage, grain}}`). The export recomputes the model's evidence numbers with `fieldvision.features` and marks which class median each is closer to, so the evidence rows match the model's own summary |
+| `--label-name` | `Declared` | what the label column is called in the app, e.g. `"Organisers' truth"` |
+| `--model-name`, `--trained-on` | none | shown in the opening summary |
 
 Predictions, as-of predictions and time series are all optional. Whatever is missing shows as missing ("—", "not seen", "no predictions yet"), never as a made-up number.
 

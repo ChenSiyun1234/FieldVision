@@ -14,7 +14,7 @@ export const COLORS = {
 };
 // sequential ramp for county silage share (light = low, saturated blue = high)
 export const RAMP = ["#22323f", "#24506b", "#2a7299", "#3f95c8", "#7cc3ef"];
-const DOT_ZOOM = 13.5;
+const DOT_ZOOM = 12.5;
 const ESRI = "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
 
 export function rampColor(v) {
@@ -30,7 +30,10 @@ export function fieldStyle(p, mode) {
   }
   if (!p.pred) return { color: COLORS.none, weight: 1.5, opacity: 0.9, dashArray: "4 3", fillColor: COLORS.none, fillOpacity: 0.04 };
   const c = COLORS[p.pred];
-  if (p.low === true) return { color: c, weight: 2.5, opacity: 1, dashArray: "5 4", fillColor: c, fillOpacity: 0.12 };
+  // a miss (prediction differs from the label) keeps its predicted colour but gets a thick magenta edge
+  const miss = p.correct === false;
+  if (p.low === true) return { color: miss ? COLORS.wrong : c, weight: miss ? 4 : 2.5, opacity: 1, dashArray: "5 4", fillColor: c, fillOpacity: miss ? 0.35 : 0.12 };
+  if (miss) return { color: COLORS.wrong, weight: 4, opacity: 1, dashArray: null, fillColor: c, fillOpacity: 0.85 };
   return { color: "#ffffff", weight: 1, opacity: 0.85, dashArray: null, fillColor: c, fillOpacity: 0.85 };
 }
 
