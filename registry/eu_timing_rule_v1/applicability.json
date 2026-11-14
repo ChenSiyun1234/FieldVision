@@ -1,0 +1,27 @@
+{
+  "model": "eu_timing_rule_v1",
+  "requires": {
+    "sensors": [
+      "Sentinel-2 L2A surface reflectance, bands B02-B12"
+    ],
+    "optical_clear_obs_in_harvest_window": 1,
+    "clear_obs_before_and_after_drop": true,
+    "min_usable_dates_jul_nov_for_confident": 6,
+    "max_harvest_bracket_days_for_confident": 20.0,
+    "corn_peak_window_doy": [
+      160,
+      280
+    ]
+  },
+  "abstains_when": [
+    "fewer usable dates than required",
+    "no harvest drop found",
+    "harvest bracket wider than the limit",
+    "drop seen only once"
+  ],
+  "confidence_tier": "medium",
+  "validated_on": [
+    "European spatial CV: AT 2024",
+    "Beltsville 2021-2023 zero-shot, Evaluation 1"
+  ]
+}

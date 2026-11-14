@@ -1,0 +1,33 @@
+{
+  "name": "eu_timing_rule_v1",
+  "description": "Timing rule (date of the sustained NDVI drop) with its threshold fitted on Austria 2024 only",
+  "class": "RuleModel",
+  "positive_class": "silage",
+  "decision": "silage if p_silage >= threshold",
+  "threshold": 0.5,
+  "features": [
+    "harv_mid_doy",
+    "pre_ndmi"
+  ],
+  "probability": "Platt-calibrated for a 50/50 training class balance",
+  "platt": {
+    "a": 0.19459550095053268,
+    "b": 0.15098335316406647
+  },
+  "rule": {
+    "timing": "harv_mid_doy",
+    "moisture": "pre_ndmi",
+    "min_gain": null,
+    "name": "timing_rule",
+    "mode_": "timing_only",
+    "t_time_": 251.5,
+    "t_moist_": null,
+    "scale_time_": 11.11934766493699,
+    "scale_moist_": 0.20197396666098835,
+    "p_missing_": 0.4583333333333333,
+    "prevalence_": 0.5,
+    "threshold": 0.5
+  },
+  "rule_text": "silage if harv_mid_doy <= 251.5; no harvest detected -> score 0.46",
+  "effective_rule": "silage if harv_mid_doy <= 255.8"
+}

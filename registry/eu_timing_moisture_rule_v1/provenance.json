@@ -1,0 +1,24 @@
+{
+  "name": "eu_timing_moisture_rule_v1",
+  "exported": "2026-11-14T14:08:46",
+  "training_run": "data/model/runs/at2024_full",
+  "run_id": "24500e02a9e0",
+  "trained": "2026-11-14T12:07:52",
+  "frozen_model_id": "987eec2c7acf3e5e",
+  "git_commit_of_training_code": "bd4cc94",
+  "training_data": [
+    {
+      "path": "data/labels/at_2024/fields.geojson",
+      "sha256": "ed883231287f186c71c58d6becabb8f6b06ae237c979761d0a7458ce0534de7e"
+    },
+    {
+      "path": "data/timeseries/at_2024/timeseries.parquet",
+      "sha256": "002f4a449bd9a70f593349d16c96b7642748dd9c5ab38229f98ee4844153ef07"
+    }
+  ],
+  "training_command": "python -m fieldvision.model.train --timeseries data/timeseries/at_2024/timeseries.parquet --fields data/labels/at_2024/fields.geojson --out data/model/runs/at2024_full --n-boot 1000 --n-splits 5",
+  "evaluated": {
+    "dir": "data/model/eval/beltsville_eval1",
+    "frozen_model_id": "72b208f3297397be"
+  }
+}

@@ -25,7 +25,7 @@ import pandas as pd
 from .features.build import build_features
 from .features.loading import load_fields, load_timeseries
 from .model.classify import results as classify_rows
-from .model.registry import load as load_model
+from .model.registry import DEFAULT_REGISTRY, load as load_model
 
 HA_TO_ACRE = 2.47105
 POLICIES = ("standard", "radar_first", "regional_threshold")
@@ -57,7 +57,8 @@ def make_pseudo_county(fields_path, timeseries_path, data_root, fips="24033", ye
 class Toolbox:
     """Same interface as the team's StubToolbox; numbers from fieldvision code only."""
 
-    def __init__(self, data_root, registry, out_root, standard_model="composite_v1",
+    def __init__(self, data_root, registry=DEFAULT_REGISTRY, out_root="toolbox_out",
+                 standard_model="composite_v1",
                  rule_model="eu_timing_rule_v1", n_resample=2000, seed=0):
         self.data_root = Path(data_root)
         self.registry = Path(registry)
@@ -98,9 +99,15 @@ class Toolbox:
         training region's median drop date (a season-relative variant)."""
         model, mj, cfg = load_model(self.registry, self.rule_model)
         base = getattr(model, "base_", model)
-        prov = json.loads((self.registry / self.rule_model / "provenance.json").read_text(encoding="utf-8"))
-        train = pd.read_parquet(Path(prov["training_run"]) / "features.parquet")
-        train_median = float(train.loc[train["split"] == "development", base.timing].median())
+        ref = self.registry / self.rule_model / "training_reference.json"
+        if ref.exists():
+            train_median = float(json.loads(ref.read_text(encoding="utf-8"))
+                                 ["training_median_harv_mid_doy"])
+        else:
+            prov = json.loads((self.registry / self.rule_model / "provenance.json")
+                              .read_text(encoding="utf-8"))
+            train = pd.read_parquet(Path(prov["training_run"]) / "features.parquet")
+            train_median = float(train.loc[train["split"] == "development", base.timing].median())
         here = float(np.nanmedian(X[base.timing].to_numpy(float)))
         shift = here - train_median if np.isfinite(here) else 0.0
         Xs = X.copy()

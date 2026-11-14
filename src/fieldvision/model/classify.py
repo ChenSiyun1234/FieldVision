@@ -26,7 +26,7 @@ import pandas as pd
 from ..features.build import build_features
 from ..features.loading import load_fields, load_timeseries
 from .artifacts import predictions_frame, write_json
-from .registry import load
+from .registry import DEFAULT_REGISTRY, load
 
 BARC_ID = re.compile(r"^barc-(\d+)-(\d{4})$", re.IGNORECASE)
 
@@ -90,7 +90,8 @@ def results(fields, ts, model, name, cfg, threshold):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Classify fields with a frozen registry model.")
-    ap.add_argument("--registry", required=True)
+    ap.add_argument("--registry", default=str(DEFAULT_REGISTRY),
+                    help="registry folder (default: the repo's registry/)")
     ap.add_argument("--model", required=True, help="registry folder name, e.g. ts_model_v1")
     ap.add_argument("--timeseries", nargs="+", required=True)
     ap.add_argument("--fields", nargs="+", required=True)

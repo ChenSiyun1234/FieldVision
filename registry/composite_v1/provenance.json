@@ -1,0 +1,18 @@
+{
+  "name": "composite_v1",
+  "exported": "2026-11-14T14:16:40",
+  "members_from_run": "data/model/runs/at2024_full",
+  "run_id": "24500e02a9e0",
+  "git_commit_of_code": "5344014",
+  "training_data": [
+    {
+      "path": "data/labels/at_2024/fields.geojson",
+      "sha256": "ed883231287f186c71c58d6becabb8f6b06ae237c979761d0a7458ce0534de7e"
+    },
+    {
+      "path": "data/timeseries/at_2024/timeseries.parquet",
+      "sha256": "002f4a449bd9a70f593349d16c96b7642748dd9c5ab38229f98ee4844153ef07"
+    }
+  ],
+  "note": "added after Evaluation 1 as a fifth family for Evaluation 2 (see ACCESS_LOG.md)"
+}

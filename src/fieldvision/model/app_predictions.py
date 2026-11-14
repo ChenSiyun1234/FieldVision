@@ -22,7 +22,7 @@ import pandas as pd
 from ..features.build import build_features
 from ..features.loading import load_fields, load_timeseries
 from .artifacts import predictions_frame, write_json
-from .registry import load
+from .registry import DEFAULT_REGISTRY, load
 
 
 def flip_reasons(model, X, p, threshold):
@@ -50,7 +50,7 @@ def flip_reasons(model, X, p, threshold):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="Predictions for the app export from a registry model.")
-    ap.add_argument("--registry", required=True)
+    ap.add_argument("--registry", default=str(DEFAULT_REGISTRY))
     ap.add_argument("--model", required=True)
     ap.add_argument("--timeseries", nargs="+", required=True)
     ap.add_argument("--fields", nargs="+", required=True)

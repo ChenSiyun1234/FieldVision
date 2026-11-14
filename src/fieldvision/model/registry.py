@@ -29,6 +29,9 @@ import numpy as np
 from ..features.season import FeatureConfig, feature_kind
 from .artifacts import frozen_model_id, load_run, write_json
 
+# the repo's registry/ folder (src/fieldvision/model/registry.py -> repo root)
+DEFAULT_REGISTRY = Path(__file__).resolve().parents[3] / "registry"
+
 
 def file_sha256(path, chunk=1 << 20):
     h = hashlib.sha256()
@@ -275,7 +278,7 @@ def main(argv=None):
     e.add_argument("--run", required=True)
     e.add_argument("--which", required=True)
     e.add_argument("--name", required=True)
-    e.add_argument("--registry", required=True)
+    e.add_argument("--registry", default=str(DEFAULT_REGISTRY))
     e.add_argument("--training-files", nargs="+", required=True)
     e.add_argument("--git-commit", required=True)
     e.add_argument("--eval", default=None)
@@ -285,7 +288,7 @@ def main(argv=None):
     c = sub.add_parser("composite")
     c.add_argument("--run", required=True)
     c.add_argument("--name", required=True)
-    c.add_argument("--registry", required=True)
+    c.add_argument("--registry", default=str(DEFAULT_REGISTRY))
     c.add_argument("--training-files", nargs="+", required=True)
     c.add_argument("--git-commit", required=True)
     c.add_argument("--family-runs", nargs="*", default=[])

@@ -1,0 +1,32 @@
+{
+  "name": "timing_rule_v1",
+  "created": "2026-11-14T14:04:34",
+  "git_commit_of_code": "d7c36b2",
+  "training_data": [
+    {
+      "path": "data/labels/barc_2021/fields.geojson",
+      "sha256": "21b4d1be5e6ceba28493e744230e00d2d23d6e3693aa06fec9c097a57ae9dcb3"
+    },
+    {
+      "path": "data/labels/barc_2022/fields.geojson",
+      "sha256": "4f1dbe4d2fb88c20277c4067e9744300576d6988cb7380424d0e8fc6100da4f5"
+    },
+    {
+      "path": "data/labels/barc_2023/fields.geojson",
+      "sha256": "c573a5aad9e50aa7136ae011cd289bfb1ab133082f105e317d9c3ee4b7843175"
+    },
+    {
+      "path": "data/timeseries/barc_2021/timeseries.parquet",
+      "sha256": "153a1050de1a53cf6fdd6b9de047accec7cbf8822fe20f50f8cdfdf5c570bb6d"
+    },
+    {
+      "path": "data/timeseries/barc_2022/timeseries.parquet",
+      "sha256": "ccda296a4eeefa9b6dcabdcc4dd514556e4b8f9af2030c67c7a4b46141059675"
+    },
+    {
+      "path": "data/timeseries/barc_2023/timeseries.parquet",
+      "sha256": "03187f2b3f37d4f55cd36f29fbab752c396eff242205c3af05ff6ddf7e24b32e"
+    }
+  ],
+  "note": "fitted on Beltsville labels; kept separate from the European models"
+}

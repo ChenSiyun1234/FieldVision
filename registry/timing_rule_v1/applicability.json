@@ -1,0 +1,18 @@
+{
+  "model": "timing_rule_v1",
+  "requires": {
+    "sensors": [
+      "Sentinel-2 L2A surface reflectance (B04, B08 and the bands the low-evidence rule uses)"
+    ],
+    "optical_clear_obs_in_harvest_window": 1,
+    "clear_obs_before_and_after_drop": true
+  },
+  "abstains_when": [
+    "harvest bracket wider than 20 days",
+    "fewer than 6 usable dates Jul-Nov",
+    "no drop found",
+    "drop seen only once"
+  ],
+  "confidence_tier": "high (simple, explainable) within Beltsville; untested elsewhere",
+  "validated_on": "Beltsville 2021-2023, leave-one-year-out (3 folds), 44 field-years"
+}
