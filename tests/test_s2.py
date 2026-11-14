@@ -165,6 +165,24 @@ def test_planetary_offset_follows_processing_baseline(baseline_value, expected):
         calibration({"collection": PLANETARY, "properties": {}}, {})
 
 
+def test_replace_retries_when_destination_is_briefly_locked(tmp_path, monkeypatch):
+    from fieldvision.s2 import extract
+    real_replace = extract.os.replace
+    failures = [2]
+    def flaky(source, target):
+        if failures[0]:
+            failures[0] -= 1
+            raise PermissionError(5, "Access is denied")
+        real_replace(source, target)
+    monkeypatch.setattr(extract.os, "replace", flaky)
+    monkeypatch.setattr(extract.time, "sleep", lambda seconds: None)
+    extract.atomic_json(tmp_path / "status.json", {"status": "complete"})
+    assert json.loads((tmp_path / "status.json").read_text()) == {"status": "complete"}
+    failures[0] = 99
+    with pytest.raises(PermissionError):
+        extract.atomic_json(tmp_path / "status.json", {"status": "running"})
+
+
 def test_local_raster_pipeline_partial_resume_and_overlap(tmp_path, monkeypatch):
     """Exercise real raster reads, checkpoint recovery and final table assembly."""
     import rasterio
@@ -195,6 +213,10 @@ def test_local_raster_pipeline_partial_resume_and_overlap(tmp_path, monkeypatch)
                              "raster:bands": [{"scale": 0.0001, "offset": -0.1, "nodata": 0}]}
     items = [{"id": f"scene-{day}", "collection": PRIMARY, "geometry": mapping(geometry), "assets": assets,
               "properties": {"datetime": f"2024-06-{day}T10:00:00Z", "proj:epsg": 32633}} for day in ("01", "11")]
+    # An upstream item with no band assets is skipped and recorded, not failed.
+    items.append({"id": "scene-no-bands", "collection": PRIMARY, "geometry": mapping(geometry),
+                  "assets": {"scl": assets["scl"]},
+                  "properties": {"datetime": "2024-06-21T10:00:00Z", "proj:epsg": 32633}})
     monkeypatch.setattr(extract, "find_scenes", lambda *args: (items, {"primary_scenes": 2, "fallback_scenes": 0}))
     real_read = extract.read_band
     calls = []
@@ -226,6 +248,8 @@ def test_local_raster_pipeline_partial_resume_and_overlap(tmp_path, monkeypatch)
     manifest = json.loads((args.out / "manifest.json").read_text())
     assert manifest["scene_failures"] == 0
     assert manifest["fields_with_usable_dates"] == 2
+    block = next(iter(manifest["blocks"].values()))
+    assert block["status"] == "complete" and "scene-no-bands" in block["skipped_items"]
     args.max_cloud = 70
     with pytest.raises(ValueError, match="different inputs/options/code"):
         extract.run(args)

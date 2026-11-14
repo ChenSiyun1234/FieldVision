@@ -44,10 +44,23 @@ def utc_now():
     return datetime.now(timezone.utc).isoformat()
 
 
+def replace_with_retry(temporary, path, attempts=8):
+    """os.replace, retried: on Windows a reader or virus scanner holding the
+    destination open makes the rename fail with access denied for a moment."""
+    for attempt in range(attempts):
+        try:
+            os.replace(temporary, path)
+            return
+        except PermissionError:
+            if attempt + 1 == attempts:
+                raise
+            time.sleep(min(0.25 * 2 ** attempt, 8))
+
+
 def atomic_json(path, content):
     temporary = path.with_suffix(path.suffix + ".tmp")
     temporary.write_text(json.dumps(content, indent=2, allow_nan=False), encoding="utf-8")
-    os.replace(temporary, path)
+    replace_with_retry(temporary, path)
 
 
 def empty_table():
@@ -58,7 +71,14 @@ def empty_table():
 def write_parquet(path, table):
     temporary = path.with_suffix(".parquet.tmp")
     table.to_parquet(temporary, index=False)
-    os.replace(temporary, path)
+    replace_with_retry(temporary, path)
+
+
+def _has_asset(item, name):
+    try:
+        return "href" in asset_for(item, name)
+    except KeyError:
+        return False
 
 
 def read_raw(item, name, grid, retries=3):
@@ -138,6 +158,14 @@ def process_block(block, args, pool):
         # STAC query intersects the block bbox; only actual polygon footprints count.
         items = [item for item in items if any(shape(item["geometry"]).intersects(f["geometry"]) for f in block["fields"])]
         atomic_json(cache_path, {"items": items, "counts": counts})
+    # Some upstream items lack band assets altogether (seen: a 2024 Collection 1
+    # item with no 10 m bands). No retry can read them; record and skip them.
+    skipped = {}
+    for item in items:
+        missing = [name for name in (*BANDS, "SCL") if not _has_asset(item, name)]
+        if missing:
+            skipped[item["id"]] = "missing assets: " + ",".join(missing)
+    items = [item for item in items if item["id"] not in skipped]
     completed = set(previous.get("completed_scene_ids", [])) if path.exists() else set()
     frames = [pd.read_parquet(path)] if path.exists() else []
     diagnostics = previous.get("diagnostics", {}) if path.exists() else {}
@@ -188,7 +216,8 @@ def process_block(block, args, pool):
     status = {"status": "partial" if errors else "complete", "field_count": len(block["fields"]),
               "field_ids": [f["field_id"] for f in block["fields"]], "bbox": block["bbox"],
               "scenes_found": len(items), **counts, "scenes_succeeded": len(completed),
-              "completed_scene_ids": sorted(completed), "scene_errors": errors, "diagnostics": diagnostics,
+              "completed_scene_ids": sorted(completed), "scene_errors": errors, "skipped_items": skipped,
+              "diagnostics": diagnostics,
               "rows": len(table), "wall_seconds": previous.get("wall_seconds", 0) + time.monotonic() - started}
     atomic_json(status_path, status)
     return status
