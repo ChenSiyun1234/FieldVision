@@ -157,3 +157,39 @@ def test_grain_metrics_and_exact_intervals():
     assert clopper_pearson(0, 5)[0] == 0.0 and clopper_pearson(5, 5)[1] == 1.0
     ex = exact_intervals(m["confusion"])
     assert ex["recall"][0] < 0.75 < ex["recall"][1]
+
+
+def test_quickstats_selection_rule(tmp_path):
+    from fieldvision.model.quickstats import load, national_share, select, shares
+    base = dict(commodity="CORN", statistic="AREA HARVESTED", unit="ACRES", frequency="ANNUAL",
+                cv_percent="", state_name="IOWA", state_ansi="19")
+    def row(level, county, ansi, crop, src, value, desc=None, domain="TOTAL", ref="YEAR", year=2022):
+        d = {"GRAIN": "CORN, GRAIN - ACRES HARVESTED", "SILAGE": "CORN, SILAGE - ACRES HARVESTED"}
+        return {**base, "year": year, "aggregation_level": level, "county_name": county,
+                "county_ansi": ansi, "crop_use": crop.lower(), "measurement": "harvested",
+                "source": src, "value": value, "domain": domain,
+                "domain_category": "NOT SPECIFIED", "reference_period": ref,
+                "short_description": desc or d[crop]}
+    rows = [
+        row("COUNTY", "STORY", "169", "GRAIN", "CENSUS", " 150,000 "),
+        row("COUNTY", "STORY", "169", "GRAIN", "SURVEY", "151,000"),          # second estimate
+        row("COUNTY", "STORY", "169", "SILAGE", "CENSUS", "10,000"),
+        row("COUNTY", "STORY", "169", "GRAIN", "CENSUS", "90,000",
+            desc="CORN, GRAIN, IRRIGATED - ACRES HARVESTED"),                 # breakdown
+        row("COUNTY", "BOONE", "015", "GRAIN", "CENSUS", "100,000"),
+        row("COUNTY", "BOONE", "015", "SILAGE", "CENSUS", "    (D)"),          # withheld
+        row("COUNTY", "OTHER (COMBINED) COUNTIES", "", "GRAIN", "SURVEY", "5,000"),
+        row("STATE", "", "", "GRAIN", "SURVEY", "12,450,000", year=2021),
+        row("STATE", "", "", "GRAIN", "SURVEY", "12,000,000", ref="YEAR - AUG FORECAST", year=2021),
+    ]
+    path = tmp_path / "qs.csv"
+    pd.DataFrame(rows).to_csv(path, index=False)
+    sel = select(load(path))
+    c = shares(sel, "COUNTY", 2022).set_index("fips")
+    assert c.loc["19169", "grain_harvested"] == 150000
+    assert c.loc["19169", "silage_share"] == pytest.approx(10000 / 160000)
+    assert np.isnan(c.loc["19015", "silage_share"]) and bool(c.loc["19015", "silage_withheld"])
+    nat = national_share(sel, 2022)
+    assert nat["n_both_disclosed"] == 1 and nat["silage_share"] == pytest.approx(10000 / 160000)
+    st = sel[(sel.aggregation_level == "STATE")]
+    assert len(st) == 1 and st["value_num"].iloc[0] == 12450000

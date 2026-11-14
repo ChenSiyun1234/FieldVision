@@ -104,6 +104,18 @@ model, threshold, run_id` and any `--keep-columns`. `harvest_start`/`harvest_end
 usable observation still standing and the first clearly harvested; `low_evidence_reason` is
 empty for confident fields and `no_timeseries` when the extractor returned nothing.
 
+## USDA Quick Stats table
+
+`python -m fieldvision.model.quickstats --csv corn_grain_silage_acres_2012_2025.csv --out <dir>`
+keeps exactly one record per geography, year, crop use and measurement (the rule is in the module
+docstring: the three plain series, domain TOTAL, reference period YEAR, county rows from CENSUS
+only and without "OTHER (COMBINED) COUNTIES", state rows from SURVEY). `(D)` stays missing,
+never zero. Checks on the 2012-2025 file: Iowa grain harvested 12.45-13.71 million acres per
+year; US silage share of harvested corn 6.2-7.8 % (2022: 7.8 % over the 1,410 counties
+reporting both numbers). Maryland 2022 grain is 422 thousand acres summed over counties;
+Prince George's County (24033) has 3,713 grain acres and a withheld silage figure. Summing
+CENSUS and SURVEY county rows together roughly doubles the totals.
+
 ## County aggregation
 
 `fieldvision.model.county.county_silage_share(predictions, county_col)` gives, per county, the
