@@ -133,7 +133,11 @@ STATE_2025 = {
         "with_double_crop_range": (5.3, 8.2), "all_corn_acres": 494_947,
         # Upper bound: every double-crop acre counted as silage, 22,700 + 17,056 (8.0 %, log 19:14).
         "upper_bound_silage_acres": 39_756,
+        # After the fact, with Landsat added (log 02:47): 99 % of the corn seen; single-crop 4.2 %
+        # [2.9, 5.8]; with double crops 6.2 % [4.7, 7.7]; still below 8.9 %. The reported figure stays.
+        "two_satellites_after_the_fact": (6.2, (4.7, 7.7)), "two_satellites_seen": 99,
     },
+    "Michigan": {"our_silage_share": 14.4, "nass_silage_share": 14.7, "source": "log 04:42"},
     "Pennsylvania": {"our_silage_share": 15.2, "nass_silage_share": 32.8, "source": "log 01:53"},
     "Wisconsin": {"our_silage_share": 16.6, "nass_silage_share": 21.6, "source": "log 01:43, corrected 01:53"},
 }
@@ -313,6 +317,7 @@ HISTORY_UPDATE_STATES = [
     ("Maryland 2025", 9.5, 6.8, 8.9, None),
     ("Wisconsin 2025", 19.8, 12.9, 21.6, None),
     ("Pennsylvania 2025", 31.4, 18.7, 32.8, None),
+    ("Michigan 2025", 14.3, 9.9, 14.7, None),  # log 04:42; rule written at 02:22; failed
 ]
 
 # The three places opened last, once each, with the procedure, the pass marks and our own
@@ -322,6 +327,7 @@ PLACES_TO_OPEN = [
     ("Wisconsin 2025", 21.6, None, 16.6),
     ("Pennsylvania 2025", 32.8, None, 15.2),
     ("Lancaster, Pa. 2023", 27.4, (27.4, 54.8), 26.6),
+    ("Michigan 2025", 14.7, None, 14.4),  # a fourth, added at log 02:22 and run at 04:40
 ]
 
 # Sentinel-2 alone and with Landsat 8 and 9 added, in the three counties where clouds hid the
@@ -394,4 +400,43 @@ LANCASTER_2023 = {
     "band": (27.4, 54.8), "points_low": 0.8,
     "updated": 25.1, "updated_off": 2.3, "land_use_updated": 9.1, "land_use_off": 18.3,
     "teammates_run": {"fields": 1_057, "share": 35.2},
+}
+
+# Michigan 2025, a fourth clean test of the same module: procedure, pass marks and prediction
+# logged at 02:22, run once (log 04:40 for the command, 04:42 for the result). 4,835 corn fields
+# in 150 blocks, Sentinel-2 plus Landsat, 98 % of the corn area seen. Headline with double-crop
+# corn 14.4 % [10.8, 18.0] for NASS 14.7 %: 0.3 points low, a PASS (mark: within 5). The warning
+# check is clean (Monroe and Bay read 3.1 %, limit 8.4 %). OUR OWN PREDICTION WAS WRONG: we had
+# written that Michigan would read below 11.7 %, expecting 2025 itself to be the cause of the low
+# readings; by the reading written with it, a Michigan that reads right says the place, not the
+# year, is the difference. Beside it, both failing: the update from the last official share
+# (14.3 %, itself 0.4 off) gives 9.9 %, 4.8 off; the update from the land-use figure gives 8.7 %,
+# 6.0 off. Ten of the 150 blocks touch Branch and Gratiot, the two counties tested in 2022: a
+# different year and an independent draw.
+MICHIGAN_2025 = {
+    "blocks": 150, "fields": 4_835, "seen": 98, "clear_tier_area": 92,
+    "ours": 14.4, "ours_range": (10.8, 18.0), "single_crop": 14.2,
+    "usda": 14.7, "points_low": 0.3, "pass_mark": 5, "predicted_below": 11.7,
+    "last_official": 14.3, "last_official_off": 0.4, "updated": 9.9, "updated_off": 4.8,
+    "land_use_updated": 8.7, "land_use_off": 6.0,
+    "guard": {"counties": "Monroe and Bay", "ours": 3.1, "limit": 8.4, "flagged": False},
+    "blocks_touching_2022_counties": 10,
+}
+
+# Tried for the low readings, with the rule for choosing written first (log 02:18; result 02:20,
+# re-checked 02:47): three replacements for the timing measurement, each refitted on the same
+# 8,000 European fields. None closed the gap between years by the third the rule asked for, so
+# the module stays as it is.
+TIMING_CANDIDATES = {"tried": 3, "kept": 0}
+
+# Where each place on the scoreboard lies, and its name there (county and year).
+SCOREBOARD_PLACE = {
+    "Queen Anne's": ("Maryland", "Queen Anne's 2022"), "Kent": ("Maryland", "Kent 2022"),
+    "Carroll": ("Maryland", "Carroll 2022"), "Frederick": ("Maryland", "Frederick 2022"),
+    "Maryland 2025 (state)": ("Maryland", "Maryland 2025"),
+    "Branch, Michigan": ("Michigan", "Branch 2022"), "Gratiot, Michigan": ("Michigan", "Gratiot 2022"),
+    "Michigan 2025": ("Michigan", "Michigan 2025"),
+    "Racine, Wisconsin": ("Wisconsin", "Racine 2023"), "Marathon, Wisconsin": ("Wisconsin", "Marathon 2023"),
+    "Wisconsin 2025": ("Wisconsin", "Wisconsin 2025"),
+    "Lancaster, Pa. 2023": ("Pennsylvania", "Lancaster 2023"), "Pennsylvania 2025": ("Pennsylvania", "Pennsylvania 2025"),
 }

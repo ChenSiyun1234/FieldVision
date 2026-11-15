@@ -415,20 +415,23 @@ def state_2025():
          lambda v: f"{v[0]:,} acres, {v[1]:g}%  (range {v[2][0]:g} to {v[2][1]:g}%)"),
         ("Upper bound: every double-crop acre counted as silage", md.get("upper_bound_silage_acres"),
          lambda v: f"{v:,} acres, {md['share_if_all_double_crop_is_silage']:.1f}%"),
+        (f"With a second satellite too, after the fact ({md.get('two_satellites_seen')}% of the corn seen)",
+         md.get("two_satellites_after_the_fact"),
+         lambda v: f"{v[0]:g}% with double crops  (range {v[1][0]:g} to {v[1][1]:g}%)"),
     ]
     for i, (label, value, fmt) in enumerate(beside):
-        y = 2.92 - i * 0.43
+        y = 2.92 - i * 0.37
         ax.text(0.6, y, label, fontsize=13.5, color=INK2, va="center")
         if value is None:
             to_come(ax, 9.15, 11.15, y, "to come", half=0.19, size=12)
         else:
             ax.text(9.15, y, fmt(value), fontsize=13.5, color=INK, va="center", fontweight="bold")
 
-    ax.add_patch(FancyBboxPatch((12.1, 4.0), 3.35, 3.35, boxstyle="round,pad=0,rounding_size=0.16", fc=BG, ec=INK2,
+    ax.add_patch(FancyBboxPatch((12.1, 3.3), 3.35, 4.05, boxstyle="round,pad=0,rounding_size=0.16", fc=BG, ec=INK2,
                                 lw=1.4, ls=(0, (4, 3))))
     ax.text(12.4, 7.0, "Other states, 2025", fontsize=14.5, color=INK, fontweight="bold", va="center")
-    for i, state in enumerate(("Pennsylvania", "Wisconsin")):
-        y = 6.15 - i * 1.1
+    for i, state in enumerate(("Michigan", "Wisconsin", "Pennsylvania")):
+        y = 6.2 - i * 1.0
         s = N.STATE_2025[state]["our_silage_share"]
         ax.text(12.4, y, state, fontsize=14, color=INK, va="center")
         usda = N.STATE_2025[state].get("nass_silage_share")
