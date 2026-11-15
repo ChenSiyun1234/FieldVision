@@ -175,3 +175,19 @@ table.data button.ghost { border: 0; padding: 0; color: var(--silage); text-alig
 .whatif-controls { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .whatif-controls input { width: 220px; }
 details summary { cursor: pointer; color: var(--muted); }
+
+/* US map picker. County shading: one blue ramp, five ordered steps, validated for both surfaces. */
+:root { --q1: #184f95; --q2: #256abf; --q3: #3987e5; --q4: #6da7ec; --q5: #9ec5f4; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) { --q1: #86b6ef; --q2: #5598e7; --q3: #2a78d6; --q4: #1c5cab; --q5: #104281; }
+}
+.usmap-page { max-width: 1400px; }
+.usmap-grid { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .usmap-grid { grid-template-columns: 1fr; } }
+.usmap { height: 560px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); }
+@media (max-width: 700px) { .usmap { height: 380px; } }
+.usmap .leaflet-container, .usmap.leaflet-container { background: var(--bg); }
+.usmap-panel { display: flex; flex-direction: column; gap: 12px; }
+.usmap-panel .chart { padding: 10px; }
+.leaflet-tooltip { background: var(--panel); color: var(--text); border: 1px solid var(--line); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+.leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before, .leaflet-tooltip-left:before, .leaflet-tooltip-right:before { display: none; }
