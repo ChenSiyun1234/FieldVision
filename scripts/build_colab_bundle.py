@@ -29,7 +29,10 @@ def fingerprint(package):
 
 def strip_item(item):
     """Drop assets and links the extractor never reads; properties and footprint stay as they are."""
-    keys = BAND_KEYS_PC if item["collection"].startswith("planetary:") else BAND_KEYS_ES
+    if item["collection"] == "sentinel-1-rtc":
+        keys = ("vv", "vh")
+    else:
+        keys = BAND_KEYS_PC if item["collection"].startswith("planetary:") else BAND_KEYS_ES
     slim = {k: v for k, v in item.items() if k not in ("assets", "links")}
     slim["assets"] = {k: item["assets"][k] for k in keys if k in item["assets"]}
     return slim

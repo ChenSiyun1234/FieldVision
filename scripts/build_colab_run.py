@@ -25,15 +25,34 @@ sys.path.insert(0, str(Path(__file__).parent))
 from build_colab_bundle import LAPTOP_LIBS, PINS, fingerprint, strip_catalog, write_split  # noqa: E402
 
 RESULT_PART_MB = 50
+S1_COLUMNS = ["scene_id", "collection", "date", "datetime", "platform", "orbit_state", "relative_orbit", "n_pixels",
+              "n_valid", "valid_fraction", "vv_mean", "vh_mean", "vv_median", "vh_median", "vv_db", "vh_db", "vh_vv_db"]
+# What differs between the optical and the radar extractor, for the bundle and its check.
+PRODUCTS = {
+    "s2": {"module": "fieldvision.s2.extract", "globs": ["s2/*.py"], "key": ["field_id", "date"],
+           "imports": "from fieldvision.s2.core import BANDS\nfrom fieldvision.s2.extract import process_block",
+           "exact": '["scene_id", "collection", "n_pixels", "n_clear", "clear_fraction", *BANDS]'},
+    "s1": {"module": "fieldvision.s1.extract", "globs": ["s1/*.py", "s2/core.py", "s2/geometry.py", "s2/catalog.py"],
+           "key": ["field_id", "absolute_orbit"], "imports": "from fieldvision.s1.extract import process_block",
+           "exact": repr(S1_COLUMNS)},
+}
 
 
-def extractor_defaults(code_dir):
+def product_fingerprint(package, globs):
+    """sha256 over the files the product's extractor hashes, in relative-path order."""
+    files = sorted({p for pattern in globs for p in Path(package).glob(pattern)},
+                   key=lambda p: p.relative_to(package).as_posix())
+    return hashlib.sha256(b"".join(p.read_bytes() for p in files)).hexdigest()
+
+
+def extractor_defaults(code_dir, module="fieldvision.s2.extract"):
     """Argument defaults of this exact code copy, read from its own parser."""
     sys.path.insert(0, str(code_dir))
     try:
         for name in [m for m in sys.modules if m == "fieldvision" or m.startswith("fieldvision.")]:
             del sys.modules[name]
-        from fieldvision.s2 import extract
+        import importlib
+        extract = importlib.import_module(module)
         captured = {}
         real_run = extract.run
         extract.run = lambda args: captured.update(vars(args)) or 0
@@ -49,19 +68,29 @@ def extractor_defaults(code_dir):
         sys.path.remove(str(code_dir))
 
 
-def start_fresh_run(run_dir, fields, code_dir, template_dir):
+def start_fresh_run(run_dir, fields, code_dir, template_dir, product="s2", year=None):
     """Create the laptop run folder for a run that will be extracted entirely on Colab.
 
-    Parameters come from a finished run with the same code (template). The stub
-    manifest carries the signature the extractor computes for these fields, arguments
-    and code, so the merge can verify Colab's run and the local finalising run accepts
-    the folder. Nothing is read from the network here.
+    Parameters come from a finished run with the same code (template), or, without a
+    template, from the extractor's own defaults for ``year``. The stub manifest carries
+    the signature the extractor computes for these fields, arguments and code, so the
+    merge can verify Colab's run and the local finalising run accepts the folder.
+    Nothing is read from the network here.
     """
-    template = json.loads((template_dir / "manifest.json").read_text())
-    params = dict(template["parameters"])
-    digest = fingerprint(code_dir / "fieldvision")
-    if digest != template["source_sha256"]:
-        raise SystemExit("template run used different code")
+    spec = PRODUCTS[product]
+    digest = product_fingerprint(code_dir / "fieldvision", spec["globs"])
+    if template_dir:
+        template = json.loads((template_dir / "manifest.json").read_text())
+        params = dict(template["parameters"])
+        if digest != template["source_sha256"]:
+            raise SystemExit("template run used different code")
+    else:
+        from datetime import date
+        defaults = extractor_defaults(code_dir, spec["module"])
+        params = {k: v for k, v in defaults.items() if k not in ("fields", "out", "workers", "scene_batch", "blocks")}
+        params["year"] = year
+        params["start_date"] = date.fromisoformat(f"{year}-{params['start']}").isoformat()
+        params["end_date"] = date.fromisoformat(f"{year}-{params['end']}").isoformat()
     signature = hashlib.sha256(fields.read_bytes() + json.dumps(params, sort_keys=True).encode()
                                + digest.encode()).hexdigest()
     sys.path.insert(0, str(code_dir))
@@ -74,7 +103,8 @@ def start_fresh_run(run_dir, fields, code_dir, template_dir):
     manifest = {"signature": signature, "source_sha256": digest, "parameters": params,
                 "fields_file": str(fields.resolve()), "block_count": block_count, "started_at": None,
                 "status": "colab_pending", "blocks": {},
-                "note": f"stub written by build_colab_run.py; parameters from {template_dir.name}; extraction runs on Colab"}
+                "note": "stub written by build_colab_run.py; parameters from "
+                        + (template_dir.name if template_dir else "the extractor defaults") + "; extraction runs on Colab"}
     (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return manifest
 
@@ -106,8 +136,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import numpy as np
 import pandas as pd
-from fieldvision.s2.core import BANDS
-from fieldvision.s2.extract import process_block
+__IMPORTS__
 from fieldvision.s2.geometry import load_fields, make_blocks
 
 work, check_zip, workers, main_fields = Path(sys.argv[1]), Path(sys.argv[2]), int(sys.argv[3]), Path(sys.argv[4])
@@ -115,7 +144,8 @@ block_ids = sys.argv[5:]
 root = work / "check"
 shutil.rmtree(root, ignore_errors=True)
 zipfile.ZipFile(check_zip).extractall(work)
-EXACT = ["scene_id", "collection", "n_pixels", "n_clear", "clear_fraction", *BANDS]
+EXACT = __EXACT__
+KEY = __KEY__
 failed = False
 with ThreadPoolExecutor(max_workers=workers) as pool:
     for block_id in block_ids:
@@ -136,8 +166,8 @@ with ThreadPoolExecutor(max_workers=workers) as pool:
                 break
             print(f"{block_id}: {len(errors)} scene reads failed (network), retry {attempt + 1}", flush=True)
             time.sleep(30 * (attempt + 1))
-        old = pd.read_parquet(d / "reference.parquet").set_index(["field_id", "date"]).sort_index()
-        new = pd.read_parquet(out / "blocks" / f"{block_id}.parquet").set_index(["field_id", "date"]).sort_index()
+        old = pd.read_parquet(d / "reference.parquet").set_index(KEY).sort_index()
+        new = pd.read_parquet(out / "blocks" / f"{block_id}.parquet").set_index(KEY).sort_index()
         problems = []
         if status["status"] != "complete":
             problems.append(f"block status {status['status']}: {status.get('scene_errors')}")
@@ -222,7 +252,9 @@ print("laptop:", bundle["laptop"], "(different GDAL/PROJ builds are allowed only
 # 4. Unpack the frozen code, check its fingerprint, then the same-result check
 shutil.rmtree(CODE, ignore_errors=True)
 zipfile.ZipFile(UPLOAD / bundle["code_zip"]).extractall(CODE)
-digest = hashlib.sha256(b"".join(p.read_bytes() for p in sorted((CODE / "fieldvision" / "s2").glob("*.py")))).hexdigest()
+package = CODE / "fieldvision"
+fp_files = sorted({p for g in bundle["fingerprint_globs"] for p in package.glob(g)}, key=lambda p: p.relative_to(package).as_posix())
+digest = hashlib.sha256(b"".join(p.read_bytes() for p in fp_files)).hexdigest()
 print("code fingerprint", digest)
 assert digest == bundle["code_sha256"], "code fingerprint differs from the laptop run's code"
 WORK.mkdir(parents=True, exist_ok=True)
@@ -274,7 +306,7 @@ print("blocks at start:", {s: list(state.values()).count(s) for s in set(state.v
 """),
         code("""
 # 6. Run the extraction (same arguments as the laptop run). Rerun this cell to resume.
-cmd = [sys.executable, "-W", "ignore", "-m", "fieldvision.s2.extract", "--fields", str(UPLOAD / bundle["fields"]),
+cmd = [sys.executable, "-W", "ignore", "-m", bundle["module"], "--fields", str(UPLOAD / bundle["fields"]),
        *bundle["cli"], "--out", str(OUT), "--workers", str(WORKERS), "--scene-batch", "6"]
 print(" ".join(cmd))
 stop = threading.Event()
@@ -349,7 +381,10 @@ for p in [sums, *parts]:
     files.download(str(p))
 """),
     ]
-    cells[1]["source"] = ["CHECK_SCRIPT = " + repr(CHECK_SCRIPT) + "\n"] + cells[1]["source"]
+    spec = PRODUCTS[bundle["product"]]
+    check = (CHECK_SCRIPT.replace("__IMPORTS__", spec["imports"]).replace("__EXACT__", spec["exact"])
+             .replace("__KEY__", repr(spec["key"])))
+    cells[1]["source"] = ["CHECK_SCRIPT = " + repr(check) + "\n"] + cells[1]["source"]
     notebook = {"cells": cells, "metadata": {"kernelspec": {"display_name": "Python 3", "language": "python", "name": "python3"},
                                               "language_info": {"name": "python"}}, "nbformat": 4, "nbformat_minor": 5}
     path.write_text(json.dumps(notebook, indent=1), encoding="utf-8")
@@ -364,20 +399,23 @@ def main():
     parser.add_argument("--check-external", nargs="*", default=[],
                         help="run_dir|labels_file|block_id of another finished run with the same code")
     parser.add_argument("--template-run", type=Path, help="for a run with no laptop folder yet: copy its settings")
+    parser.add_argument("--product", choices=sorted(PRODUCTS), default="s2", help="s2 optical (default) or s1 radar")
+    parser.add_argument("--year", type=int, help="fresh run without template: the year")
     parser.add_argument("--dest", type=Path, required=True)
     args = parser.parse_args()
     run = args.run_dir.name
     if not (args.run_dir / "manifest.json").exists():
-        if not args.template_run:
-            raise SystemExit("no laptop run yet: pass --template-run")
-        start_fresh_run(args.run_dir, args.fields, args.code, args.template_run)
+        if not args.template_run and not args.year:
+            raise SystemExit("fresh run without --template-run needs --year")
+        start_fresh_run(args.run_dir, args.fields, args.code, args.template_run, args.product, args.year)
         print("created laptop run folder with stub manifest:", args.run_dir)
     manifest = json.loads((args.run_dir / "manifest.json").read_text())
-    digest = fingerprint(args.code / "fieldvision")
+    spec = PRODUCTS[args.product]
+    digest = product_fingerprint(args.code / "fieldvision", spec["globs"])
     if digest != manifest["source_sha256"]:
         raise SystemExit(f"code copy {digest[:8]} does not match the run's {manifest['source_sha256'][:8]}")
     params = manifest["parameters"]
-    cli = cli_from_manifest(params, extractor_defaults(args.code))
+    cli = cli_from_manifest(params, extractor_defaults(args.code, spec["module"]))
     if args.dest.exists():
         shutil.rmtree(args.dest)
     args.dest.mkdir(parents=True)
@@ -426,8 +464,8 @@ def main():
             archive.write(args.run_dir / "blocks" / f"{block_id}.parquet", f"{prefix}/reference.parquet")
             archive.writestr(f"{prefix}/settings.json", json.dumps({"year": params["year"], "parameters": params,
                                                                      "source_run": run, "fields": "MAIN"}))
-        for spec in args.check_external:
-            other_dir, labels, block_id = spec.split("|")
+        for check_spec in args.check_external:
+            other_dir, labels, block_id = check_spec.split("|")
             other_dir, labels = Path(other_dir), Path(labels)
             other = json.loads((other_dir / "manifest.json").read_text())
             if other["source_sha256"] != digest:
@@ -449,7 +487,8 @@ def main():
                                                                      "source_run": other_dir.name}))
     check_ids = [*args.check_local, *(s.split("|")[2] for s in args.check_external)]
 
-    bundle = {"run": run, "code_zip": code_name, "code_sha256": digest, "fields": fields_name, "cli": cli,
+    bundle = {"run": run, "product": args.product, "module": spec["module"], "fingerprint_globs": spec["globs"],
+              "code_zip": code_name, "code_sha256": digest, "fields": fields_name, "cli": cli,
               "block_count": manifest["block_count"], "catalog_parts": catalog_parts, "block_parts": block_parts,
               "laptop_blocks_at_build": {s: list(statuses.values()).count(s) for s in set(statuses.values())},
               "catalog_files": n_catalog, "check_blocks": check_ids, "pins": PINS, "laptop": LAPTOP_LIBS,
