@@ -70,7 +70,7 @@ Policies: `standard` is the one the agent already uses (unchanged); `module_v2` 
 | Racine, Wisconsin 2023 | survey 2.4% (official figures 2.4 to 6.4%) | 6.4% | no |
 | Marathon, Wisconsin 2023, a third of the county's corn | survey 49.9% (official figures 32.1 to 49.9%) | 4.3%; half the fields could not be judged | no |
 | Lancaster, Pennsylvania 2023, 10,533 fields (64% of the county's corn), two satellites | Census 2022 27.4% (the 2023 survey, 44.5%, counts half the corn acres) | 26.6% | no |
-| Michigan 2025, random sample of 4,835 fields, two satellites | NASS 14.7% | 14.4%, range 10.8 to 18.0 (about 334,000 silage acres for USDA's 340,000) | no |
+| Michigan 2025, random sample of 4,835 fields, two satellites | NASS 14.7% | 14.4%, range 10.8 to 18.0 (on USDA's corn total that is about 334,000 silage acres for USDA's 340,000) | no |
 | Wisconsin 2025, random sample of 8,199 fields, two satellites | NASS 21.6% | 16.6%, range 13.8 to 19.5; flagged unreliable by our warning check | no |
 | Pennsylvania 2025, random sample of 3,931 fields, two satellites | NASS 32.8% | 15.2%, range 12.9 to 17.5 (9.5% without double-crop corn) | no |
 | Maryland 2025, random sample of 3,611 fields | NASS 8.9% (40,000 acres) | 4.75%, range 3.4 to 6.3 (22,700 acres); with double-crop corn scored afterwards 6.7% (33,135 acres) | no |
