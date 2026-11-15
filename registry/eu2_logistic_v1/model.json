@@ -1,0 +1,43 @@
+{
+  "name": "eu2_logistic_v1",
+  "description": "Evaluation 2 family, trained on every European field-year in READY.txt (AT 2022-2024, FR 2022, NL 2025) with the 13:58 design",
+  "class": "LogisticModel",
+  "positive_class": "silage",
+  "decision": "silage if p_silage >= threshold",
+  "threshold": 0.5,
+  "features": [
+    "harv_days_since_peak",
+    "harv_decline_days",
+    "pre_ndvi_frac",
+    "pre_ndmi",
+    "sen_ndvi_slope_rel",
+    "post_ndti"
+  ],
+  "probability": "Platt-calibrated for a 50/50 training class balance",
+  "platt": {
+    "a": 0.9758459734825649,
+    "b": -0.0002505695306731228
+  },
+  "evidence_reference": {
+    "harv_days_since_peak": {
+      "silage": 51.5,
+      "grain": 63.5
+    },
+    "sen_ndvi_slope_rel": {
+      "silage": -0.005415251653994976,
+      "grain": -0.011398596908640965
+    },
+    "pre_ndvi_frac": {
+      "silage": 0.7876357892145817,
+      "grain": 0.5388593315661715
+    },
+    "pre_ndmi": {
+      "silage": 0.2953583854857834,
+      "grain": 0.13005934311174128
+    },
+    "post_ndti": {
+      "silage": 0.12173763696649806,
+      "grain": 0.1485274368668752
+    }
+  }
+}

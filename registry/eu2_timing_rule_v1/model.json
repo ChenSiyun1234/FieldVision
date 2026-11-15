@@ -1,0 +1,56 @@
+{
+  "name": "eu2_timing_rule_v1",
+  "description": "Evaluation 2 family, trained on every European field-year in READY.txt (AT 2022-2024, FR 2022, NL 2025) with the 13:58 design",
+  "class": "RuleModel",
+  "positive_class": "silage",
+  "decision": "silage if p_silage >= threshold",
+  "threshold": 0.5,
+  "features": [
+    "harv_mid_doy",
+    "pre_ndmi"
+  ],
+  "probability": "Platt-calibrated for a 50/50 training class balance",
+  "platt": {
+    "a": 0.2613873643176478,
+    "b": 0.09235243726522653
+  },
+  "rule": {
+    "timing": "harv_mid_doy",
+    "moisture": "pre_ndmi",
+    "min_gain": null,
+    "name": "timing_rule",
+    "mode_": "timing_only",
+    "t_time_": 257.5,
+    "t_moist_": null,
+    "scale_time_": 16.679021497405486,
+    "scale_moist_": 0.18383521001927958,
+    "p_missing_": 0.624031007751938,
+    "prevalence_": 0.5,
+    "threshold": 0.5
+  },
+  "rule_text": "silage if harv_mid_doy <= 257.5; no harvest detected -> score 0.62",
+  "effective_rule": "silage if harv_mid_doy <= 260.4",
+  "evidence_reference": {
+    "harv_days_since_peak": {
+      "silage": 51.5,
+      "grain": 63.5
+    },
+    "sen_ndvi_slope_rel": {
+      "silage": -0.005415251653994976,
+      "grain": -0.011398596908640965
+    },
+    "pre_ndvi_frac": {
+      "silage": 0.7876357892145817,
+      "grain": 0.5388593315661715
+    },
+    "pre_ndmi": {
+      "silage": 0.2953583854857834,
+      "grain": 0.13005934311174128
+    },
+    "post_ndti": {
+      "silage": 0.12173763696649806,
+      "grain": 0.1485274368668752
+    }
+  },
+  "training_median_timing": 259.5
+}
