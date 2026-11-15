@@ -1,9 +1,12 @@
 # FieldVision
 
-**Was this corn field chopped for silage or combined for grain?** FieldVision answers that for every corn field in
-a county from free public satellite data, adds the fields up to county and state acres, and checks the result
-against USDA NASS. Built for Hack the Harvest 2026 (USDA NASS challenge).
+**An explainable, satellite-driven corn harvest intelligence system.** Was this corn field chopped green for
+**silage** or left to dry for **grain**? FieldVision answers that for every corn field from free public satellite
+data, explains each call, adds the fields up to county and state acres, and checks them against USDA NASS.
+Built for Hack the Harvest 2026 (USDA NASS challenge) by **Team makai**: Hetvi Bhadani, Hima Verma, Krishi Shah,
+Priyanka R, Siyun Chen.
 
+**Presentation:** [`handoff/presentation/FieldVision.pdf`](handoff/presentation/FieldVision.pdf) (17 slides).
 Every figure the system produces is a **model estimate, not a NASS statistic**.
 
 - [What it does](#what-it-does)
@@ -29,37 +32,87 @@ explains it, and code checks every number it writes.
 
 ## Results
 
-All results below are from runs logged before they were opened. The full record is in
-[`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/REPORT.md`](handoff/results/REPORT.md).
+The figures below are the ones in the presentation. The full record, with which results were clean tests and
+when each was logged, is in [`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/REPORT.md`](handoff/results/REPORT.md).
 
-**Field calls, 44 labelled US field-years (Beltsville, MD, 2021-23), scored once.** The model was trained only on
-8,000 labelled European fields.
+### Field level: 44 labelled US field-years (Beltsville, MD, 2021-23)
 
-| Model | Right | Silage precision | Silage recall | False positive rate | ROC-AUC |
+Trained with **zero US labels** (8,000 labelled European fields from three countries), scored once.
+
+| | Predicted silage | Predicted grain |
+|---|---|---|
+| **Truly silage** | 11 | 1 |
+| **Truly grain** | 1 | 31 |
+
+| Accuracy | Precision | Recall | F1 | False positive rate | Speed |
 |---|---|---|---|---|---|
-| `eu2_logistic_v1` (final) | 42 of 44 | 0.917 | 0.917 | 0.031 | 0.951 |
-| Always grain | 32 of 44 | – | 0 | 0 | 0.5 |
+| 95.5% (42 of 44) | 91.7% | 91.7% | 91.7% | 3.1% | 14 ms per field |
 
-**States, 2025, against the organisers' NASS figures** (silage share of corn harvested; clean tests run once under
-rules written first):
+For comparison: a larger gradient-boosted model gets 37 of 44, and always saying "grain" gets 32 of 44.
 
-| State | Ours | NASS 2025 | Miss |
+### State level, 2025: model alone, against NASS
+
+Within 5 points of USDA in 7 states (silage share of harvested corn acres):
+
+| State | NASS 2025 | Model alone | Gap (points) |
 |---|---|---|---|
-| Maryland | 4.75% [3.4, 6.3] | 8.9% | −4.2 |
-| Wisconsin | 16.6% [13.8, 19.5] | 21.6% | −5.0 |
-| Pennsylvania | 15.2% [12.9, 17.5] | 32.8% | −17.6 |
+| Iowa | 1.9% | 6.2% | 4.3 |
+| Minnesota | 4.1% | 6.4% | 2.3 |
+| Kansas | 3.4% | 1.3% | 2.1 |
+| Michigan | 14.7% | 12.7% | 2.0 |
+| South Dakota | 5.8% | 4.3% | 1.5 |
+| Nebraska | 2.1% | 0.7% | 1.4 |
+| Wisconsin | 21.6% | 22.2% | 0.6 |
+| **Average** | | | **2.0** |
 
-**Counties.** Lancaster PA 2023 with Sentinel-2 and Landsat: 26.6% against 27.4% in the 2022 Census. Frederick MD
-2022: 13.2% against 19.6% (used in tuning). Every place, test or not, is in [`docs/RESULTS.md`](docs/RESULTS.md).
+### Model + USDA history: where images mislead, USDA history steers
 
-**What the misses mean.** The model reads silage low in dairy country. Three causes, from
-[`handoff/results/hima/COMBINED_GAP_FINDINGS.md`](handoff/results/hima/COMBINED_GAP_FINDINGS.md): harvests hidden by
-cloud (the unjudged fields there are mostly silage), northern silage cut after the crop yellows and read as grain,
-and a partly seen county whose clear fields are not typical. USDA's last official share alone misses the 2025 state
-samples by 2.5 points on average, better than any satellite variant; say so beside any satellite figure.
+Each field's silage probability *p* is adjusted with the state's recent USDA silage share π (2021, 2023, 2024) by
+Bayes' rule, p′ = p·π ÷ (p·π + (1 − p)(1 − π)), and the state estimate is the area-weighted mean of p′.
 
-**Speed.** Classifying a county takes about 14 ms per field on a laptop CPU (Gratiot MI, 3,463 fields, 47 s);
-an agent run takes 1 to 2 minutes and 70,000 to 100,000 Nemotron tokens. No GPU is needed.
+| State | NASS 2025 | Model alone | Model + USDA history | Gap |
+|---|---|---|---|---|
+| Texas | 10.3% | 34.1% | 10.2% | 23.8 → 0.1 |
+| California | 83.1% | 75.0% | 86.0% | 8.1 → 2.9 |
+| Colorado | 14.0% | 21.9% | 12.7% | 7.9 → 1.3 |
+| **Average** | | | | **13.3 → 1.4** |
+
+### Counties and states against USDA
+
+| Place | FieldVision | USDA |
+|---|---|---|
+| Nebraska 2025 (state) | 0.7% | 2.1% |
+| Branch County, MI | 2.1% | 1.8% |
+| South Dakota 2025 (state) | 4.3% | 5.8% |
+| Frederick County, MD 2022 | 19.2% | 19.6% |
+| Wisconsin 2025 (state) | 22.2% | 21.6% |
+| Lancaster County, PA 2023 | 26.6% | 27.4% |
+| Gratiot County, MI | 30.0% | 24.2% |
+| Wyoming County, NY 2022 | 64.9% | 66.7% |
+
+### Cloud gaps: Landsat 8/9 as a second satellite
+
+| | Sentinel-2 only | + Landsat 8/9 |
+|---|---|---|
+| Fields hidden by clouds at harvest (8 states) | 217 | 136 |
+| Model-alone miss, in points | 3.5 | 2.8 |
+| Iowa silage share (NASS 1.9%) | 6.2% | 2.5% |
+
+### Agents (Nemotron)
+
+| Correct routing decisions | Evidence Q&A checks | Unsupported numbers after guardrails | County run time |
+|---|---|---|---|
+| 5 / 5 | 4 / 4 | 0 | Bolt 6.9 s · Lightning 15.3 s · Ultra 37.6 s |
+
+Failures found and fixed: empty replies from reasoning tokens (larger per-call output budget); a tool result that
+tried to steer the agent (next steps enforced in code); numbers added by the writer in 2 of 8 reasons (every number
+checked, with a template fallback); vision correct on 15 of 28 at 10 m (used as context, never as the label).
+
+### Where it still reads low
+
+Dairy states with long cloud gaps at harvest read silage low: in the 2025 state samples Pennsylvania (32.8% by
+NASS) and New York (53.2%) are 14 to 20 points under, and northern silage cut after the crop yellows can look like
+grain. Why, and what closes it: [`handoff/results/hima/COMBINED_GAP_FINDINGS.md`](handoff/results/hima/COMBINED_GAP_FINDINGS.md).
 
 ## Quick start
 
@@ -159,7 +212,7 @@ FieldVision/
 | Extract a new county | [`docs/s2-extractor.md`](docs/s2-extractor.md), [`colab/README.md`](colab/README.md), `scripts/colab_to_county.py` |
 | Use the toolbox from Python | [`docs/toolbox.md`](docs/toolbox.md) |
 | See what was tried, including what failed | [`docs/log.md`](docs/log.md) |
-| Present it | [`handoff/presentation/FieldVision_results.pdf`](handoff/presentation/FieldVision_results.pdf) |
+| Present it | [`handoff/presentation/FieldVision.pdf`](handoff/presentation/FieldVision.pdf) |
 
 ## Data
 

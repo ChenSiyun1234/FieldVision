@@ -4,7 +4,8 @@ What a judge or a new teammate needs, without running anything.
 
 | Path | What it is |
 |---|---|
-| `presentation/FieldVision_results.pdf` (`.pptx`) | The results deck: every result, the agents, the app, the maps |
+| `presentation/FieldVision.pdf` | **The final presentation** (17 slides): problem, model, data and features, results against NASS, cloud gaps, the agents, impact, the price outlook, future work |
+| `presentation/FieldVision_results.pdf` (`.pptx`) | An earlier, longer results deck: every result, the agents, the app, the maps |
 | `presentation/FieldVision_model_story.pdf` (`.pptx`) | The model team's deck: how the model was built and tested |
 | `figures/` | Figures used in the decks: architecture, field strips, county maps, test charts |
 | `results/REPORT.md` | The Beltsville evaluation report: metrics with intervals, misclassified fields, every decision with its time |
