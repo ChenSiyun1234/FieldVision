@@ -3,12 +3,15 @@
 Everything needed to put the model part into the 5-minute talk. Each figure is a 1920 x 1080 PNG
 with its own title, so it can go on a slide as it is.
 
-**Status.** Michigan, Maryland 2025 and the last test on the labelled fields are in. Still to
-come: Pennsylvania and Wisconsin 2025 (a dashed "to come" mark in `state_2025.png`).
+**Status.** Michigan, Maryland 2025, the last test on the labelled fields and Wisconsin 2025 are
+in. Still to come: Pennsylvania 2025 and Lancaster County 2023.
 
 **Newer than the rest of this page:** the Wisconsin 2023 test failed (Marathon County read 4.3 %
-where USDA has 32.1 to 49.9 %). The slide deck is up to date; the figures, `script.md` and
-`limits.md` of the first pack were written before it.
+where USDA has 32.1 to 49.9 %). The Wisconsin 2025 state sample, never looked at before and run
+once, read 16.5 % where USDA has 21.6 %: 5.1 points low against a pass mark of 5, as we had
+predicted in writing; a warning check on two grain counties also went off (15.0 % for 4.5 %). The
+slide deck is up to date; the figures, `script.md` and `limits.md` of the first pack were written
+before both.
 
 ## The three sentences the model part stands on
 
@@ -73,7 +76,7 @@ and run the script again.
 
 ## The slide deck
 
-The deck itself (an eleven-slide story for the judges, then nine backup slides, 16:9, speaker notes
+The deck itself (a ten-slide story for the judges, then ten backup slides, 16:9, speaker notes
 in English and Chinese on every slide) is built from the same numbers. Earlier versions (16
 slides, ten, twelve) are in this folder's history. The PowerPoint and PDF files are not in git;
 they are made by:
@@ -97,25 +100,26 @@ their process and how it could be developed further"); technical quality 20 % (p
 false positive rate, response time); innovation 20 % ("a new data source or harvest signal");
 feasibility 20 % ("potential to be developed further").
 
-**The story, eleven slides.** 1 USDA's own question, with a real field. 2 The catch and the idea: no
+**The story, ten slides.** 1 USDA's own question, with a real field. 2 The catch and the idea: no
 US labels, so learn from European farm registries (the new data source). 3 The signal, in real
 pictures: silage is cut green and wet (the harvest signal). 4 How it works in three plain steps,
 and the rule that a hidden harvest is not guessed. 5 The test on USDA's 44 labelled fields, with
-the rubric's four measures. 6 The scoreboard: nine places against USDA, close where silage is
-rare, a miss where it is everywhere. 7 A second satellite, Landsat, in the three counties where
-clouds hid the harvest: all three figures move towards USDA's; in a fourth county that was already
-well seen the figure changes little and slips one point past USDA's range (the second new data
-source). 8 Starting
-from USDA's last figure, the pictures move six of eight counties closer to the truth (the value;
-counties seen while tuning, so not a test). 9 What went wrong on the way and what it taught us
-(the process). 10 Where the model sits in the team's system. 11 What USDA gets today, what comes
-next, and the closing line. After a divider
+the rubric's four measures. 6 The scoreboard: ten places against USDA, close where silage is
+rare, low in dairy country; the newest row is Wisconsin 2025, a state never looked at before,
+16.5 % for USDA's 21.6 %. 7 A second satellite, Landsat, in the three counties where clouds hid
+the harvest: all three figures move towards USDA's; in a fourth county that was already well seen
+the figure changes little and slips one point past USDA's range (the second new data source).
+8 What went wrong on the way and what it taught us (the process). 9 Where the model sits in the
+team's system. 10 What USDA gets today, what comes next, and the closing line. After a divider
 come the slides that go deeper; every slide stands on its own, so any of them can be lifted into
-another deck. The notes of slide 1 end with a one-minute spoken version of the whole story.
+another deck. One of them was a story slide until Wisconsin 2025 came in: starting from USDA's
+last figure and updating it with the pictures moved six of the eight counties seen while tuning
+closer to the truth, but made both state figures worse. The notes of slide 1 end with a
+one-minute spoken version of the whole story.
 
 ## Still to come
 
 | Result | Where it will appear |
 |---|---|
-| Pennsylvania and Wisconsin 2025 | `state_2025.png`, one more line in `script.md`, `limits.md` |
+| Pennsylvania 2025 and Lancaster County 2023 | The scoreboard and the places slide of the deck, `state_2025.png`, one more line in `script.md`, `limits.md` |
 | A model that also reads the pixels around the field | A line in `limits.md`, if it is logged in time |

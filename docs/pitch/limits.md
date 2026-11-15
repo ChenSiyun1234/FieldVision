@@ -8,6 +8,17 @@ seen clearly were the late ones, which are grain, and the "not seen" measure did
 labelled fields were also scored a fourth time (log 23:39): a sequence model got 42 of 44, a tie
 with the small model. The slide deck shows both; the rest of this page does not yet.
 
+**Also written before the Wisconsin 2025 state test (log 01:43), which missed its pass mark.** A
+random sample of the whole state (8,199 corn fields in 150 blocks, Sentinel-2 plus Landsat, 96 %
+of the corn area seen), run once under rules written at log 00:18. The satellite alone read
+16.5 % silage (13.7 to 19.4) where USDA's 2025 figure is 21.6 %: 5.1 points low, and the pass mark
+was 5. We had written beforehand that it would read below 16.6 %; that held. A warning check
+written into the same rules also went off: in two low-silage reference counties (Waukesha and
+Rock, three blocks) the same count read 15.0 % where the 2022 Census has 4.5 %, so by those rules
+the state figure is reported as unreliable, and the error is not one uniform shift. Starting from
+USDA's last figure (19.8 %, itself 1.8 off) and updating it with the pictures gave 12.9 %, 8.7
+off; with the land-use figure instead, 11.6 %. Both failed.
+
 "Log HH:MM" is a row of the evaluation access log (`<data>/eval/ACCESS_LOG.md`), named by its time
 on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
 

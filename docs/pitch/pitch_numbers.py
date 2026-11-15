@@ -135,7 +135,7 @@ STATE_2025 = {
         "upper_bound_silage_acres": 39_756,
     },
     "Pennsylvania": {"our_silage_share": None, "source": "to come"},
-    "Wisconsin": {"our_silage_share": None, "source": "to come"},
+    "Wisconsin": {"our_silage_share": 16.5, "nass_silage_share": 21.6, "source": "log 01:43"},
 }
 
 # =================================================================================================
@@ -246,8 +246,6 @@ MARATHON_NOT_JUDGED = 48
 # area lies in windows with no clear view, where it is the count by harvest window (log 19:33; on
 # everything seen so far that means Queen Anne's and Kent).
 NOT_SEEN_SWITCH = 20
-# Not opened: kept as the clean test of the next change to the module (log 23:00).
-PLACES_HELD = ["Pennsylvania, Wisconsin 2025"]
 
 # The judges' rubric asks for precision, recall, false positive rate and response time. On the 44
 # labelled field-years the small model's calls were (log 18:02): 11 silage found, 1 silage missed,
@@ -306,13 +304,19 @@ HISTORY_UPDATE = [
 ]
 # Mean miss in points, same row: last figure alone, updated, the satellite alone.
 HISTORY_UPDATE_MISS = {"last": 2.7, "updated": 2.6, "last_no_marathon": 2.3, "updated_no_marathon": 1.4, "satellite": 9.7}
-HISTORY_UPDATE_STATE = {"name": "Maryland 2025", "last": 9.5, "updated": 6.8, "true": 8.9}  # moved away
+# The same update on the two states (same columns): both moved away from the truth. Maryland
+# 2025: log 00:11. Wisconsin 2025: log 01:43, a test whose rule was written first (log 00:18: it
+# passes only if it ends closer than the last figure alone and within 3 points); it failed.
+HISTORY_UPDATE_STATES = [
+    ("Maryland 2025", 9.5, 6.8, 8.9, None),
+    ("Wisconsin 2025", 19.8, 12.9, 21.6, None),
+]
 
 # The three places opened last, once each, with the procedure, the pass marks and our own
 # prediction (the satellite alone will read low in dairy states) written first: log 00:18.
 # (name, USDA %, USDA band or None, ours % or None until logged)
 PLACES_TO_OPEN = [
-    ("Wisconsin 2025", 21.6, None, None),
+    ("Wisconsin 2025", 21.6, None, 16.5),
     ("Pennsylvania 2025", 32.8, None, None),
     ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
 ]
@@ -331,3 +335,21 @@ LANDSAT_PAIR = [
     {"name": "Racine", "when": "Wisconsin 2023: not hit by\ncloud, already well seen", "seen": (80, 90), "figure": (6.4, 7.4),
      "usda": (2.4, 6.4), "control": True},
 ]
+
+# Wisconsin 2025, the first of the three: a random sample of the whole state, run once (log 01:39
+# for the command, 01:43 for the result) under the procedure, pass marks and prediction of log
+# 00:18. Sentinel-2 plus Landsat. Satellite alone 16.5 % [13.7, 19.4] for NASS 21.6 %: 5.1 points
+# low, pass mark 5, so a FAIL by 0.1; the written prediction (below 16.6 %) held. The warning
+# check ("guard") went off: the two low-silage reference counties, Waukesha and Rock (three drawn
+# blocks), read 15.0 % for 4.5 % in the 2022 Census (limit 12.5 %), so by the locked rule the
+# state figure is reported as unreliable for 2025. Beside it, both failing: the update from the
+# last official share (19.8 %, itself 1.8 off) gives 12.9 %, 8.7 off; the update from the
+# land-use figure gives 11.6 %, 10.0 off.
+WISCONSIN_2025 = {
+    "blocks": 150, "fields": 8_199, "seen": 96, "clear_tier_area": 88,
+    "ours": 16.5, "ours_range": (13.7, 19.4), "usda": 21.6, "points_low": 5.1, "pass_mark": 5,
+    "predicted_below": 16.6,
+    "last_official": 19.8, "last_official_off": 1.8, "updated": 12.9, "updated_off": 8.7,
+    "land_use_updated": 11.6, "land_use_off": 10.0,
+    "guard": {"counties": "Waukesha and Rock", "blocks": 3, "ours": 15.0, "census": 4.5, "limit": 12.5},
+}
