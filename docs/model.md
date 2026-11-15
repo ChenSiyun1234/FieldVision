@@ -8,6 +8,21 @@ the repo (`<data>` below), never into git; frozen models go to `registry/` (see
 Until the package is installable from the merged `pyproject.toml`, run from the
 repo root with `PYTHONPATH=src` (PowerShell: `$env:PYTHONPATH="src"`).
 
+## Results on held-out data (times are rows of the evaluation access log, 14 Nov)
+
+| what | when | result |
+|---|---|---|
+| Evaluation 1, Beltsville, Austria-trained models (zero-shot, once) | 13:53 | LightGBM (primary) 30 of 44, timing rule 38, logistic 42 (secondary), always grain 32 |
+| Evaluation 2 primary chosen by leave-one-country-out (AT / FR / NL) | 17:49, corrected 18:01 | logistic .765 mean ROC-AUC, LightGBM .763, composite .760, timing+moisture rule .728, timing rule .662; the 17:41 reading of "tie" would have chosen the timing rule; all three readings logged |
+| Evaluation 2, Beltsville, all-Europe models (once) | 18:02 | logistic `eu2_logistic_v1` (primary) 42 of 44, LightGBM 37, composite 36, timing+moisture rule 36, timing rule 35, always grain 32 |
+| Third Beltsville scoring (coordinator's decision, candidate asked for by the user) | 19:15-19:16 | date-thinned LightGBM `eu2_gbm_thin_v1` 39 of 44, above the 37 recorded beforehand; the set is now closed |
+| Maryland county check (Kent, Carroll; module_v2 local threshold) | 18:11, 18:16 | Kent 21.0 % against Census 5.5 %: fail; Carroll 0 % against 8.9 %: weak |
+| Michigan 2022 tracking test (counted clear share) | 19:07-19:11 | Branch 2.1 % (Census 1.8 %), Gratiot 30.0 % (24.2 %): pass |
+| Maryland 2025 state figure (counted clear share, 150-block sample) | 19:12-19:14 | 4.75 % [3.4, 6.3], 22,700 silage acres; NASS 2025 8.9 % (40,000 acres): reads 4.2 points low |
+| Maryland 2025 with double-crop corn (after the fact) | 19:21-19:23 | 6.7 % [5.3, 8.2] |
+
+How the county and state figures are built, and why: `docs/module.md`.
+
 ## Commands
 
 Train and evaluate (spatial CV, leave-one-country-out, leave-one-year-out,
