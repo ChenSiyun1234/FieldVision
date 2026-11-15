@@ -221,11 +221,12 @@ def build(out):
           "我们的模型很小：六个数加一个简单公式，只用欧洲的地块训练。在美国 44 个带标签的地块上，它对了 42 个。一个大得多的模型对了 37 个。")
 
     # every place against USDA ---------------------------------------------------------------------
-    s = new_slide(prs, "Counties and a state: every place we checked against USDA")
+    s = new_slide(prs, "Against USDA: right where silage is rare, a clear miss in the heaviest dairy county")
     body_picture(s, "s05_places.png")
-    notes(s, "This is every place where we can compare our number with USDA. The four Maryland counties were used while tuning, "
-             "so they are not tests. The two Michigan counties passed their test, and Maryland 2025 reads low.",
-          "这是我们所有能和美国农业部数字对比的地方。马里兰的四个县在调优时用过，所以不算检验。密歇根两个县通过了检验，马里兰 2025 偏低。")
+    notes(s, "This is every place where we can compare our number with USDA. Where silage is rare we read right, and the Michigan "
+             "test passed. In the heaviest dairy county, Marathon in Wisconsin, we read far too low, and Maryland 2025 reads low too.",
+          "这是我们所有能和美国农业部数字对比的地方。青贮少的地方我们读得对，密歇根的检验通过了。"
+          "在奶牛最多的威斯康星 Marathon 县，我们读得太低；马里兰 2025 也偏低。")
 
     # what went wrong and what we did ----------------------------------------------------------------
     s = new_slide(prs, "What went wrong, and what we did about it")
@@ -245,16 +246,19 @@ def build(out):
          "Scored it with the same model, afterwards", "Maryland 2025: 4.75% → 6.7% (USDA 8.9%)"),
         ("The big model did not travel to a new country",
          "Dropped dates in training; tried a sequence model", "37 → 39 of 44; 0.817 against 0.765 in Europe"),
+        ("A northern dairy county reads far too low: Marathon 4% for 50%",
+         "Half its fields could not be judged. Cause under investigation now", "Open: a clear miss"),
     ]
-    rh = 0.78
+    rh = 0.66
     for i, cells in enumerate(fixes):
-        y = 1.85 + i * (rh + 0.07)
+        y = 1.85 + i * (rh + 0.06)
         card(s, MX, y, FULL, rh)
         for (x, w, _), cell, strong in zip(cols, cells, (False, False, True)):
             text(s, x + 0.2, y, w - 0.3, rh, cell, size=14, bold=strong, color=INK, anchor=MSO_ANCHOR.MIDDLE, spacing=1.05)
     notes(s, "Here is the tuning in one table. Each row is a problem the data showed us, what we did, and what came out. "
-             "One of them, early green grain, is still open.",
-          "这一页用一张表讲完调优过程：每一行是数据暴露出的一个问题、我们的做法和结果。其中一个，趁绿早收的籽粒玉米，还没有解决。")
+             "Two are still open: early green grain, and the miss in Marathon County.",
+          "这一页用一张表讲完调优过程：每一行是数据暴露出的一个问题、我们的做法和结果。"
+          "有两个还没解决：趁绿早收的籽粒玉米，以及 Marathon 县读数过低。")
 
     # the first county total ------------------------------------------------------------------
     f = N.FIRST_COUNTY_TOTAL
@@ -336,21 +340,21 @@ def build(out):
             arrow.line.fill.background()
             arrow.shadow.inherit = False
         x += w + gap
-    text(s, MX, 4.1, FULL, 0.35, "Around it, built by our teammates (one line each; they fill in the rest)", size=14, bold=True, color=INK)
+    text(s, MX, 4.1, FULL, 0.35, "Around it, built by our teammates", size=14, bold=True, color=INK)
     around = [
         ("Planner", "Which fields to visit."),
         ("Recommender", "Grain fields near dairies that are short of silage."),
         ("Picture check", "Looks at the before-and-after pictures of a field."),
-        ("Price module", "Details from the team."),
-        ("Four-state check", "Details from the team."),
+        ("Price module", "What the silage and grain split does to prices."),
+        ("Four-state check", "Checks 2025 in four states (PA, WI, IA, NE), about 300 fields each."),
     ]
     aw = (FULL - 4 * 0.25) / 5
     for i, (head, line) in enumerate(around):
         x = MX + i * (aw + 0.25)
-        card(s, x, 4.55, aw, 1.5)
+        card(s, x, 4.55, aw, 1.65)
         text(s, x + 0.2, 4.68, aw - 0.4, 0.4, head, size=15, bold=True, color=INK)
-        text(s, x + 0.2, 5.12, aw - 0.4, 0.85, line, size=12.5, spacing=1.1)
-    text(s, MX, 6.35, FULL, 0.7, "Our model is the blue box. The agent reaches it through the bridge, which loads the module with the small "
+        text(s, x + 0.2, 5.12, aw - 0.4, 1.0, line, size=12.5, spacing=1.1)
+    text(s, MX, 6.45, FULL, 0.7, "Our model is the blue box. The agent reaches it through the bridge, which loads the module with the small "
          "model behind it.", size=16, color=INK, spacing=1.15)
     notes(s, "This is the team's whole system. Our model is the blue box, and the agent calls it through a bridge. "
              "The other boxes are our teammates' parts.",
@@ -369,12 +373,12 @@ def build(out):
          "Score the double-crop corn that today's state number leaves out.\n\n"
          "A land-use hint (hay and pasture mean dairy), shown beside the satellite number.", size=16, color=INK, spacing=1.15)
     card(s, MX, 5.95, FULL, 1.0, fill=BLUE, line=None)
-    text(s, MX + 0.4, 5.95, FULL - 0.8, 1.0, "This is a preliminary baseline, checked in Maryland and in two Michigan counties. "
-         "Predictions anywhere else are examples, not verified results.", size=17, color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
+    text(s, MX + 0.4, 5.95, FULL - 0.8, 1.0, "This is a preliminary baseline, checked in Maryland, two Michigan counties and two Wisconsin counties; "
+         "it missed the heaviest dairy county. Predictions anywhere else are examples, not verified results.", size=17, color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
     notes(s, "The team gets a toolbox, a demo map and notebooks. Next come radar for cloudy weeks, double-crop corn, and a land-use hint. "
-             "This is a first baseline, checked in Maryland and two Michigan counties only.",
+             "This is a first baseline, checked in Maryland, Michigan and Wisconsin only, and it missed one county badly.",
           "团队拿到的是：工具箱、演示地图和笔记本。接下来要做的是：多云那几周用雷达、给双季玉米打分、加上土地利用的提示。"
-          "这只是一个初步的基线，只在马里兰和密歇根两个县检验过。")
+          "这只是一个初步的基线，只在马里兰、密歇根和威斯康星检验过，其中一个县错得很多。")
 
     # backup 1 ------------------------------------------------------------------------------------
     s = new_slide(prs, "Backup: why the simple model won")
@@ -394,15 +398,16 @@ def build(out):
          "Failures are shown as failures.", size=15, color=INK, spacing=1.15)
     text(s, MX, 4.8, FULL, 0.35, "From the log: the rule first, then the test", size=14, bold=True, color=INK)
     logged = [("16:12", "16:40", "Queen Anne's", "failed"), ("17:30", "18:11", "Kent", "failed"),
-              ("18:25", "19:11", "Michigan", "passed"), ("18:25", "19:14", "Maryland 2025", "reads low")]
-    sw = (FULL - 3 * 0.25) / 4
+              ("18:25", "19:11", "Michigan", "passed"), ("18:25", "19:14", "Maryland 2025", "reads low"),
+              ("22:55", "22:58", "Wisconsin", "failed")]
+    sw = (FULL - 4 * 0.2) / 5
     for i, (rule_at, test_at, what, result) in enumerate(logged):
-        x = MX + i * (sw + 0.25)
+        x = MX + i * (sw + 0.2)
         good = result == "passed"
         card(s, x, 5.25, sw, 1.65, fill=BLUE if good else WHITE, line=None if good else GREY)
         text(s, x + 0.25, 5.4, sw - 0.5, 0.35, f"{rule_at}  rule written", size=13, color=WHITE if good else INK2)
         text(s, x + 0.25, 5.75, sw - 0.5, 0.35, f"{test_at}  test run once", size=13, color=WHITE if good else INK2)
-        text(s, x + 0.25, 6.2, sw - 0.5, 0.5, f"{what}: {result}", size=17, bold=True, color=WHITE if good else INK)
+        text(s, x + 0.2, 6.2, sw - 0.4, 0.6, f"{what}: {result}", size=15, bold=True, color=WHITE if good else INK)
     notes(s, "Backup. Every test rule was written in a log before the test ran. "
              "The 44 labelled fields were scored three times, each time logged.",
           "备用页。每条检验规则都在检验之前写进了日志。44 个带标签的地块一共打了三次分，每次都有记录。")

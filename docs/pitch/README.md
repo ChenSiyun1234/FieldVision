@@ -6,6 +6,10 @@ with its own title, so it can go on a slide as it is.
 **Status.** Michigan, Maryland 2025 and the last test on the labelled fields are in. Still to
 come: Pennsylvania and Wisconsin 2025 (a dashed "to come" mark in `state_2025.png`).
 
+**Newer than the rest of this page:** the Wisconsin 2023 test failed (Marathon County read 4.3 %
+where USDA has 32.1 to 49.9 %). The slide deck is up to date; the figures, `script.md` and
+`limits.md` of the first pack were written before it.
+
 ## The three sentences the model part stands on
 
 1. Field by field it works: trained only on European fields, the small model gets 42 of the

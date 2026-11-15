@@ -223,11 +223,20 @@ PLACES = [
     ("tuning", "Frederick", 19.6, (11.2, 19.9), 13.2, 15.1, 0.5),
     ("test", "Branch, Michigan", 1.8, None, 2.1, 3.6, 0.8),
     ("test", "Gratiot, Michigan", 24.2, None, 30.0, 29.8, 0.2),
+    ("test", "Racine, Wisconsin", 2.4, (2.4, 6.4), 6.4, 6.3, 0.6),
+    ("test", "Marathon, Wisconsin", 49.9, (32.1, 49.9), 4.3, 10.0, 0.4),
     ("test", "Maryland 2025 (state)", 8.9, None, 4.75, 3.8, 0.6),
 ]
+# Wisconsin 2023 (log 22:52 and 22:55 for the rule, 22:58 for the result; each county run once).
+# USDA figure: the 2023 survey; band: the official figures across sources and years (Census 2022
+# to survey 2023). Racine reads inside its band. Marathon (a seeded draw of a third of its corn)
+# reads 27.8 points below its band; 48 % of its fields could not be judged and the clearly seen
+# fields are 32 % of the area. As a pair the test FAILED.
+PLACE_MISSES = {"Marathon, Wisconsin": 27.8}
+MARATHON_NOT_JUDGED = 48
 # Which of the two is read as "ours": the plain count, except where more than 20 % of the corn
 # area lies in windows with no clear view, where it is the count by harvest window (log 19:33; on
 # everything seen so far that means Queen Anne's and Kent).
 NOT_SEEN_SWITCH = 20
-# Places being tested as this is drawn (log 22:52): no figures yet.
-PLACES_TO_COME = ["Two Wisconsin counties, 2023", "Pennsylvania, Wisconsin 2025"]
+# Not opened: kept as the clean test of the next change to the module (log 23:00).
+PLACES_HELD = ["Pennsylvania, Wisconsin 2025"]
