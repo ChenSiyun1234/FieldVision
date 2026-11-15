@@ -11,6 +11,13 @@ per CDL year 2018-2025. Written per field and radius:
   forage_share_<r>_mean8   the same share averaged over the eight years of the CSB sequence
   forage_ext_share_<r>_*   forage plus triticale (205) and triticale/corn double crop (228)
   pasture_share_<r>_*      grass/pasture (176) / (cropland + grass/pasture)
+  forage_pasture_share_<r>_*  (forage + grass/pasture) / (cropland + grass/pasture)
+  forage_share_<r>_mean1823   forage share averaged over 2018-2023 only
+
+CDL 2024 and 2025 put much of what earlier years called other hay (37) into grass/pasture (176): in the
+Maryland CSB, other hay falls from about 100,000 acres (2022-2023) to about 38,000 (2024-2025) while
+grass/pasture rises from about 60,000 to 140,000-150,000. For 2024+ fields use forage_pasture_share or
+forage_share_*_mean1823, not forage_share_*_year.
   cropland_acres_<r>_year  cropland acres in the neighbourhood in the field's own year
 
 Forage = alfalfa 36, other hay 37, clover/wildflowers 58, vetch 224. Cropland = CDL crop classes
@@ -93,6 +100,13 @@ def main(argv=None):
         out[f'forage_ext_share_{tag}_mean8'] = np.nanmean(se, axis=1)
         out[f'pasture_share_{tag}_year'] = sp[:, yi]
         out[f'pasture_share_{tag}_mean8'] = np.nanmean(sp, axis=1)
+        # CDL 2024+ moved much "other hay" (37) into grass/pasture (176): forage + pasture is comparable across years,
+        # and the 2018-2023 mean of the forage share avoids the break
+        with np.errstate(invalid='ignore', divide='ignore'):
+            sfp = (F + P) / (C + P)
+        out[f'forage_pasture_share_{tag}_year'] = sfp[:, yi]
+        out[f'forage_pasture_share_{tag}_mean8'] = np.nanmean(sfp, axis=1)
+        out[f'forage_share_{tag}_mean1823'] = np.nanmean(sf[:, :6], axis=1)
         out[f'cropland_acres_{tag}_year'] = C[:, yi]
     own_codes = codes[own]
     others = [i for i in range(len(YEARS)) if i != yi]
