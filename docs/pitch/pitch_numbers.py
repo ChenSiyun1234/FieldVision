@@ -283,3 +283,36 @@ MARATHON_GAP = {
 # 9 October with 24 % (Planetary Computer, landsat-c2-l2). The Landsat extraction was being built
 # when this was written: no result yet.
 SAFETY_NET = {"counties": 8, "satellite": 8.6, "land_use": 8.2, "both": 6.8}
+
+# Landsat 8 and 9 added to the Sentinel-2 pictures in Marathon 2023: a development check, not a
+# test (log 23:52 for what was run; 23:59 and 00:18 for the figures). Corn area seen 29 % -> 83 %
+# (log 23:17 and 00:18); silage figure 4.3 % -> 13.8 %; USDA 49.9 %, band 32.1-49.9 %.
+LANDSAT_MARATHON = {"seen_before": 29, "seen_after": 83, "silage_before": 4.3, "silage_after": 13.8, "usda": 49.9}
+
+# Starting from USDA's last figure and letting the pictures update it (log 00:11): the last
+# official silage share known before the test year (2017 Census for the 2022 counties, 2022 survey
+# for the two Wisconsin counties), then each clearly seen field's call shifted by that figure and
+# unseen fields keeping it. Counties seen while tuning: a development result, not a test.
+# (county, last official %, updated %, true %, USDA band or None)
+HISTORY_UPDATE = [
+    ("Queen Anne's", 2.2, 2.1, 1.3, None),
+    ("Branch, Michigan", 3.6, 1.9, 1.8, None),
+    ("Racine, Wisconsin", 4.2, 2.6, 2.4, None),
+    ("Kent", 5.8, 5.5, 5.5, None),
+    ("Carroll", 11.4, 5.3, 8.9, (4.8, 7.5)),
+    ("Frederick", 24.3, 16.6, 19.6, None),
+    ("Gratiot, Michigan", 19.8, 21.8, 24.2, None),
+    ("Marathon, Wisconsin", 44.9, 39.4, 49.9, (32.1, 49.9)),
+]
+# Mean miss in points, same row: last figure alone, updated, the satellite alone.
+HISTORY_UPDATE_MISS = {"last": 2.7, "updated": 2.6, "last_no_marathon": 2.3, "updated_no_marathon": 1.4, "satellite": 9.7}
+HISTORY_UPDATE_STATE = {"name": "Maryland 2025", "last": 9.5, "updated": 6.8, "true": 8.9}  # moved away
+
+# The three places opened last, once each, with the procedure, the pass marks and our own
+# prediction (the satellite alone will read low in dairy states) written first: log 00:18.
+# (name, USDA %, USDA band or None, ours % or None until logged)
+PLACES_TO_OPEN = [
+    ("Wisconsin 2025", 21.6, None, None),
+    ("Pennsylvania 2025", 32.8, None, None),
+    ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
+]

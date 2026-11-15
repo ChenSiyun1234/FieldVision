@@ -65,12 +65,12 @@ def places():
     fig = body()
     ax = fig.add_axes([0.2, 0.2, 0.79, 0.7])
     D.clean(ax, grid=None)
-    ax.set_xlim(-0.8, 112)
-    usda_x, ours_x, beside_x = 61.5, 70.5, 72.5
+    ax.set_xlim(-0.8, 116)
+    usda_x, ours_x, beside_x = 65, 74, 76
     step = 0.78
     tuning = [r for r in N.PLACES if r[0] == "tuning"]
     tests = [r for r in N.PLACES if r[0] == "test"]
-    top = 0.7 + step * (len(tuning) + len(tests) + len(N.PLACES_HELD)) + 1.9
+    top = 0.7 + step * (len(tuning) + len(tests) + len(N.PLACES_TO_OPEN)) + 1.9
     ax.set_ylim(0, top + 1.15)
     y_of = {}
     y = top
@@ -85,11 +85,21 @@ def places():
         y_of[row[1]] = y
     lowest = y
     y -= 0.95
-    ax.text(0, y, "Not opened", fontsize=13.5, fontweight="bold", color=INK, va="center")
-    for name in N.PLACES_HELD:
+    ax.text(0, y, "Opened last, once each. Our prediction, written first: the satellite alone reads low in dairy states",
+            fontsize=13.5, fontweight="bold", color=INK, va="center")
+    for name, usda, band, ours in N.PLACES_TO_OPEN:
         y -= step
-        ax.text(-1.6, y, name, ha="right", va="center", fontsize=12.5, color=INK2)
-        D.to_come(ax, 0.6, 52, y, "held back as the clean test of the next fix", half=0.25, size=12)
+        ax.text(-1.6, y, name, ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
+        if band:
+            ax.plot(band, [y, y], color=INK, lw=8, alpha=0.16, solid_capstyle="round", zorder=1)
+        ax.scatter([usda], [y], s=125, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
+        ax.text(usda_x, y, pct(usda), fontsize=14, color=INK, ha="right", va="center")
+        if ours is None:
+            ax.text(ours_x, y, "to come", fontsize=12.5, color=INK2, ha="right", va="center", style="italic")
+        else:
+            ax.plot([min(usda, ours), max(usda, ours)], [y, y], color=GREY, lw=2.2, zorder=2)
+            ax.scatter([ours], [y], s=150, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
+            ax.text(ours_x, y, pct(ours), fontsize=14.5, fontweight="bold", color=BLUE, ha="right", va="center")
     ax.text(usda_x, top + 0.75, "USDA", fontsize=13, color=INK2, ha="right", va="center")
     ax.text(ours_x, top + 0.75, "Ours", fontsize=13, fontweight="bold", color=BLUE, ha="right", va="center")
     ax.text(beside_x, top + 0.75, "Beside it", fontsize=13, color=INK2, va="center")
@@ -201,9 +211,71 @@ def scoreboard():
     ]
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.35, 1.0), ncol=2, frameon=False, fontsize=13,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
+    waiting = [p[0] for p in N.PLACES_TO_OPEN if p[3] is None]
+    more = (f"\nBeing opened tonight, once each: {', '.join(waiting)}. Our written prediction: the satellite alone reads low in dairy states."
+            if waiting else "")
     fig.text(0.02, 0.02, "Share of the corn area that is silage. The four Maryland counties (2022) were used to tune the method; "
-             "the other five places were tests, each run once.", fontsize=11.5, color=INK2, va="bottom")
+             "the other five places were tests, each run once." + more, fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s06_scoreboard")
+
+
+# --- starting from USDA's last figure: which way did the pictures move it? --------------------------
+def history_update():
+    def pct(v):
+        return f"{v:.1f}%"
+
+    rows = N.HISTORY_UPDATE
+    fig = body()
+    ax = fig.add_axes([0.2, 0.235, 0.79, 0.63])
+    D.clean(ax, grid=None)
+    ax.set_xlim(-20, 31)
+    n = len(rows)
+    ax.set_ylim(-0.7, n + 0.35)
+    ax.plot([0, 0], [-0.7, n - 0.4], color=INK, lw=1.6, zorder=1)
+    ax.text(0, n - 0.15, "the true figure", ha="center", va="bottom", fontsize=12.5, color=INK)
+    for x in (-15, -10, -5, 5):
+        ax.plot([x, x], [-0.7, n - 0.4], color=GRID, lw=1, zorder=0)
+    ax.text(9, n - 0.15, "USDA's last figure  →  with our pictures", fontsize=12.5, color=INK2, va="bottom")
+    ax.text(25.5, n - 0.15, "true", fontsize=12.5, color=INK2, va="bottom")
+    for i, (name, last, updated, true, band) in enumerate(rows):
+        y = n - 1 - i
+        a, b = last - true, updated - true
+        # "into USDA's range" only when the last figure lay outside the range and the updated one lies inside it
+        inside = band is not None and band[0] <= updated <= band[1] and not band[0] <= last <= band[1]
+        closer = abs(b) < abs(a)
+        if band:
+            ax.plot([band[0] - true, band[1] - true], [y, y], color=INK, lw=9, alpha=0.14, solid_capstyle="round", zorder=1)
+        good = closer or inside
+        ax.annotate("", xy=(b, y), xytext=(a, y), zorder=3,
+                    arrowprops=dict(arrowstyle="-|>", color=BLUE if good else INK, lw=2.6, mutation_scale=20, shrinkA=6, shrinkB=6))
+        ax.scatter([a], [y], s=110, facecolors=BG, edgecolors=GREY, linewidths=2.4, zorder=4)
+        ax.scatter([b], [y], s=150, color=BLUE if good else INK, edgecolors=BG, linewidths=1.5, zorder=5)
+        ax.text(-20.6, y, name, ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
+        ax.text(9, y, f"{pct(last)}  →  {pct(updated)}", fontsize=14, color=INK, va="center")
+        ax.text(25.5, y, pct(true), fontsize=14, color=INK, va="center", fontweight="bold")
+        word = "closer" if closer else ("into USDA's range" if inside else "further away")
+        ax.text(9, y - 0.36, word, fontsize=11.5, color=BLUE if good else INK, va="center",
+                fontweight="normal" if good else "bold")
+    ax.set_yticks([])
+    ax.set_xticks([-15, -10, -5, 0, 5])
+    ax.set_xticklabels(["15 below", "10 below", "5 below", "right", "5 above"])
+    ax.set_xlabel("points of silage share below or above the true figure", fontsize=12.5, color=INK2, labelpad=8, loc="left")
+    handles = [
+        plt.Line2D([], [], marker="o", ls="", markersize=10, markerfacecolor=BG, markeredgecolor=GREY, markeredgewidth=2.4,
+                   label="USDA's last figure before that year"),
+        plt.Line2D([], [], marker="o", ls="", markersize=12, markerfacecolor=BLUE, markeredgecolor=BG,
+                   label="the same figure, updated field by field with our pictures"),
+    ]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.19, 1.0), ncol=2, frameon=False, fontsize=13,
+               labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
+    m, st = N.HISTORY_UPDATE_MISS, N.HISTORY_UPDATE_STATE
+    fig.text(0.02, 0.02, "Eight counties we had already seen while tuning, so this is not a test yet. USDA's last figure: the 2017 Census "
+             "(in Wisconsin, the 2022 survey).\n"
+             f"Mean miss: last figure alone {m['last']} points, updated {m['updated']}; without Marathon {m['last_no_marathon']} and "
+             f"{m['updated_no_marathon']}. The satellite on its own: {m['satellite']}.\n"
+             f"For the one state tried, {st['name']}, the update moved away from the truth ({st['last']}% to {st['updated']}%, true {st['true']}%).",
+             fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
+    put(fig, "s_update")
 
 
 # --- Marathon: the silage weeks were the cloudy weeks ---------------------------------------------
@@ -476,6 +548,7 @@ if __name__ == "__main__":
     D.state_2025()
     places()
     scoreboard()
+    history_update()
     marathon_gap()
     transfer_summary()
     gap_evidence()
