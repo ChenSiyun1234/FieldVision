@@ -11,7 +11,7 @@ field) are taken. Writes:
   (the drawn read block, the sampling unit), block10_id, county_fips, stratum, crop_code, area_ha ...;
 * timeseries.parquet: rows of the corn stratum only (the fields that are scored);
 * timeseries_dblcrop.parquet: rows of the small-grain/corn stratum, kept apart so nothing scores them;
-* fields_coverage.csv, draw.json (copied), and PARTIAL.json listing the parts included while any part
+* fields_coverage.csv, draw.json and state_acres.json (copied), and PARTIAL.json listing the parts included while any part
   is missing; PARTIAL.json is removed once all parts are in.
 """
 import argparse
@@ -86,6 +86,7 @@ def main(argv=None):
         replace(a.out / (name + '.tmp'), a.out / name)
     pd.concat(covs, ignore_index=True).to_csv(a.out / 'fields_coverage.csv', index=False)
     shutil.copyfile(a.sample_dir / 'draw.json', a.out / 'draw.json')
+    shutil.copyfile(a.sample_dir / 'state_acres.json', a.out / 'state_acres.json')
     info = {'written_at': datetime.now(timezone.utc).isoformat(), 'parts_included': used, 'parts_missing': missing,
             'fields': len(feats), 'fields_corn': sum(v == 'corn' for v in stratum.values()),
             'fields_dblcrop': sum(v != 'corn' for v in stratum.values()),
