@@ -27,20 +27,52 @@ module_v2 was prompted by Queen Anne's County (see "Why module_v2" below). Every
 written into the evaluation access log, with the time, before it was computed or applied.
 
 
-## Where it stands (Evaluation 2 and the Maryland test)
+## Where it stands (Evaluation 2, the Maryland test, the 2025 state figure)
 
-- **Field calls hold up.** Evaluation 2 (run once, logged): the six-feature logistic trained on
-  every European field-year (Austria 2022-2024, France 2022, Netherlands 2025), `eu2_logistic_v1`,
-  got 42 of the 44 Beltsville field-years right (ROC-AUC 0.95). The other families, scored in the
-  same run: timing+moisture rule 36, LightGBM 37, composite 36, timing rule 35, always grain 32.
-- **The county step fails the Maryland test.** On Kent (Census 5.5 %), the one clean test opened
-  so far, the headline read 21.0 %, beyond the fail line of 20.5 % written down beforehand. Across
-  the three Maryland counties the local threshold flags 9.3 % (Queen Anne's, Census 1.3 %),
-  17.0 % (Frederick, 19.6 %) and 18.0 % (Kent, 5.5 %) of the clear-tier area: the flagged share
-  does not follow the Census. The two label-free checks from the anomaly work, computed afterwards
-  as a diagnostic, pass on Kent and fail on Frederick, so they would not have caught this.
-- So the module gives field calls that can be trusted on fields like Beltsville's, and county
-  figures that should be read as indicative only.
+**The module gives field calls. Its county step failed the Maryland check (Kent read high, Carroll
+read low), and the label-free checks did not catch that failure.**
+
+- **Field calls.** Evaluation 2 (run once, logged): the six-feature logistic trained on every
+  European field-year (Austria 2022-2024, France 2022, Netherlands 2025), `eu2_logistic_v1`, got 42
+  of the 44 Beltsville field-years right (ROC-AUC 0.95). Same run: timing+moisture rule 36,
+  LightGBM 37, composite 36, timing rule 35, always grain 32.
+- **County step (local threshold).** Kent (Census 5.5 %) read 21.0 %, beyond the fail line written
+  down beforehand; Carroll (8.9 %) read 0 %. The flagged clear-tier area was 9.3 % / 4.4 % /
+  17.0 % / 18.0 % in Queen Anne's / Carroll / Frederick / Kent against Census 1.3 / 8.9 / 19.6 /
+  5.5 %. The two label-free checks, computed afterwards, passed on Kent and failed on Frederick.
+- **County figures now: the counted clear share**, the share of clear-tier corn area the classifier
+  calls silage. Per county it was off by up to about 7 points in either direction (4.0 / 3.6 /
+  13.2 / 12.9 % in the four counties above); pooled over the four it was within half a point
+  (8.4 % against 8.1 %). Any figure over many counties rests on that cancelling, which four counties
+  cannot prove. Classifiers that have seen the Beltsville labels did worse here (Queen Anne's
+  10.2 %, Kent 15-17 %): they raise the false alarms on the Eastern Shore.
+- **Michigan 2022** (Gratiot 24.2 %, Branch 1.8 %) is the one clean test left of whether the counted
+  clear share follows the silage share: pass only if Gratiot reads at least 10 points above Branch
+  and neither is more than 10 points off (logged before opening).
+
+## The 2025 state figure
+
+The organisers judge results against NASS 2025 state figures. The state step was logged before any
+2025 US imagery was opened, chosen after the four Maryland county results and with the 2025
+Maryland target (8.9 %) already known to us (`fieldvision.model.state_estimate`):
+
+- a simple random sample of 150 of Maryland's 838 read blocks (seed fixed); every class-1 corn field
+  in them scored with `eu2_logistic_v1`; the small-grain-then-corn double crops are not scored;
+- headline: the counted clear share over all drawn blocks; range: 5-95 % of 2,000 resamples of
+  whole blocks; beside it, the per-county error measured in 2022 (up to about 7 points) and the
+  pooled one (half a point);
+- acres: share x the state's class-1 corn acres from boundaries (477,891), grain the rest; the
+  double-crop corn (17,056 acres) reported beside, with the share if none or all of it is silage;
+- shift guard: the counted clear share in the drawn blocks of the counties whose 2022 Census silage
+  share is below 2 % (Anne Arundel, St Mary's, Queen Anne's, Baltimore; this leans on 2022 Census
+  shares, not on the 2025 target); above 0.10 the headline is reported as unreliable for 2025;
+- shown beside: the failed local-threshold step as a record, the reference-calibrated share, the
+  unadjusted flagged share, the per-tier share, the wide tier, and the counted clear share of the
+  Europe-plus-Beltsville logistic;
+- the comparison with NASS 2025 is shown once.
+
+A dry run on the four seen 2022 counties pooled as a pseudo-state gave 8.2 % [5.9, 10.7] against
+their pooled Census 8.1 %; it is seen data, not evidence.
 
 ## The layers (module_v2)
 

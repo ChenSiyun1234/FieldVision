@@ -132,7 +132,14 @@ def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 
     d = Path(sample)
     fields = load_fields(d / "fields.geojson")
     fields = fields.drop(columns=[c for c in ("label", "y") if c in fields], errors="ignore")
-    dc = fields["crop_code"].isin(double_crop_codes) if "crop_code" in fields else np.zeros(len(fields), bool)
+    import geopandas as gpd
+    raw = gpd.read_file(d / "fields.geojson", ignore_geometry=True).set_index("field_id")
+    if "stratum" in raw:            # the sample's own flag: corn / dblcrop_sg_corn
+        dc = (raw["stratum"].reindex(fields["field_id"]).astype(str) != "corn").to_numpy()
+    elif "crop_code" in raw:
+        dc = raw["crop_code"].reindex(fields["field_id"]).isin(double_crop_codes).to_numpy()
+    else:
+        dc = np.zeros(len(fields), bool)
     scored = fields[~np.asarray(dc)].reset_index(drop=True)
     ts, _ = load_timeseries(d / "timeseries.parquet", field_ids=scored["field_id"])
     model, mj, cfg = load_model(registry, model_name)
@@ -140,10 +147,8 @@ def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 
     r = pd.DataFrame(rows)
     meta = scored.set_index("field_id")
     if "county_fips" not in meta:      # the loader keeps the contract columns only
-        import geopandas as gpd
-        raw = gpd.read_file(d / "fields.geojson", ignore_geometry=True)
-        cf = raw.set_index("field_id")["county_fips"] if "county_fips" in raw else None
-        meta["county_fips"] = cf.reindex(meta.index).to_numpy() if cf is not None else ""
+        meta["county_fips"] = (raw["county_fips"].reindex(meta.index).to_numpy()
+                               if "county_fips" in raw else "")
     ids = r["source_field_id"]
     table = pd.DataFrame({
         "field_id": ids, "block_id": ids.map(meta["block_id"]).to_numpy(),
@@ -169,6 +174,8 @@ def main(argv=None):
     ap.add_argument("--headline", required=True, choices=ESTIMATES[:5])
     ap.add_argument("--guard", type=float, default=0.10,
                     help="reference counted clear share above which the headline is flagged")
+    ap.add_argument("--secondary-model", default=None,
+                    help="also report this model's counted clear share (shown beside)")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
@@ -202,6 +209,14 @@ def main(argv=None):
                           a.double_crop_acres if a.double_crop_acres is not None else 0.0),
         "model": a.model,
     }
+    if a.secondary_model:
+        t2, _ = field_table(a.sample, a.registry, a.secondary_model)
+        r2 = ref_mask if len(t2) == len(table) else t2["county_fips"].isin(
+            [str(f) for f in a.reference_fips]).to_numpy()
+        p2, g2, _ = block_bootstrap(t2, r2, ref_share, tpr_clear, local_tpr, n_boot=a.n_boot)
+        report["secondary_model"] = {"model": a.secondary_model, "counted_clear": p2["counted_clear"],
+                                     "range_5_95": g2["counted_clear"],
+                                     "reference_counted_clear": p2["reference_counted_clear"]}
     write_json(out / "state_estimate.json", report)
     print(json.dumps(report, indent=1, default=float))
     return report
