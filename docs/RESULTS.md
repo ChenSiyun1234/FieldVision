@@ -27,6 +27,7 @@ so it is not a clean test. Headline = what the log named as the headline when th
 | Pennsylvania (150 random blocks), Sentinel-2 + Landsat | 2025 | 15.2 % [12.9, 17.5] all corn incl. double crops (single-crop 9.5 %); guard clean; prior-updated 18.7 % (last official 31.4 %), 13.1 % (land-use) | NASS 32.8 % | no: **fail** (17.6 low), as predicted before opening | 01:53 |
 | Lancaster PA (70 of 113 blocks), Sentinel-2 + Landsat | 2023 | 26.6 % counted clear, seen 60 %, range 18.0-58.1 %; prior-updated 25.1 % (Census 27.4 %), 9.1 % (land-use) | Census 27.4 %; band 27.4-54.8 % | no: **pass** (0.8 low); teammates' independent run 35.2 % | 02:13 |
 | Michigan (150 random blocks), Sentinel-2 + Landsat | 2025 | 14.4 % [10.8, 18.0] all corn incl. double crops; seen 98 %; guard clean; prior-updated 9.9 % (last official 14.3 %), 8.7 % (land-use) | NASS 14.7 % | no: **pass** (0.3 low); the prediction that it would read low failed | 04:42 |
+| New York (150 random blocks), Sentinel-2 + Landsat | 2025 | 48.7 % [43.3, 54.2] all corn incl. double crops; seen 88 %; guard clean; prior-updated 46.5 % (last official 45.0 %), 36.5 % (land-use) | NASS 53.2 % | no: **pass** (4.5 low); the prediction that it would read below 40 % failed | 04:55 |
 
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
@@ -149,7 +150,7 @@ low, with 98 % of the corn seen. The prediction logged before opening (below 11.
 module reads Michigan right in 2022 (Branch, Gratiot) and in 2025, Lancaster right in 2023, and
 Wisconsin, Pennsylvania and Maryland low in 2025.
 
-**Tally of the locked procedure, satellite alone:** Wisconsin 2025 passes by 0.02 point, Pennsylvania 2025 fails (17.6 low), Lancaster 2023 passes (0.8 low), Michigan 2025 passes (0.3 low). The prior updates failed their marks in all three places.
+**Tally of the locked procedure, satellite alone:** Wisconsin 2025 passes by 0.02 point, Pennsylvania 2025 fails (17.6 low), Lancaster 2023 passes (0.8 low), Michigan 2025 passes (0.3 low), New York 2025 passes (4.5 low): four of five clean places pass, and the highest-silage state reads right, so the under-read is not 'dairy' as such; Pennsylvania 2025 stands out, with Maryland 2025 and Marathon among the development places. The prior updates failed their marks in all three places.
 
 **Why does Lancaster read right in 2023 and Pennsylvania low in 2025? Not the timing feature.**
 Lancaster's own fields in the Pennsylvania 2025 sample read 15.7 % (block-resampling range 11.1-20.4 %,
@@ -164,6 +165,12 @@ not the cause. With the Maryland 2025 Landsat added afterwards (Frederick's 2025
 the gaps are 19.7 for V0 and 16.9-17.1 for the others: the decision does not change. Maryland 2025
 itself with Landsat, after the fact: 99 % seen, single-crop 4.2 % [2.9, 5.8], with double crops
 6.2 % [4.7, 7.7], against NASS 8.9 %: still low, now with nothing hidden by clouds.
+
+**November-green variant (teammate's lead, report only, 04:52).** Counting abstained fields that are
+green again in November as silage moves the development places by +0.3 to +3.9 points (Lancaster
++13.5, to 40.1 % against a Census 27.4 %), helps Carroll, Frederick, Marathon and the 2025 states a
+little (Pennsylvania +1.8 of 23.3 missing), and adds 1-2 points to the low-silage counties. It touches
+none of the 44 Beltsville field-years. Left as a documented lead; New York was run without it.
 
 ## Open leads, in the order we would try them
 
