@@ -219,37 +219,59 @@ def scoreboard():
     put(fig, "s06_scoreboard")
 
 
-# --- a second satellite in the two counties where clouds hid the harvest ---------------------------
+# --- a second satellite in the three counties where clouds hid the harvest, and in a control county
 def landsat_pair():
     rows = N.LANDSAT_PAIR
+    cloudy = [r for r in rows if not r["control"]]
+    control = [r for r in rows if r["control"]]
     fig = body()
-    fig.text(0.25, 0.875, "Corn area we could see", fontsize=16, fontweight="bold", color=INK, va="center")
-    fig.text(0.6, 0.875, "Our silage figure, against USDA's", fontsize=16, fontweight="bold", color=INK, va="center")
-    axl = fig.add_axes([0.25, 0.2, 0.27, 0.62])
-    axr = fig.add_axes([0.6, 0.2, 0.38, 0.62])
+    fig.text(0.25, 0.915, "Corn area we could see", fontsize=16, fontweight="bold", color=INK, va="center")
+    fig.text(0.6, 0.915, "Our silage figure, against USDA's", fontsize=16, fontweight="bold", color=INK, va="center")
+    axl = fig.add_axes([0.25, 0.17, 0.27, 0.71])
+    axr = fig.add_axes([0.6, 0.17, 0.38, 0.71])
     D.clean(axl, grid=None)
     D.clean(axr)
-    n = len(rows)
-    for i, r in enumerate(rows):
-        yc = (n - 1 - i) * 2.2
+    step = 2.1
+    y = step * (len(rows) - 1) + 1.5
+    top = y + 1.45
+    placed = []
+    for group, head in ((cloudy, "Clouds hid the harvest"), (control, "Control: not hit by cloud")):
+        axl.text(-5, y + 1.0, head, ha="right", va="center", fontsize=12.5, color=INK2, style="italic")
+        for r in group:
+            placed.append((y, r))
+            y -= step
+        y -= 0.8
+    for yc, r in placed:
         one, two = r["seen"]
-        axl.barh(yc + 0.32, one, height=0.52, color=GREY, zorder=3)
-        axl.barh(yc - 0.32, two, height=0.52, color=BLUE, zorder=3)
-        axl.text(one + 2.5, yc + 0.32, f"{one}%", va="center", fontsize=17, color=INK)
-        axl.text(two - 2.5, yc - 0.32, f"{two}%", va="center", ha="right", fontsize=17, fontweight="bold", color="#ffffff", zorder=4)
-        axl.text(-5, yc + 0.3, r["name"], ha="right", va="center", fontsize=16, fontweight="bold", color=INK)
-        axl.text(-5, yc - 0.38, r["when"], ha="right", va="center", fontsize=11.5, color=INK2, linespacing=1.3)
+        axl.barh(yc + 0.3, one, height=0.5, color=GREY, zorder=3)
+        axl.barh(yc - 0.3, two, height=0.5, color=BLUE, zorder=3)
+        axl.text(one + 2.5, yc + 0.3, f"{one}%", va="center", fontsize=15, color=INK)
+        axl.text(two - 2.5, yc - 0.3, f"{two}%", va="center", ha="right", fontsize=15, fontweight="bold", color="#ffffff", zorder=4)
+        axl.text(-5, yc + 0.32, r["name"], ha="right", va="center", fontsize=15.5, fontweight="bold", color=INK)
+        axl.text(-5, yc - 0.36, r["when"], ha="right", va="center", fontsize=10.5, color=INK2, linespacing=1.25)
         before, after = r["figure"]
+        usda = r["usda"]
+        if isinstance(usda, tuple):
+            towards = abs(after - min(max(after, usda[0]), usda[1])) < abs(before - min(max(before, usda[0]), usda[1]))
+            axr.plot(usda, [yc, yc], color=INK, lw=9, alpha=0.16, solid_capstyle="round", zorder=1)
+            said = f"USDA says {usda[0]} to {usda[1]}%"
+        else:
+            towards = abs(after - usda) < abs(before - usda)
+            axr.scatter([usda], [yc], s=150, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
+            said = f"USDA says {usda}%"
+        colour = BLUE if towards else INK
         axr.annotate("", xy=(after, yc), xytext=(before, yc), zorder=3,
-                     arrowprops=dict(arrowstyle="-|>", color=BLUE, lw=2.8, mutation_scale=22, shrinkA=8, shrinkB=8))
-        axr.scatter([before], [yc], s=140, facecolors=BG, edgecolors=GREY, linewidths=2.6, zorder=4)
-        axr.scatter([after], [yc], s=190, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
-        axr.scatter([r["usda"]], [yc], s=160, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
-        axr.text(0.8, yc + 0.62, f"{before}%  →  {after}%", fontsize=18, fontweight="bold", color=BLUE, va="center")
-        axr.text(24.5, yc + 0.62, f"USDA says {r['usda']}%", fontsize=15, color=INK, va="center")
-    for ax, top in ((axl, 100), (axr, 54)):
-        ax.set_xlim(0, top)
-        ax.set_ylim(-1.1, (n - 1) * 2.2 + 1.1)
+                     arrowprops=dict(arrowstyle="-|>", color=colour, lw=2.6, mutation_scale=20, shrinkA=7, shrinkB=7))
+        axr.scatter([before], [yc], s=120, facecolors=BG, edgecolors=GREY, linewidths=2.4, zorder=4)
+        axr.scatter([after], [yc], s=160, color=colour, edgecolors=BG, linewidths=1.5, zorder=5)
+        axr.text(0.8, yc + 0.6, f"{before}%  →  {after}%", fontsize=16, fontweight="bold", color=colour, va="center")
+        axr.text(22.5, yc + 0.6, said, fontsize=13.5, color=INK, va="center")
+        if isinstance(usda, tuple) and after > usda[1]:
+            axr.text(after + 3.5, yc, f"now {after - usda[1]:.1f} points above USDA's range", fontsize=12.5, color=INK2,
+                     va="center", style="italic")
+    for ax, right in ((axl, 100), (axr, 54)):
+        ax.set_xlim(0, right)
+        ax.set_ylim(y + 0.8 + step - 1.0, top)
         ax.set_yticks([])
     axl.set_xticks([0, 50, 100])
     axl.set_xticklabels(["0%", "50%", "100%"])
@@ -261,11 +283,10 @@ def landsat_pair():
                    label="two satellites (Sentinel-2 and Landsat)"),
         plt.Line2D([], [], marker="D", ls="", markersize=10, markerfacecolor=INK, markeredgecolor=BG, label="what USDA reports"),
     ]
-    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.24, 1.0), ncol=3, frameon=False, fontsize=13,
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.24, 1.005), ncol=3, frameon=False, fontsize=13,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
-    nj = rows[0]["not_judged"]
-    fig.text(0.02, 0.02, "Checks on two counties we had already seen, so not tests. "
-             f"In Kent the fields we could not judge fell from {nj[0]}% to {nj[1]}% of the area.\n"
+    fig.text(0.02, 0.015, "Checks on four counties we had already seen, so not tests. In the control county, already well seen, "
+             "the figure changed little and slipped one point past USDA's range.\n"
              "In Marathon the rest of the gap is not cloud: silage in the north is cut after the crop has yellowed, "
              "and that needs labelled northern fields.", fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s_landsat")

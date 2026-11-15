@@ -73,7 +73,7 @@ and run the script again.
 
 ## The slide deck
 
-The deck itself (a nine-slide story for the judges, then eight backup slides, 16:9, speaker notes
+The deck itself (an eleven-slide story for the judges, then nine backup slides, 16:9, speaker notes
 in English and Chinese on every slide) is built from the same numbers. Earlier versions (16
 slides, ten, twelve) are in this folder's history. The PowerPoint and PDF files are not in git;
 they are made by:
@@ -97,13 +97,15 @@ their process and how it could be developed further"); technical quality 20 % (p
 false positive rate, response time); innovation 20 % ("a new data source or harvest signal");
 feasibility 20 % ("potential to be developed further").
 
-**The story, nine slides.** 1 USDA's own question, with a real field. 2 The catch and the idea: no
+**The story, eleven slides.** 1 USDA's own question, with a real field. 2 The catch and the idea: no
 US labels, so learn from European farm registries (the new data source). 3 The signal, in real
 pictures: silage is cut green and wet (the harvest signal). 4 How it works in three plain steps,
 and the rule that a hidden harvest is not guessed. 5 The test on USDA's 44 labelled fields, with
 the rubric's four measures. 6 The scoreboard: nine places against USDA, close where silage is
-rare, a miss where it is everywhere. 7 A second satellite, Landsat, in the two counties where
-clouds hid the harvest: both figures move towards USDA's (the second new data source). 8 Starting
+rare, a miss where it is everywhere. 7 A second satellite, Landsat, in the three counties where
+clouds hid the harvest: all three figures move towards USDA's; in a fourth county that was already
+well seen the figure changes little and slips one point past USDA's range (the second new data
+source). 8 Starting
 from USDA's last figure, the pictures move six of eight counties closer to the truth (the value;
 counties seen while tuning, so not a test). 9 What went wrong on the way and what it taught us
 (the process). 10 Where the model sits in the team's system. 11 What USDA gets today, what comes

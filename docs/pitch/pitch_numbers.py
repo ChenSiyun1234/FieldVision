@@ -317,13 +317,17 @@ PLACES_TO_OPEN = [
     ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
 ]
 
-# The two counties where clouds hid the harvest, with Sentinel-2 alone and with Landsat 8 and 9
-# added: development checks on places already seen, not tests. Kent 2022: log 00:23 (seen 9 -> 94 %,
-# not judged 22 -> 4 % of area, figure 12.9 -> 7.3 %, Census 5.5 %). Marathon 2023: log 23:59 and
-# 00:18 (seen 29 -> 83 %, figure 4.3 -> 13.8 %, survey 49.9 %).
+# Sentinel-2 alone and with Landsat 8 and 9 added, in the three counties where clouds hid the
+# harvest and in one county that was already well seen (the control). Development checks on
+# places already seen, not tests. Kent 2022: log 00:23. Queen Anne's 2022 and Racine 2023: log
+# 00:33. Marathon 2023: log 23:59 and 00:18. "usda" is one figure, or the band of official figures.
 LANDSAT_PAIR = [
-    {"name": "Kent, Maryland", "when": "2022: a cloudy fortnight\nin September", "seen": (9, 94), "figure": (12.9, 7.3),
-     "usda": 5.5, "not_judged": (22, 4)},
-    {"name": "Marathon, Wisconsin", "when": "2023: 25 cloudy days over\nthe silage harvest", "seen": (29, 83), "figure": (4.3, 13.8),
-     "usda": 49.9},
+    {"name": "Kent", "when": "Maryland 2022: a cloudy\nfortnight in September", "seen": (9, 94), "figure": (12.9, 7.3),
+     "usda": 5.5, "control": False},
+    {"name": "Queen Anne's", "when": "Maryland 2022: the same\ncloudy fortnight", "seen": (14, 70), "figure": (4.0, 2.4),
+     "usda": 1.3, "control": False},
+    {"name": "Marathon", "when": "Wisconsin 2023: 25 cloudy days\nover the silage harvest", "seen": (29, 83), "figure": (4.3, 13.8),
+     "usda": 49.9, "control": False},
+    {"name": "Racine", "when": "Wisconsin 2023: not hit by\ncloud, already well seen", "seen": (80, 90), "figure": (6.4, 7.4),
+     "usda": (2.4, 6.4), "control": True},
 ]

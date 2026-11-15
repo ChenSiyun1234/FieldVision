@@ -262,13 +262,13 @@ def build(out):
           "然后我们想办法把它考倒：拿九个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；青贮最多的那个县，我们读错了。")
 
     # 7  a second satellite for the cloudy counties --------------------------------------------------------------
-    s = new_slide(prs, "A second satellite sees past the clouds: in both cloudy counties our figure moved towards USDA's")
+    s = new_slide(prs, "A second satellite sees past the clouds: in the three cloudy counties our figure moved towards USDA's")
     body_picture(s, "s_landsat.png")
-    notes(s, "In two counties, clouds hid the harvest. So we added a second satellite, Landsat. "
-             "In Kent we now see 94 percent of the corn, and our figure moved from 12.9 to 7.3 where USDA says 5.5. "
-             "In Marathon it moved from 4 to 14 where USDA says 50, so that one is only partly fixed.",
-          "有两个县的收割期被云挡住了，所以我们加了第二颗卫星 Landsat。在 Kent 县，现在能看到 94% 的玉米，"
-          "读数从 12.9% 降到 7.3%，美国农业部是 5.5%。在 Marathon 县，读数从 4% 升到 14%，美国农业部是 50%，所以那里只修好了一部分。")
+    notes(s, "In three counties, clouds hid the harvest. So we added a second satellite, Landsat, and in all three our figure "
+             "moved towards USDA's. Kent is almost right now; Marathon is only partly fixed. "
+             "In a fourth county, which clouds did not hit, it changed little.",
+          "有三个县的收割期被云挡住了，所以我们加了第二颗卫星 Landsat，这三个县的读数都向美国农业部的数字靠拢。"
+          "Kent 县现在几乎对了，Marathon 县只修好了一部分。第四个县没有被云影响，读数几乎没变。")
 
     # 8  starting from USDA's last figure ---------------------------------------------------------------------
     s = new_slide(prs, "Start from USDA's last figure: our pictures move six of eight counties closer to the truth")
@@ -354,7 +354,7 @@ def build(out):
          "Free public data, no US labels, about a minute per county on a laptop.", size=16, color=INK, spacing=1.08)
     card(s, MX + half + 0.4, 1.5, half, 3.55)
     text(s, MX + half + 0.8, 1.7, half - 0.8, 0.5, "Next", size=24, bold=True, color=BLUE)
-    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "The second satellite, Landsat, everywhere: it brought two cloud-hidden counties back into view.\n\n"
+    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "The second satellite, Landsat, everywhere: it brought three cloud-hidden counties back into view.\n\n"
          "Labelled fields from northern dairy country, where silage is cut later than in Europe.\n\n"
          "Count the corn sown after a small grain.", size=16, color=INK, spacing=1.08)
     card(s, MX, 5.3, FULL, 1.6, fill=BLUE, line=None)
