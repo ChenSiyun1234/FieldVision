@@ -8,6 +8,26 @@ seen clearly were the late ones, which are grain, and the "not seen" measure did
 labelled fields were also scored a fourth time (log 23:39): a sequence model got 42 of 44, a tie
 with the small model. The slide deck shows both; the rest of this page does not yet.
 
+**Also written before the two state tests of 2025 (log 01:43, corrected 01:53; log 01:53).** Both
+are random samples of a whole state, read with Sentinel-2 plus Landsat, run once under rules
+written at log 00:18; the figure is the share over all corn, double-crop corn included.
+
+- *Wisconsin 2025* (8,199 corn fields in 150 blocks, 96 % of the corn area seen): 16.6 % silage
+  (16.62; 13.8 to 19.5) where USDA's 2025 figure is 21.6 %. That is 4.98 points low against a pass
+  mark of 5: inside it by 0.02 point. The 16.5 % logged first was the single-crop figure, reported
+  by mistake and corrected. We had written beforehand that it would read below 16.6 %; that
+  misses by the same 0.02. A warning check written into the same rules went off: in two
+  low-silage reference counties (Waukesha and Rock, three blocks) the same count read 15.0 % where
+  the 2022 Census has 4.5 %, so by those rules the state figure is reported as unreliable, and the
+  error is not one uniform shift.
+- *Pennsylvania 2025* (3,931 corn fields in 150 blocks, 98 % seen): 15.2 % (12.9 to 17.5) where
+  USDA has 32.8 %. 17.6 points low: a fail. Single-crop corn alone reads 9.5 %. The warning check
+  did not go off (4.1 % for 3.8 % in the reference counties), so this is neither cloud nor a
+  general shift. The written prediction (below 27.8 %) held.
+- Starting from USDA's last figure and updating it with the pictures made both worse: Wisconsin
+  19.8 % (itself 1.8 off) to 12.9 %, Pennsylvania 31.4 % (1.4 off) to 18.7 %. The update from the
+  land-use figure gave 11.6 % and 13.1 %. All four failed.
+
 "Log HH:MM" is a row of the evaluation access log (`<data>/eval/ACCESS_LOG.md`), named by its time
 on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
 

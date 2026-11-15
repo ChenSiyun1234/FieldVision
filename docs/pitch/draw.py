@@ -431,8 +431,9 @@ def state_2025():
         y = 6.15 - i * 1.1
         s = N.STATE_2025[state]["our_silage_share"]
         ax.text(12.4, y, state, fontsize=14, color=INK, va="center")
-        ax.text(12.4, y - 0.42, "to come" if s is None else f"{s:g}% silage", fontsize=13, color=INK2,
-                va="center", style="italic" if s is None else "normal")
+        usda = N.STATE_2025[state].get("nass_silage_share")
+        ax.text(12.4, y - 0.42, "to come" if s is None else f"{s:g}% silage" + (f" (USDA {usda:g}%)" if usda else ""),
+                fontsize=13, color=INK2, va="center", style="italic" if s is None else "normal")
     if low:
         first = ("USDA's figure lies outside our range. The range covers sampling only, not the method's own miss "
                  "(about 7 points on single counties in 2022).")
