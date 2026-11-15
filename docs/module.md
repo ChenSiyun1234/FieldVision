@@ -14,7 +14,7 @@ Sentinel-2 series per field
 1 evidence tiers ──► clear / wide / abstain (every field keeps its call)   fieldvision.features (no model)
    │
    ▼
-2 field classifier ──► p_silage, label                                     registry/eu_logistic_v1
+2 field classifier ──► p_silage, label                                     registry/eu2_logistic_v1
    │
    ▼
 3 second opinion ──► agree / disagree                                      registry/anomaly_v1 (being built)
@@ -25,6 +25,22 @@ Sentinel-2 series per field
 
 module_v2 was prompted by Queen Anne's County (see "Why module_v2" below). Every rule in it was
 written into the evaluation access log, with the time, before it was computed or applied.
+
+
+## Where it stands (Evaluation 2 and the Maryland test)
+
+- **Field calls hold up.** Evaluation 2 (run once, logged): the six-feature logistic trained on
+  every European field-year (Austria 2022-2024, France 2022, Netherlands 2025), `eu2_logistic_v1`,
+  got 42 of the 44 Beltsville field-years right (ROC-AUC 0.95). The other families, scored in the
+  same run: timing+moisture rule 36, LightGBM 37, composite 36, timing rule 35, always grain 32.
+- **The county step fails the Maryland test.** On Kent (Census 5.5 %), the one clean test opened
+  so far, the headline read 21.0 %, beyond the fail line of 20.5 % written down beforehand. Across
+  the three Maryland counties the local threshold flags 9.3 % (Queen Anne's, Census 1.3 %),
+  17.0 % (Frederick, 19.6 %) and 18.0 % (Kent, 5.5 %) of the clear-tier area: the flagged share
+  does not follow the Census. The two label-free checks from the anomaly work, computed afterwards
+  as a diagnostic, pass on Kent and fail on Frederick, so they would not have caught this.
+- So the module gives field calls that can be trusted on fields like Beltsville's, and county
+  figures that should be read as indicative only.
 
 ## The layers (module_v2)
 
@@ -44,11 +60,20 @@ Every field still gets a call (`label`, `p_silage`); the tier is in `evidence.ev
 Anne's the share called silage rose with the bracket (6.6 % of fields at 5-10 days, 60 % at 15-20
 days); with a wide bracket the drop date, and so the timing evidence, is not known.
 
-**2. Field classifier.** `eu_logistic_v1`, the six-feature logistic regression trained on Austrian
-registry labels (2024), frozen and not refit. Features: days from the green peak to the drop, how
-long the decline took, greenness before the cut as a share of the peak, moisture before the cut,
-the relative senescence slope, and residue after the cut. The calendar timing rule
-(`eu_timing_rule_v1`) is no longer part of the call; it stays in the registry as a baseline.
+**2. Field classifier.** `eu2_logistic_v1`, the six-feature logistic regression trained on every
+European field-year (Austria 2022-2024, France 2022, Netherlands 2025; the Evaluation 2 primary).
+Features: days from the green peak to the drop, how long the decline took, greenness before the
+cut as a share of the peak, moisture before the cut, the relative senescence slope, and residue
+after the cut. The calendar timing rule is no longer part of the call; it stays in the registry as
+a baseline. Until Evaluation 2 the slot held `eu_logistic_v1` (the same family trained on Austria
+2024 only); only the model file changed, so the module is still module_v2.
+
+The Evaluation 2 primary was chosen by the rule logged at 14:07 (highest mean ROC-AUC under
+leave-one-country-out, ties to the simpler family). Held out Austria / France / Netherlands:
+logistic 0.754 / 0.826 / 0.717 (mean 0.765), LightGBM 0.763, composite 0.760, timing+moisture rule
+0.728, timing rule 0.662. A reading of "tie" written at 17:41 (gap below the best family's spread
+across countries) would have selected the timing rule; it was corrected by the coordinator after the
+table was seen and before Beltsville was opened, and all three readings are in the access log.
 
 How it was chosen (rule logged at 17:02, result at 17:16): the logistic alone against the mean of
 the logistic and the timing+moisture rule, by mean ROC-AUC under leave-one-country-out on
@@ -69,11 +94,17 @@ says `classifier_only`.
   and in the reference;
 - share = (target flagged - reference flagged) / (matched TPR - reference flagged), clipped to
   0-1, where matched TPR is the recall of European held-out silage at the score that flags 10 % of
-  European held-out grain (clear tier, `matched_tpr_alpha_0.10` in `rates.json`, 0.632).
+  European held-out grain, measured inside each source country-year on non-abstained clear-tier
+  fields and averaged (`local` in `rates.json`, 0.508 for eu2_logistic_v1; computed with
+  `fieldvision.anomaly.local`, the shared implementation).
 
 Beside it, all on the clear tier: the counted share (area called silage), the Europe-adjusted
 share, and the reference-calibrated share (see module_v1); and for context the clear tier's share
-of the county's corn area, the wide tier's acreage and the share of it called silage. Without a
+of the county's corn area, the wide tier's acreage and the share of it called silage; the
+unadjusted locally flagged share; the per-tier local share (the same step inside the clear and the
+wide tier, combined by area; added after seeing Frederick and Queen Anne's); and the double-crop
+corn acres outside the scored field set (`unscored_corn.json`) with the county-share range they
+imply (none of them silage / all of them silage). Without a
 same-season reference the headline falls back to the counted share of the clear tier, and
 `headline_method` says so.
 
@@ -110,11 +141,14 @@ step re-anchors the threshold locally.
 | piece | where | result |
 |---|---|---|
 | Beltsville regression check | Evaluation 1 predictions of eu_logistic_v1 already scored, 44 field-years, no new scoring | clear tier 24 field-years, 0 wrong; wide tier 12, 1 silage missed; all 44: 42 right, as before |
-| county step | Austrian/French pseudo-counties, 150 fields, 1-50 % silage, 200 draws, clear tier | mean abs. error of the share, held out 2022 / 2023 / France: local threshold 0.087 / 0.086 / 0.082; reference-calibrated 0.072 / 0.328 / 0.068; counted 0.066 / 0.399 / 0.070; Europe-adjusted 0.071 / 0.668 / 0.073 |
+| county step (eu_logistic_v1) | Austrian/French pseudo-counties, 150 fields, 1-50 % silage, 200 draws, clear tier | mean abs. error of the share, held out 2022 / 2023 / France: local threshold 0.087 / 0.086 / 0.082; reference-calibrated 0.072 / 0.328 / 0.068; counted 0.066 / 0.399 / 0.070; Europe-adjusted 0.071 / 0.668 / 0.073 |
 | county step at 5-10 % silage | same, held-out settings pooled | local threshold mean abs. error 0.070, 90th percentile 0.147 |
-| Queen Anne's 2022 (seen) | Census 1.3 % | clear tier 37 % of area; counted clear share 7.8 % (module_v1 headline 22.4 %); used as the reference county |
-| Frederick 2022, partial (seen) | 248 of 2,233 fields; Census 19.6 % for the whole county | clear tier 86 %; local threshold 6.4 %, reference-calibrated 12.8 %, counted 14.3 %, Europe-adjusted 7.4 % |
-| Frederick 2022, full (partial seen before) | all 2,233 fields, run after the county step was fixed; Census 19.6 % | clear tier 67 % of area; **headline (local threshold) 8.4 %**, reference-calibrated 12.3 %, counted 14.0 %, Europe-adjusted 6.8 %; wide tier 9,880 acres, 24.6 % called silage. On the Kent/Carroll bands this would be weak (0.11 low) |
+| Queen Anne's 2022 (seen, eu_logistic_v1) | Census 1.3 % | clear tier 37 % of area; counted clear share 7.8 % (module_v1 headline 22.4 %); used as the reference county |
+| Frederick 2022, partial (seen, eu_logistic_v1) | 248 of 2,233 fields; Census 19.6 % for the whole county | clear tier 86 %; local threshold 6.4 %, reference-calibrated 12.8 %, counted 14.3 %, Europe-adjusted 7.4 % |
+| Frederick 2022, full (seen, eu_logistic_v1) | all 2,233 fields, run after the county step was fixed; Census 19.6 % | clear tier 67 % of area; **headline (local threshold) 8.4 %**, reference-calibrated 12.3 %, counted 14.0 %, Europe-adjusted 6.8 %; wide tier 9,880 acres, 24.6 % called silage. On the Kent/Carroll bands this would be weak (0.11 low) |
+| county step (eu2_logistic_v1) | pseudo-counties from the all-Europe run, each held-out country or year with a source outside it, recall per country-year, clear tier | mean abs. error held out AT / FR / NL / 2022 / 2023 / 2024: local threshold (headline) 0.142 / 0.131 / 0.134 / 0.157 / 0.090 / 0.127, over-counting by 0.07-0.11 in four settings; unadjusted flagged share 0.094 / 0.078 / 0.121 / 0.080 / 0.088 / 0.079; counted 0.142 / 0.070 / 0.379 / 0.068 / 0.374 / 0.066 |
+| Frederick 2022, full (seen, eu2_logistic_v1) | Census 19.6 %; 3,364 acres of double-crop corn outside the scored set | headline 18.4 %; flagged 17.0 %, per-tier 18.2 %, reference-calibrated 14.8 %, counted 13.2 %; range with the double crops 17.0-24.9 %. Queen Anne's (reference) counted clear share 4.0 % |
+| **Kent 2022, clean test** (eu2_logistic_v1, run once) | Census 5.5 %; bands logged before | **headline 21.0 %: FAIL** (fail line 20.5 %); flagged 18.0 %, per-tier 23.4 %, reference-calibrated 14.4 %, counted 12.9 %, Europe-adjusted 0 %; clear tier 33 % of area; no double-crop corn |
 
 Queen Anne's and the Frederick snapshot were both seen before module_v2 was built, so neither is a
 clean test. Kent (24029, Census 5.5 %) and Carroll (24013, Census 8.9 %) are the clean tests. The
