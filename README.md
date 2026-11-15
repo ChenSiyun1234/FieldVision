@@ -32,7 +32,7 @@ explains it, and code checks every number it writes.
 
 ## Results
 
-The figures below are the ones in the presentation. The full record, with which results were clean tests and
+The figures below come from the logged runs and match the presentation. The full record, with which results were clean tests and
 when each was logged, is in [`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/REPORT.md`](handoff/results/REPORT.md).
 
 ### Field level: 44 labelled US field-years (Beltsville, MD, 2021-23)
@@ -50,9 +50,27 @@ Trained with **zero US labels** (8,000 labelled European fields from three count
 
 For comparison: a larger gradient-boosted model gets 37 of 44, and always saying "grain" gets 32 of 44.
 
-### State level, 2025: model alone, against NASS
+### Clean tests against USDA
 
-Within 5 points of USDA in 7 states (silage share of harvested corn acres):
+Each place was run once, under rules written down before it was opened, with Sentinel-2 and Landsat 8/9.
+Silage share of harvested corn acres; ranges in brackets.
+
+| Place | FieldVision | USDA | Gap (points) | Logged result |
+|---|---|---|---|---|
+| Michigan 2025 (state) | 14.4% [10.8, 18.0] | 14.7% (NASS 2025) | −0.3 | pass |
+| Lancaster County, PA 2023 | 26.6% | 27.4% (Census 2022) | −0.8 | pass |
+| New York 2025 (state) | 48.7% [43.3, 54.2] | 53.2% (NASS 2025) | −4.5 | pass |
+| Wisconsin 2025 (state) | 16.6% [13.8, 19.5] | 21.6% (NASS 2025) | −5.0 | pass, by 0.02 point |
+| Pennsylvania 2025 (state) | 15.2% [12.9, 17.5] | 32.8% (NASS 2025) | −17.6 | **missed** |
+
+**Four of these five are within 5 points of USDA; Pennsylvania is missed.** Earlier clean tests: Maryland 2025,
+4.75% [3.4, 6.3] against 8.9% (4.2 low); Branch County MI 2022, 2.1% against 1.8% (pass); Gratiot County MI
+2022, 30.0% against 24.2% (pass under its logged rule).
+
+### Earlier state samples: model alone
+
+300 fields per state, Sentinel-2, from the runs used while building the method (not clean tests). Within 5
+points of USDA in 7 states:
 
 | State | NASS 2025 | Model alone | Gap (points) |
 |---|---|---|---|
@@ -68,7 +86,8 @@ Within 5 points of USDA in 7 states (silage share of harvested corn acres):
 ### Model + USDA history: where images mislead, USDA history steers
 
 Each field's silage probability *p* is adjusted with the state's recent USDA silage share π (2021, 2023, 2024) by
-Bayes' rule, p′ = p·π ÷ (p·π + (1 − p)(1 − π)), and the state estimate is the area-weighted mean of p′.
+Bayes' rule, p′ = p·π ÷ (p·π + (1 − p)(1 − π)), and the state estimate is the area-weighted mean of p′. On the
+earlier samples (not clean tests):
 
 | State | NASS 2025 | Model alone | Model + USDA history | Gap |
 |---|---|---|---|---|
@@ -77,18 +96,8 @@ Bayes' rule, p′ = p·π ÷ (p·π + (1 − p)(1 − π)), and the state estima
 | Colorado | 14.0% | 21.9% | 12.7% | 7.9 → 1.3 |
 | **Average** | | | | **13.3 → 1.4** |
 
-### Counties and states against USDA
-
-| Place | FieldVision | USDA |
-|---|---|---|
-| Nebraska 2025 (state) | 0.7% | 2.1% |
-| Branch County, MI | 2.1% | 1.8% |
-| South Dakota 2025 (state) | 4.3% | 5.8% |
-| Frederick County, MD 2022 | 19.2% | 19.6% |
-| Wisconsin 2025 (state) | 22.2% | 21.6% |
-| Lancaster County, PA 2023 | 26.6% | 27.4% |
-| Gratiot County, MI | 30.0% | 24.2% |
-| Wyoming County, NY 2022 | 64.9% | 66.7% |
+Counting the fields hidden by cloud by the model's own call brings two counties seen while tuning close to the
+Census: Frederick County MD 2022, 19.2% against 19.6%, and Wyoming County NY 2022, 64.9% against 66.7%.
 
 ### Cloud gaps: Landsat 8/9 as a second satellite
 
@@ -110,9 +119,10 @@ checked, with a template fallback); vision correct on 15 of 28 at 10 m (used as 
 
 ### Where it still reads low
 
-Dairy states with long cloud gaps at harvest read silage low: in the 2025 state samples Pennsylvania (32.8% by
-NASS) and New York (53.2%) are 14 to 20 points under, and northern silage cut after the crop yellows can look like
-grain. Why, and what closes it: [`handoff/results/hima/COMBINED_GAP_FINDINGS.md`](handoff/results/hima/COMBINED_GAP_FINDINGS.md).
+Pennsylvania 2025 is the clean test that missed: 15.2% against NASS's 32.8%. Dairy country with long cloud gaps
+at harvest reads silage low, because the fields the model cannot judge there are mostly silage, and northern silage
+cut after the crop yellows can look like grain. Why, and what closes it:
+[`handoff/results/hima/COMBINED_GAP_FINDINGS.md`](handoff/results/hima/COMBINED_GAP_FINDINGS.md).
 
 ## Quick start
 

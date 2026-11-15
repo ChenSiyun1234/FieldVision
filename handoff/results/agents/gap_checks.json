@@ -381,28 +381,40 @@
     "place": "Wisconsin 2025",
     "usda_pct": 21.6,
     "usda_band": null,
-    "ours_pct": null
+    "ours_pct": 16.6
    },
    {
     "place": "Pennsylvania 2025",
     "usda_pct": 32.8,
     "usda_band": null,
-    "ours_pct": null
+    "ours_pct": 15.2
    },
    {
     "place": "Lancaster, Pa. 2023",
-    "usda_pct": 44.5,
+    "usda_pct": 27.4,
     "usda_band": [
      27.4,
      54.8
     ],
-    "ours_pct": null
+    "ours_pct": 26.6
+   },
+   {
+    "place": "Michigan 2025",
+    "usda_pct": 14.7,
+    "usda_band": null,
+    "ours_pct": 14.4
+   },
+   {
+    "place": "New York 2025",
+    "usda_pct": 53.2,
+    "usda_band": null,
+    "ours_pct": 48.7
    }
   ],
   "blind_n": 6,
   "blind_within_5_pts": 4,
   "blind_mean_abs_error_pts": 7.1,
-  "finding": "4 of 6 blind comparisons land within 5 points of USDA. The misses: Frederick County, MD -6.4, PA -24.2. Frederick's critic range (24.3\u201332.1%, from the 2012 and 2017 Census) would only have warned on the true 19.6% as well, so the history check cannot see a real change coming. Starting from USDA's last figure and letting the fields update it, 6 of 8 counties move closer to the truth, mean miss 2.6 points (the satellite alone 9.7); these counties were seen while tuning, so it is not a clean test. Clean tests, written down before opening: Wisconsin 2025, Pennsylvania 2025, Lancaster, Pa. 2023 (results to come)."
+  "finding": "4 of 6 blind comparisons land within 5 points of USDA. The misses: Frederick County, MD -6.4, PA -24.2. Frederick's critic range (24.3\u201332.1%, from the 2012 and 2017 Census) would only have warned on the true 19.6% as well, so the history check cannot see a real change coming. Starting from USDA's last figure and letting the fields update it, 6 of 8 counties move closer to the truth, mean miss 2.6 points (the satellite alone 9.7); these counties were seen while tuning, so it is not a clean test. Clean tests, written down before opening: Wisconsin 2025, Pennsylvania 2025, Lancaster, Pa. 2023, Michigan 2025, New York 2025."
  },
  "scale": {
   "script": "scripts/pod_batch_counties.py",
