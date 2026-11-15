@@ -83,6 +83,29 @@ the Census by 10-20 %.
 * Census acres are harvested acres reported by farms by farm headquarters county, not by field
   location; CSB is located by field.
 
+## Frederick 2022: county totals against the Census
+
+`fieldvision.toolbox.Toolbox` from `main` at 12e5a4e, policy `standard` (`composite_v1`), on the
+full county (2,233 fields, 39,030 acres; 207 fields and 3,059 acres abstained, so 35,971 acres
+are counted). Census 2022: grain 31,752, silage 7,748 acres, share 19.6 %. Output kept in
+`C:\t\fv\data\us\toolbox_results\`.
+
+| Estimate | Silage share | Silage acres |
+|---|---:|---:|
+| Census 2022 | 19.6 % | 7,748 |
+| counted share (headline rule logged 16:12) | 20.9 % | 7,525 |
+| raw sum of probabilities | 36.5 % | 13,130 [12,155-14,066] |
+| adjusted with European rates (TPR 0.70, FPR 0.16) | 8.6 % | 3,077 [908-5,139] |
+| adjusted, other European designs | 0.0-9.1 % | |
+| reference-calibrated, Queen Anne's as reference (local FPR 0.22) | 0.0 % [0-6.9 %] | 0 |
+| prior-shift (EM) | 0.0 % | |
+
+The counted share lands on the Census figure, but the same model calls 22.4 % of Queen Anne's
+area silage where the Census says 1.3 %: the classifier calls about a fifth of the corn area
+silage in both counties, so the Frederick agreement is not evidence that it separates silage
+from grain. The corrected estimators, which remove that common false-positive level, put
+Frederick at 0-9 %, below the Census. Frederick was seen in part before the rule was fixed.
+
 ## Choosing the untouched test county
 
 Frederick's partial snapshot has been looked at and Queen Anne's serves as the grain reference,
