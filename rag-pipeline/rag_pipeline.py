@@ -53,7 +53,7 @@ EMBED_BACKEND = os.environ.get("EMBED_BACKEND", "local")
 LOCAL_EMBED_MODEL = os.environ.get("LOCAL_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 NV_EMBED_MODEL = os.environ.get("NV_EMBED_MODEL", "nvidia/llama-3.2-nv-embedqa-1b-v2")  # confirm with client.models.list()
 NV_BASE_URL = "https://integrate.api.nvidia.com/v1"
-CHAT_MODEL = os.environ.get("NEMOTRON_MODEL", "nvidia/nemotron-3-super-120b-a12b")
+CHAT_MODEL = os.environ.get("NEMOTRON_MODEL", "nvidia/nemotron-3-ultra-550b-a55b")  # super-120b 404s on our key
 
 CHUNK_CHARS = 1200
 CHUNK_OVERLAP = 200
