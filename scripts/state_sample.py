@@ -129,7 +129,8 @@ def main(argv=None):
     for f in fr:
         names[f['properties']['county_fips']] = f['properties'].get('county_name')
     state_acres = {
-        'source': 'CSB 2018-2025 rev23 polygons by their CDL class of the year; acres = polygon area in UTM 18N',
+        'source': ('CSB 2018-2025 rev23 polygons by their CDL class of the year; acres = area_ha of the frame '
+                   '(polygon area in the metric CRS given to from_file --metric-crs)'),
         'year': a.year, 'state_fips': a.state.zfill(2),
         'by_class': acres_by(fr, lambda p: f"{p['crop_code']} {p['crop_name']}"),
         'by_county': {k: dict(v, name=names.get(k)) for k, v in acres_by(fr, lambda p: p['county_fips']).items()},
