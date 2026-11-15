@@ -12,23 +12,25 @@ predictions.parquet, embeddings).
 **In two plain sentences:** a pretrained satellite model (Presto) did no
 better than simply handing our model the same monthly satellite values,
 so the small gain it adds inside Austria comes from the extra season-long
-data, not from pretraining. Moving to a different Austrian year cost
-every model about the same small amount, so this test cannot tell us
-which model will hold up in Maryland, where the simplest models have so
-far transferred best.
+data, not from pretraining. When the country changes, the richer models
+lose far more than the 6-feature logistic, so that trained on Austria and
+tested on France the simple model wins outright, as in Maryland, and
+trained on France and tested on Austria the richer ones keep only a small
+lead.
 
 What that means for the main line: no change. Presto is not worth its
-extra complexity here. Richer inputs (Presto, raw monthly values, the
-135-feature LightGBM) win within Austria and across Austrian years, but
-the modelling session's one-time US check showed the opposite ordering
-(as reported to us: 6-feature logistic 42 of 44 correct, LightGBM 30 of
-44; not re-checked here, this experiment never read the US data), and nothing here
-contradicts that: year-to-year change inside one country is much
-smaller than the jump to another continent.
+extra complexity here, and it transfers worst of all (it loses 0.10-0.20
+ROC-AUC across countries). Richer inputs win within Austria and across
+Austrian years, but across countries only the 6-feature logistic keeps its
+in-country accuracy (it loses 0.00-0.02 ROC-AUC, the richer models
+0.06-0.20), which matches the modelling session's one-time US check (as
+reported to us: 6-feature logistic 42 of 44 correct, LightGBM 30 of 44;
+not re-checked here, this experiment never read the US data).
 
 Data: Austria 2024 (2,400 fields, 20 blocks) for the main table;
-Austria 2022 + 2024 (3,600 fields) for leave-one-year-out. Austria 2023
-and other countries were not yet extracted when this was written.
+Austria 2022 + 2024 (3,600 fields) for the first leave-one-year-out;
+Austria 2022, 2023, 2024 + France 2022 (6,400 fields) for
+leave-one-country-out and the country-to-country pairs.
 
 ## Which model and why
 
@@ -274,6 +276,71 @@ Spatial CV on the combined 3,600 fields repeats the Austria 2024 pattern:
 both-gbm vs phys-gbm +0.017 [+0.010, +0.024]; both-gbm vs physraw-gbm
 -0.002 [-0.006, +0.003], no clear difference; emb-gbm vs raw-gbm -0.023
 [-0.032, -0.014], worse.
+
+### Transfer to a new country (leave-one-country-out)
+
+Data: Austria 2022, 2023, 2024 (4,800 fields) and France 2022 (1,600
+fields, listed 01:02Z on 15 November), run
+`C:\t\fv\data\foundation\runs\at_fr`, 6,400 fields, none dropped. Same
+models and settings; "trained on Austria" means all three Austrian years.
+Cells: ROC-AUC on the held-out country, then the paired difference to the
+6-feature logistic on the same fields with its block-bootstrap 95 % CI;
+"loss" = AUC in (spatial CV, that country in training) minus AUC out.
+
+| model | test France (trained on Austria) | loss | test Austria (trained on France) | loss |
+|---|---|---:|---|---:|
+| phys-logistic (6 features) | 0.822 (reference) | 0.004 | 0.766 (reference) | 0.005 |
+| timing rule | 0.692, -0.130 [-0.166, -0.097] | 0.000 | 0.655, -0.110 [-0.139, -0.087] | -0.002 |
+| phys-rule | 0.770, -0.052 [-0.065, -0.038] | 0.002 | 0.738, -0.028 [-0.041, -0.017] | 0.012 |
+| phys-gbm (main line) | 0.752, -0.070 [-0.103, -0.034] | 0.101 | 0.783, +0.017 [+0.005, +0.031] | 0.066 |
+| emb-logistic (Presto) | 0.632, -0.190 [-0.208, -0.149] | 0.196 | 0.727, -0.039 [-0.062, -0.014] | 0.096 |
+| raw-gbm | 0.772, -0.050 [-0.074, -0.016] | 0.071 | 0.751, -0.015 [-0.037, +0.010] | 0.082 |
+| both-gbm (phys + Presto) | 0.750, -0.072 [-0.104, -0.032] | 0.107 | 0.800, +0.034 [+0.019, +0.049] | 0.062 |
+| physraw-gbm (phys + raw) | 0.784, -0.037 [-0.070, +0.001] | 0.076 | 0.790, +0.025 [+0.010, +0.041] | 0.072 |
+
+Country-year to country-year (ROC-AUC on the target; one training
+year only, so smaller training sets):
+
+| pair | 6-feature logistic | phys-rule | phys-gbm | emb-logistic | raw-gbm | both-gbm | physraw-gbm |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| AT 2022 -> FR 2022 (same imagery source) | 0.750 | 0.768 | 0.689 | 0.626 | 0.731 | 0.703 | 0.711 |
+| AT 2023 -> FR 2022 | 0.809 | 0.785 | 0.784 | 0.600 | 0.759 | 0.802 | 0.805 |
+| AT 2024 -> FR 2022 | 0.829 | 0.783 | 0.755 | 0.610 | 0.730 | 0.760 | 0.763 |
+| FR 2022 -> AT 2022 (same imagery source) | 0.693 | 0.727 | 0.728 | 0.719 | 0.729 | 0.753 | 0.742 |
+| FR 2022 -> AT 2023 | 0.794 | 0.762 | 0.799 | 0.703 | 0.686 | 0.815 | 0.802 |
+| FR 2022 -> AT 2024 | 0.784 | 0.736 | 0.804 | 0.747 | 0.789 | 0.816 | 0.809 |
+
+Paired to the logistic: on AT 2022 -> FR 2022 every richer model is worse
+with the interval excluding zero (phys-gbm -0.060 [-0.093, -0.021],
+both-gbm -0.047 [-0.074, -0.015], physraw-gbm -0.039 [-0.063, -0.008],
+Presto -0.123); only the two-feature rule is level (+0.019 [-0.007,
++0.047]). On FR 2022 -> AT 2022 the richer models are ahead (phys-gbm
++0.036 [+0.005, +0.066], both-gbm +0.060 [+0.020, +0.100]).
+
+**When the country changes, does the ordering look like the Austrian year
+hold-out (richer wins) or like Maryland (simpler wins)?** It depends on
+the direction, but the mechanism is the same both ways. The 6-feature
+logistic keeps its in-country accuracy almost exactly (loss 0.004 and
+0.005), while every richer model loses 0.06-0.20. Trained on Austria and
+tested on France, that loss is bigger than the richer models' in-country
+lead, so the simple model wins outright, like Maryland. Trained on France
+and tested on Austria, the richer models' lead shrinks from about 0.09 to
+0.02-0.03 but survives. Within Austria the year hold-out cost every model
+about the same 0.02-0.05, which is why it ranked the models the other way.
+Presto transfers worst in every direction. Note also that the three-year
+leave-one-year-out in this run (with France 2022 inside the 2022 group)
+already narrows the richer models' lead: on 2022 none of them is clearly
+ahead of the logistic (phys-gbm +0.002 [-0.036, +0.040], both-gbm +0.023
+[-0.014, +0.059]).
+
+**Caveat: country and imagery source are partly confounded.** France 2022
+and Austria 2022 come from Planetary Computer (Sentinel-2 L2A), Austria
+2023 and 2024 from Earth Search (Collection 1). The pairs that hold the
+source fixed (AT 2022 <-> FR 2022) show the same direction-dependent
+pattern as the full country hold-out, so the ordering is not just a
+change of processing; but the source-fixed pairs use one training year
+(1,200 or 1,600 fields), so they are noisier and their training sets
+smaller than in the full hold-out.
 
 ## Field plus surroundings
 
