@@ -2,13 +2,6 @@
 
 Hack the Harvest 2026 — can public satellite data tell whether a corn field was cut early for **silage** or left to mature for **grain**?
 
-| | |
-|---|---|
-| Build window | Sat Nov 14, 10:30 AM → Sun Nov 15, 9:00 AM PT |
-| Submit | In Keeboh by Sun 9:00 AM. Late = not judged |
-| Present | 5 minutes, no Q&A, no video |
-| Data | Publicly available geospatial data only |
-
 Rules and rubric: <https://hack-the-harvest.devpost.com/rules>
 
 ## What the judges score
