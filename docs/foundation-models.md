@@ -281,7 +281,7 @@ both-gbm vs phys-gbm +0.017 [+0.010, +0.024]; both-gbm vs physraw-gbm
 
 Data: Austria 2022, 2023, 2024 (4,800 fields) and France 2022 (1,600
 fields, listed 01:02Z on 15 November), run
-`C:\t\fv\data\foundation\runs\at_fr`, 6,400 fields, none dropped. Same
+`<data>\foundation\runs\at_fr`, 6,400 fields, none dropped. Same
 models and settings; "trained on Austria" means all three Austrian years.
 Cells: ROC-AUC on the held-out country, then the paired difference to the
 6-feature logistic on the same fields with its block-bootstrap 95 % CI;

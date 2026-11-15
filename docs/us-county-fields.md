@@ -88,7 +88,7 @@ the Census by 10-20 %.
 `fieldvision.toolbox.Toolbox` from `main` at 12e5a4e, policy `standard` (`composite_v1`), on the
 full county (2,233 fields, 39,030 acres; 207 fields and 3,059 acres abstained, so 35,971 acres
 are counted). Census 2022: grain 31,752, silage 7,748 acres, share 19.6 %. Output kept in
-`C:\t\fv\data\us\toolbox_results\`.
+`<data>\us\toolbox_results\`.
 
 | Estimate | Silage share | Silage acres |
 |---|---:|---:|
@@ -125,7 +125,7 @@ No model is run on a test county until the county procedure is fixed and logged.
 
 ## Time series and the toolbox copy
 
-`C:\t\fv\data\timeseries\us_<fips>_2022`, extractor defaults (`--year 2022`, April 1 to
+`<data>\timeseries\us_<fips>_2022`, extractor defaults (`--year 2022`, April 1 to
 November 30, Collection 1 with the Planetary Computer fallback). Extraction cost is per read
 block, not per field: Frederick's 2,233 fields make 70 blocks and a random 800 would still
 make 63, so the whole county is extracted. Western Frederick blocks see about 120 scenes
