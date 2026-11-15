@@ -79,7 +79,29 @@ def em_share(p, a, train_prior=0.5, tol=1e-6, max_iter=500):
     return pi
 
 
-def estimates(c, tpr, fpr, ref_counted=None, ref_share=None):
+def local_threshold_share(c, ref, source, alpha=0.10):
+    """The local-threshold county layer (fieldvision.anomaly.local), area-weighted here.
+
+    Threshold = the reference county's (1 - alpha) quantile of scores (labels not read);
+    TPR = share of source silage above the score that flags alpha of source grain
+    (out-of-fold source scores); share = (flagged - reference flagged) / (TPR - reference
+    flagged), clipped to [0, 1]. Non-abstained fields only.
+    """
+    rok = ~ref["abstain"].to_numpy()
+    rp, ra = ref["p"].to_numpy()[rok], ref["area"].to_numpy()[rok]
+    t = float(np.quantile(rp, 1 - alpha))
+    ref_flag = float(np.sum(ra * (rp >= t)) / np.sum(ra))
+    sp, sy = source
+    t_s = float(np.quantile(sp[sy == 0], 1 - alpha))
+    tpr = float((sp[sy == 1] >= t_s).mean())
+    ok = ~c["abstain"].to_numpy()
+    p, a = c["p"].to_numpy()[ok], c["area"].to_numpy()[ok]
+    flag = float(np.sum(a * (p >= t)) / np.sum(a))
+    den = tpr - ref_flag
+    return float(np.clip((flag - ref_flag) / den, 0, 1)) if den > 1e-9 else np.nan
+
+
+def estimates(c, tpr, fpr, ref_counted=None, ref_share=None, ref=None, source=None):
     ok = ~c["abstain"].to_numpy()
     a, p = c["area"].to_numpy()[ok], c["p"].to_numpy()[ok]
     called = p >= 0.5
@@ -96,6 +118,8 @@ def estimates(c, tpr, fpr, ref_counted=None, ref_share=None):
         fpr_ref = float(np.clip((ref_counted - tpr * ref_share) / (1 - ref_share), 0, 0.95))
         out["ref"] = adj(fpr_ref)
         out["fpr_ref"] = fpr_ref
+    if ref is not None and source is not None:
+        out["local"] = local_threshold_share(c, ref, source)
     return out
 
 
@@ -106,7 +130,7 @@ def counted_share(c):
 
 
 def simulate(pool, tpr, fpr, n_fields=250, n_ref=250, ref_share=0.01, reps=200, seed=0,
-             tpr_offsets=(0.0,)):
+             tpr_offsets=(0.0,), source=None):
     rng = np.random.default_rng(seed)
     rows = []
     for rep in range(reps):
@@ -116,12 +140,12 @@ def simulate(pool, tpr, fpr, n_fields=250, n_ref=250, ref_share=0.01, reps=200, 
         for share in SHARES:
             c = draw_county(pool, share, n_fields, rng, exclude=ref.index)
             for off in tpr_offsets:
-                e = estimates(c, tpr + off, fpr, ref_counted, true_ref)
+                e = estimates(c, tpr + off, fpr, ref_counted, true_ref, ref=ref, source=source)
                 rows.append({"rep": rep, "target_share": share, "tpr_offset": off, **e})
     return pd.DataFrame(rows)
 
 
-ESTIMATORS = ("raw", "counted", "adj_eu", "ref", "em")
+ESTIMATORS = ("raw", "counted", "adj_eu", "ref", "local", "em")
 
 
 def summarise(sim, setting):
@@ -154,13 +178,18 @@ def main(argv=None):
     out.mkdir(parents=True, exist_ok=True)
     rates = rates_from_run(a.rates_run, "composite")["spatial"]
     tpr, fpr = rates["tpr"], rates["fpr"]
+    # source scores for the local-threshold layer: out-of-fold composite scores of the rates run
+    src = composite_pool(a.rates_run, "spatial")
+    src = src[~src["abstain"]]
+    source = (src["p"].to_numpy(), src["y"].to_numpy(int))
     settings = {
         "same year (2024 fields, spatial CV)": composite_pool(a.run, "spatial", year=2024),
         "held-out year (2022 fields, model trained on 2024)": composite_pool(a.run, "loyo:2022"),
     }
     tables, overall = [], []
     for name, pool in settings.items():
-        sim = simulate(pool, tpr, fpr, reps=a.reps, seed=a.seed, tpr_offsets=(0.0, -0.1, 0.1))
+        sim = simulate(pool, tpr, fpr, reps=a.reps, seed=a.seed, tpr_offsets=(0.0, -0.1, 0.1),
+                       source=source)
         sim.to_csv(out / f"sim_{len(tables)}.csv", index=False)
         for off in (0.0, -0.1, 0.1):
             t, o = summarise(sim[sim["tpr_offset"] == off], name)
