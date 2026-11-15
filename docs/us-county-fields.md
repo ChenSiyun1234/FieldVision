@@ -210,6 +210,41 @@ UTM zone 16 (EPSG:32616). The Colab bundle for the field files is ready, not sta
 `C:\t\fv\colab\fields_26_2022\` (notebook, code at 62d26e2, Census table); its code was checked by
 rebuilding the Kent field file from the Maryland subset byte for byte.
 
+## 2023 test counties chosen by the team (Wisconsin, Pennsylvania)
+
+The user asked for the teammates' counties (branch `dataset-analysis`, `src/config.py`) instead of
+the Michigan pair above, in season 2023:
+
+| Run | County | 2023 survey: planted / grain / silage (share) | 2022 Census: grain / silage (share) |
+|---|---|---|---|
+| `us_55073_2023` | Marathon, WI | 124,000 / 61,300 / 61,000 (49.9 %) | 83,973 / 39,717 (32.1 %) |
+| `us_42071_2023` | Lancaster, PA | 69,000 / 38,200 / 30,600 (44.5 %) | 95,549 / 35,988 (27.4 %) |
+| `us_55101_2023` | Racine, WI (mostly-grain reference) | 33,800 / 32,900 / 800 (2.4 %) | 31,327 / 2,154 (6.4 %) |
+
+Survey values: `corn_grain_silage_acres_2021_2023.csv` from that branch, county SURVEY rows, domain
+TOTAL, period YEAR (one record per series). The survey and the Census disagree badly for Lancaster
+(grain 38,200 against 95,549); the CSB corn area is printed next to both by the notebook's cell B.
+
+**Field set: our rule, not theirs.** Ours: every CSB 2018-2025 polygon in the county whose 2023 CDL
+majority class is corn (`CDL2023 == 1`), no size limit. Theirs (`config.py`): CSB 2016-2023 rev23
+polygons of at least 2 ha with at least 80 % of their CDL 2023 pixels corn. Theirs drops small and
+mixed fields, so it covers less corn area; ours keeps any field where corn is the majority class,
+so it can include fields with up to half their area in another class. The two CSB releases also
+draw slightly different boundaries.
+
+**Cap.** Marathon and Lancaster have about 120-130 thousand corn acres. Each run is capped at 70
+read blocks (about Frederick's cost): whole 10 km blocks are taken in the order of
+`numpy.random.default_rng(42).permutation` over the sorted block ids, and a block is kept if its
+read blocks still fit under 70. `sample.json` in the county folder records the seed, label and read
+blocks drawn of how many, fields and acres drawn of the total and the acre fraction; scale county
+acres by that fraction, and never read a capped run as the whole county. Racine is expected to fit
+whole (`is_sample` false).
+
+Colab bundles: `C:\t\fv\colab\us_<fips>_2023\`, built by `scripts/build_colab_county.py`
+(field file, survey check and draw on Colab, then the standard extraction with code 9cd0447b and
+`--year 2023`; 2023 imagery is Earth Search Collection 1). Untouched test counties: no model is
+run on them until the modelling session has logged the test.
+
 ## Corn outside the scored field set (Frederick, Queen Anne's)
 
 From the Maryland CSB subset, county polygons by their 2022 CDL class (acres in UTM 18N):
