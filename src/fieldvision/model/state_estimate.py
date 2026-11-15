@@ -40,18 +40,36 @@ from .artifacts import write_json
 ESTIMATES = ("window_zero", "counted_clear", "reference_calibrated", "local_threshold",
              "local_flagged", "local_per_tier", "window_upper", "blind_share", "lower_bound",
              "wide_called", "raw_sum")
-# harvest-window regions for Maryland (logged 18:55, geography only)
-MD_REGIONS = {
-    "eastern_shore": ("24015", "24029", "24035", "24011", "24041", "24019", "24045", "24039", "24047"),
-    "western": ("24023", "24001", "24043", "24021"),
+# harvest-window regions, fixed from geography before each state's sample was opened
+# (Maryland logged 18:55; Pennsylvania and Wisconsin logged 22:5x). Counties not listed fall in
+# the state's last, default region.
+STATE_REGIONS = {
+    "24": ({"eastern_shore": ("015", "029", "035", "011", "041", "019", "045", "039", "047"),
+            "western": ("023", "001", "043", "021")}, "central_southern"),
+    "42": ({"southeast_southcentral": ("001", "011", "017", "029", "041", "043", "045", "055", "067",
+                                       "071", "075", "077", "087", "091", "095", "099", "101", "107",
+                                       "133"),
+            "western": ("003", "005", "007", "009", "013", "019", "021", "023", "031", "033", "039",
+                        "047", "049", "051", "053", "059", "063", "065", "073", "083", "085", "111",
+                        "121", "123", "125", "129")}, "central_northern"),
+    "55": ({"southern": ("025", "105", "045", "065", "043", "049", "127", "059", "101", "079", "133",
+                         "055", "027", "021", "111", "103", "023", "123", "089", "131", "047", "077",
+                         "039", "117"),
+            "eastern": ("071", "015", "139", "087", "009", "061", "029", "115", "135", "137", "083",
+                        "075", "078")}, "central_western_northern"),
 }
+MD_REGIONS = {k: tuple("24" + c for c in v) for k, v in STATE_REGIONS["24"][0].items()}
 
 
 def region_of(fips):
-    for name, members in MD_REGIONS.items():
-        if str(fips) in members:
+    fips = str(fips).zfill(5)
+    regions, default = STATE_REGIONS.get(fips[:2], ({}, "all"))
+    for name, members in regions.items():
+        if fips[2:] in members:
             return name
-    return "central_southern"
+    return default
+
+
 HA_TO_ACRE = 2.47105
 
 
