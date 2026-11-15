@@ -8,13 +8,15 @@ supervised 6-feature logistic (best ROC-AUC 0.69 against 0.77), because silage i
 shifted part of the grain distribution, not something outside it, and the score flags
 odd grain fields (second green-up, cloudy series, early harvest) just as readily; it
 stays in the code only as a diagnostic of unusual fields, never as a silage vote.
-What does carry over is learning the classifier's *threshold* from local, mostly-grain
-fields: on Austrian pseudo-counties it never fails badly (mean absolute error of the
-area share 0.10-0.13 in every held-out year, where counting at the classifier's own
-cut-off ranges from 0.08 to 0.33), but in Maryland its one real test so far, Frederick's
-partial snapshot, comes out at 15% against the Census 19.6% with both of its failure
-checks firing, so the Queen Anne's reference probably does not stand in for that part
-of Frederick and the number should not be trusted.
+Learning the classifier's *threshold* from local, mostly-grain fields does carry over
+in Europe (the plain share of area above a reference county's 90th percentile has a
+mean absolute error of 0.07-0.12 in every held-out year and country, where counting at
+the classifier's own cut-off fails in some of them with errors up to 0.43), but in
+Maryland it does not recover the Census: on the whole of Frederick County, with Queen
+Anne's as the reference, it reads 14.9% of area flagged (7.0% after adjustment) against
+the Census 19.6%, with both failure checks passing, so the checks catch a reference
+whose grain looks different but not a classifier that separates silage worse than in
+Europe.
 
 **Known weak point, up front.** Any reference-county method assumes the target
 county's grain looks to the classifier like the reference county's grain. The
@@ -28,9 +30,14 @@ clipped at 0), and it shows through two checks computed from the two counties' s
 alone, with no labels: (1) the estimate drifts with alpha (estimates at alpha 0.05,
 0.10, 0.20 and 0.30 disagree), and (2) the share of the target's area below the
 reference's median score differs from what the estimate implies. On Austrian
-pseudo-counties of Frederick's size both checks together reach Frederick's values in
-under 1% of draws. When they fire, the county figure should be reported as "reference
-does not match", not as a number.
+pseudo-counties of Frederick's size both checks together reach the partial snapshot's
+values in under 1% of draws. When they fire, the county figure should be reported as
+"reference does not match", not as a number. A second weak point, shown by the full
+Frederick county: the adjusted share also assumes the classifier separates silage
+from grain in the target as well as in Europe (the matched recall). If it separates
+worse, the adjusted share under-counts and the plain flagged share barely rises above
+the reference's, and neither check can see it, because both look only at how the bulk
+of the fields (mostly grain) compares with the reference.
 
 ## Stage 1: distance-to-normal scorers on European data
 
@@ -207,6 +214,30 @@ The same pattern as across years: counting at 0.5 and the Europe-adjusted count 
 fine in one direction and fail in the other (0.25 when the model trained on France
 meets Austria), while the local versions stay at 0.06-0.09 both ways.
 
+Three countries (the Netherlands 2025 added, 1,600 fields; each country and each year
+left out in turn; matched recall now measured inside each source country-year, the
+pooled version in the "pooled" column). Block-split, mean absolute error over 1-50%:
+
+| held out | counted | Europe-adjusted | local | local, pooled recall | local, not adjusted | local, stratified |
+|---|---:|---:|---:|---:|---:|---:|
+| Austria | 0.155 | 0.086 | 0.151 | 0.229 | 0.099 | 0.159 |
+| France | 0.074 | 0.111 | 0.123 | 0.214 | 0.075 | 0.144 |
+| Netherlands | 0.434 | 0.581 | 0.131 | 0.131 | 0.122 | 0.126 |
+| 2022 (AT + FR) | 0.078 | 0.118 | 0.142 | 0.251 | 0.080 | 0.175 |
+| 2023 (AT) | 0.335 | 0.350 | 0.131 | 0.170 | 0.101 | 0.141 |
+| 2024 (AT) | 0.076 | 0.127 | 0.146 | 0.226 | 0.077 | 0.142 |
+
+- Measuring the matched recall inside each source domain is never worse than pooling
+  and much better once a third country is in the source (0.14-0.15 against 0.21-0.25);
+  with Austria and France only it gives 0.06-0.10 in every hold-out.
+- With the Netherlands among the sources the adjusted share still over-counts in
+  Austria and France (bias +0.07 to +0.12): the classifier separates the classes worse
+  in the Netherlands, which lowers the averaged recall. So the adjusted share depends on
+  which sources it is averaged over.
+- The plain locally flagged share is the most robust estimator in every one of these
+  settings (0.07-0.12, bias 0.00-0.04); counting and the Europe-adjusted count each fail
+  somewhere (0.43 and 0.58 on the Netherlands). Its known cost: it cannot read much
+  below the alpha share, so a nearly pure grain county reads about 0.09.
 - The stratified version is not better than one threshold in any year or country, so
   the whole-county threshold stays.
 - Counting and Europe-adjusted counting are best in one year and fail in another
@@ -308,6 +339,36 @@ is 7 adjacent blocks in one corner of a county that spans very different terrain
 Queen Anne's; the full Frederick extraction will show whether the mismatch is that
 corner or the county. Kent and Carroll, untouched, should be scored with exactly this
 recipe and checks, read as numbers only when the checks pass.
+
+### The full Frederick County
+
+Scored after the amended recipe was committed (0dc0beb); 2,233 fields, 2,038 not low
+evidence; Census 19.6% (not used). Matched recall inside each Austrian year: 0.593.
+
+| | Queen Anne's (reference, Census 1.3%) | Frederick, whole county (Census 19.6%) |
+|---|---:|---:|
+| fields scored | 1,054 | 2,038 |
+| classifier at 0.5, share of area | 0.181 | 0.185 [0.16, 0.21] |
+| local threshold, flagged share of area (not adjusted) | 0.115 | 0.149 [0.13, 0.17] |
+| local threshold, adjusted share of area | 0 (by construction) | 0.070 [0.02, 0.12] |
+| local threshold, stratified (not adopted), adjusted | | 0.105 |
+| distance view, flagged share of area | 0.008 | 0.045 |
+| failure checks | | alpha drift 0.14 (0.14 / 0.07 / 0 / 0), lower-tail ratio 1.23: both inside the Austrian range |
+
+Field-bootstrap intervals (they leave out the reference, the matched recall and the
+clustering in blocks). Agreement: the local threshold flags 351 fields, all also
+flagged at 0.5; the 0.5 cut-off flags 68 more.
+
+Reading: with the whole county the checks pass, so by the rule fixed in advance the
+figures are read as numbers, and they are wrong. The plain classifier finds the same
+share in both counties (18.1% and 18.5%); the local threshold separates them, but only
+by 3.4 points of flagged area where the Census differs by 18, and the adjusted share
+(7%) is well below the Census. The partial snapshot's close match was a corner of the
+county, not the method. The likely cause is the second weak point above: the matched
+recall (0.59, from Austria) is much higher than the classifier's recall on Maryland
+silage, which no label-free check can measure. This is a reason to treat the local
+threshold as a guard against false alarms (it does not let the classifier call 18% of
+an almost all-grain county silage) rather than as a county estimate in Maryland.
 
 ## The importable layer
 
