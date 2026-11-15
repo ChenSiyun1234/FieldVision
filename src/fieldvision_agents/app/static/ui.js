@@ -68,22 +68,59 @@ export const isLight = () => (document.documentElement.dataset.theme
   ? document.documentElement.dataset.theme === "light" : matchMedia("(prefers-color-scheme: light)").matches);
 export function setTheme(theme) { document.documentElement.dataset.theme = theme; store.set("fv.theme", theme); }
 
-// Any result as a document: a standalone HTML file (opens in a browser or Word, prints to PDF) with the
-// page's own styles, minus controls and live maps, which do not survive outside the app.
-let cssText = null;
+// Any result as a PDF: the page's own rendering (light theme, so it prints well), minus controls and live
+// maps, which do not survive outside the app. html2pdf loads from cdnjs on first use; without a network
+// the same content is saved as an HTML file instead.
+const PDF_LIB = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+let pdfLib = null;
+const loadPdfLib = () => (pdfLib ??= new Promise((ok, fail) => {
+  const s = Object.assign(document.createElement("script"), { src: PDF_LIB, onload: ok, onerror: () => { pdfLib = null; fail(new Error("PDF library did not load")); } });
+  document.head.append(s);
+}));
+// The PDF renderer cannot parse color(srgb …), which is how the browser reports color-mix(): rewrite to rgba.
+const COLOR_PROPS = ["color", "backgroundColor", "backgroundImage", "borderTopColor", "borderRightColor", "borderBottomColor",
+  "borderLeftColor", "outlineColor", "boxShadow", "textDecorationColor", "fill", "stroke"];
+const toRgba = (v) => v.replace(/color\(srgb ([-\d.e]+) ([-\d.e]+) ([-\d.e]+)(?: \/ ([-\d.e]+))?\)/g,
+  (_, r, g, b, a) => `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a ?? 1})`);
+function plainColors(doc) {
+  for (const n of doc.querySelectorAll("*")) {
+    const cs = doc.defaultView.getComputedStyle(n);
+    for (const k of COLOR_PROPS) if (cs[k] && cs[k].includes("color(")) n.style[k] = toRgba(cs[k]);
+  }
+}
+const slug = (t) => t.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "fieldvision";
+
 export async function downloadDoc(title, node, subtitle = "") {
-  cssText ??= await fetch("/static/app.css").then((r) => r.text()).catch(() => "");
   const copy = node.cloneNode(true);
   copy.querySelectorAll("button, input, select, textarea, form, .suggest, .hint, .avatar").forEach((n) => n.remove());
-  copy.querySelectorAll(".leaflet-container, .usmap, .map").forEach((n) => n.replaceWith(Object.assign(document.createElement("p"),
-    { className: "muted small", textContent: "[Interactive map: open FieldVision to see it.]" })));
-  const when = new Date().toLocaleString();
-  const html = `<!doctype html><html lang="en" data-theme="${isLight() ? "light" : "dark"}"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>${cssText}
-body{display:block;padding:32px;max-width:1000px;margin:0 auto;height:auto}.doc-head{border-bottom:1px solid var(--line);margin-bottom:20px}
-</style></head><body><div class="doc-head"><h1>${title}</h1><p class="muted small">${subtitle ? subtitle + " · " : ""}FieldVision · ${when}.
-Acres are model estimates, not NASS statistics.</p></div>${copy.outerHTML}</body></html>`;
-  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([html], { type: "text/html" })),
-    download: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.html` });
-  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  copy.querySelectorAll(".leaflet-container, .usmap, .map").forEach((n) => n.replaceWith(el("p", { class: "muted small" },
+    "[Interactive map: open FieldVision to see it.]")));
+  const page = el("div", { class: "pdf-doc" },
+    el("div", { class: "doc-head" }, el("h1", {}, title),
+      el("p", { class: "muted small" }, `${subtitle ? subtitle + " · " : ""}FieldVision · ${new Date().toLocaleString()}. `
+        + "Acres are model estimates, not NASS statistics.")), copy);
+  const root = document.documentElement, before = root.dataset.theme;
+  root.dataset.theme = "light";                                   // print colours, then put the user's theme back
+  const holder = el("div", { class: "pdf-holder" }, page);   // off screen; the PDF library copies `page` itself
+  document.body.append(holder);
+  try {
+    // charts colour themselves with CSS variables, which the PDF renderer cannot read: write the values in
+    page.querySelectorAll("svg *").forEach((n) => {
+      const cs = getComputedStyle(n);
+      n.style.fill = cs.fill; n.style.stroke = cs.stroke; n.style.color = cs.color;
+    });
+    await loadPdfLib();
+    await window.html2pdf().set({ margin: [12, 12, 14, 12], filename: `${slug(title)}.pdf`, image: { type: "jpeg", quality: 0.95 },
+      html2canvas: { scale: 2, backgroundColor: "#ffffff", useCORS: true, onclone: plainColors }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["css", "legacy"], avoid: ["tr", ".card", "svg", "h2", "h3"] } }).from(page).save();
+  } catch (e) {
+    const html = `<!doctype html><html lang="en" data-theme="light"><head><meta charset="utf-8"><title>${slug(title)}</title>`
+      + `${[...document.querySelectorAll('link[rel="stylesheet"]')].map((l) => `<link rel="stylesheet" href="${l.href}">`).join("")}`
+      + `</head><body style="display:block;padding:32px">${page.outerHTML}</body></html>`;
+    const a = el("a", { href: URL.createObjectURL(new Blob([html], { type: "text/html" })), download: `${slug(title)}.html` });
+    document.body.append(a); a.click(); a.remove();
+  } finally {
+    holder.remove();
+    if (before) root.dataset.theme = before; else delete root.dataset.theme;
+  }
 }

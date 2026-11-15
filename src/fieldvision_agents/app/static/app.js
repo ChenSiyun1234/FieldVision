@@ -165,7 +165,7 @@ function messageNode(m, question) {
   if (m.cards?.length) body.append(el("div", { class: "cards" }, m.cards.map((c) => renderCard(c, { openRun: (id) => app.openRun(id), openMap: (r) => app.openMap(r) }))));
   if (m.meta) body.append(el("div", { class: "meta" }, el("span", {}, m.meta.mode), ...(m.meta.tools || []).map((t) => el("span", { class: "tool" }, t)),
     el("span", {}, m.meta.grounded ? "· every number checked" : "· contains [unverified] numbers"),
-    el("button", { class: "dl", title: "Download this answer as a document",
+    el("button", { class: "dl", title: "Download this answer as a PDF",
       onclick: () => downloadDoc(question || "FieldVision answer", body, `Answer by ${m.meta.mode}`) }, "⬇ Download")));
   return node;
 }
