@@ -4,6 +4,25 @@ Every number below is from a run logged in the evaluation access log before it w
 is the log row. "Seen before" says whether the place had already been looked at when the figure was
 produced. Method and reasoning: `docs/module.md`; commands and models: `docs/model.md`.
 
+## For the deck: every county and state figure
+
+"Used in tuning" = the place's result was seen before the method that produced the figure was fixed,
+so it is not a clean test. Headline = what the log named as the headline when the place was opened.
+
+| place | year | headline | comparison | used in tuning | logged |
+|---|---|---|---|---|---|
+| Queen Anne's MD | 2022 | 22.4 % (module_v1 counted share) | Census 1.3 % | no (first check: failed) | 16:40 |
+| Queen Anne's MD | 2022 | 4.0 % counted clear / 2.0 % window | Census 1.3 % | yes | 18:07, 18:54 |
+| Frederick MD | 2022 | 13.2 % counted clear / 15.1 % window | Census 19.6 %; scored set 11.2-19.9 % | yes | 18:09 |
+| Kent MD | 2022 | 21.0 % local threshold (failed) | Census 5.5 % | no for the local threshold; yes for counted clear 12.9 % and window 6.2 % | 18:11 |
+| Carroll MD | 2022 | 0 % local threshold (weak) | Census 8.9 %; scored set 4.8-7.5 % | no for the local threshold; yes for counted clear 3.6 % and window 5.1 % | 18:16 |
+| Branch MI | 2022 | 2.1 % counted clear (window 3.6 %) | Census 1.8 % | no: pass | 19:11 |
+| Gratiot MI | 2022 | 30.0 % counted clear (window 29.8 %) | Census 24.2 % | no: pass | 19:11 |
+| Maryland (150 random blocks) | 2025 | 4.75 % [3.4, 6.3] counted clear (window 3.8 %) | NASS 8.9 % | no: reads low | 19:14 |
+| Maryland, double crops added | 2025 | 6.7 % [5.3, 8.2] | NASS 8.9 % | after the fact | 19:23 |
+| Land-use prior, Maryland | 2025 | 10.6 % | NASS 8.9 % | no (county work) | 19:48 |
+| Racine WI, Marathon WI | 2023 | to come | survey 2023 / Census 2022: 4.2-6.4 %, 32.1-44.9 % | no | criteria 22:52 |
+
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
 | what | compared with | logged | seen before | result |
