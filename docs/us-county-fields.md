@@ -383,3 +383,11 @@ Not finished:
   county_check.json, sample.json). `references.json`: 55073 -> 55101, year 2023, share 0.0237 from the 2023
   county survey (no Census in 2023; recorded in the entry's share_source). Untouched until the modelling session
   runs them once under its 19:33 rule.
+- 23:20 PT: Sentinel-1 bundle for Marathon 2023 built and dry-checked, `C:\t\fv\colab\s1_55073_2023\` (the Kent
+  pilot's notebook, code 3fc72639, the 3,448 drawn fields, 70 blocks, April-November; same-result check on the
+  pilot's two Kent blocks passed on the laptop). Radar coverage there is thin: Planetary Computer `sentinel-1-rtc`
+  has 12 scenes in April-November 2023, one relative orbit (92 ascending), none from May to 12 August, and a 24-day
+  gap from 18 September to 12 October (the 30 September pass is missing), nearly the same window as the optical
+  cloud gap (20 September-15 October). Not handed to Colab pending the coordinator's decision.
+- Per-county land-use prior table: `python scripts/landuse_prior.py prior-table ...` writes
+  `C:\t\fv\data\us\landuse\county_prior.csv` / `.parquet` (2,890 counties).
