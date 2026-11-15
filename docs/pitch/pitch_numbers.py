@@ -134,8 +134,8 @@ STATE_2025 = {
         # Upper bound: every double-crop acre counted as silage, 22,700 + 17,056 (8.0 %, log 19:14).
         "upper_bound_silage_acres": 39_756,
     },
-    "Pennsylvania": {"our_silage_share": None, "source": "to come"},
-    "Wisconsin": {"our_silage_share": 16.5, "nass_silage_share": 21.6, "source": "log 01:43"},
+    "Pennsylvania": {"our_silage_share": 15.2, "nass_silage_share": 32.8, "source": "log 01:53"},
+    "Wisconsin": {"our_silage_share": 16.6, "nass_silage_share": 21.6, "source": "log 01:43, corrected 01:53"},
 }
 
 # =================================================================================================
@@ -240,7 +240,8 @@ PLACES = [
 # to survey 2023). Racine reads inside its band. Marathon (a seeded draw of a third of its corn)
 # reads 27.8 points below its band; 48 % of its fields could not be judged and the clearly seen
 # fields are 32 % of the area. As a pair the test FAILED.
-PLACE_MISSES = {"Marathon, Wisconsin": 27.8}
+# Pennsylvania 2025 (log 01:53): 17.6 points below NASS.
+PLACE_MISSES = {"Marathon, Wisconsin": 27.8, "Pennsylvania 2025": 17.6}
 MARATHON_NOT_JUDGED = 48
 # Which of the two is read as "ours": the plain count, except where more than 20 % of the corn
 # area lies in windows with no clear view, where it is the count by harvest window (log 19:33; on
@@ -304,20 +305,22 @@ HISTORY_UPDATE = [
 ]
 # Mean miss in points, same row: last figure alone, updated, the satellite alone.
 HISTORY_UPDATE_MISS = {"last": 2.7, "updated": 2.6, "last_no_marathon": 2.3, "updated_no_marathon": 1.4, "satellite": 9.7}
-# The same update on the two states (same columns): both moved away from the truth. Maryland
-# 2025: log 00:11. Wisconsin 2025: log 01:43, a test whose rule was written first (log 00:18: it
-# passes only if it ends closer than the last figure alone and within 3 points); it failed.
+# The same update on the three states (same columns): all moved away from the truth. Maryland
+# 2025: log 00:11. Wisconsin 2025 (log 01:43) and Pennsylvania 2025 (log 01:53) were tests whose
+# rule was written first (log 00:18: the update passes only if it ends closer than the last figure
+# alone and within 3 points); both failed.
 HISTORY_UPDATE_STATES = [
     ("Maryland 2025", 9.5, 6.8, 8.9, None),
     ("Wisconsin 2025", 19.8, 12.9, 21.6, None),
+    ("Pennsylvania 2025", 31.4, 18.7, 32.8, None),
 ]
 
 # The three places opened last, once each, with the procedure, the pass marks and our own
 # prediction (the satellite alone will read low in dairy states) written first: log 00:18.
 # (name, USDA %, USDA band or None, ours % or None until logged)
 PLACES_TO_OPEN = [
-    ("Wisconsin 2025", 21.6, None, 16.5),
-    ("Pennsylvania 2025", 32.8, None, None),
+    ("Wisconsin 2025", 21.6, None, 16.6),
+    ("Pennsylvania 2025", 32.8, None, 15.2),
     ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
 ]
 
@@ -337,19 +340,38 @@ LANDSAT_PAIR = [
 ]
 
 # Wisconsin 2025, the first of the three: a random sample of the whole state, run once (log 01:39
-# for the command, 01:43 for the result) under the procedure, pass marks and prediction of log
-# 00:18. Sentinel-2 plus Landsat. Satellite alone 16.5 % [13.7, 19.4] for NASS 21.6 %: 5.1 points
-# low, pass mark 5, so a FAIL by 0.1; the written prediction (below 16.6 %) held. The warning
-# check ("guard") went off: the two low-silage reference counties, Waukesha and Rock (three drawn
-# blocks), read 15.0 % for 4.5 % in the 2022 Census (limit 12.5 %), so by the locked rule the
-# state figure is reported as unreliable for 2025. Beside it, both failing: the update from the
-# last official share (19.8 %, itself 1.8 off) gives 12.9 %, 8.7 off; the update from the
-# land-use figure gives 11.6 %, 10.0 off.
+# for the command, 01:43 for the result, 01:53 for a correction) under the procedure, pass marks
+# and prediction of log 00:18. Sentinel-2 plus Landsat. The correction: by the logged rules the
+# headline is the share over all corn INCLUDING double-crop corn, 16.62 % [13.8, 19.5]; 01:43 had
+# reported the single-crop 16.51 % by mistake. Against NASS 21.6 % that is 4.98 points low: inside
+# the pass mark of 5 by 0.02 point, and the written prediction "below 16.6 %" misses by the same
+# 0.02. The warning check ("guard") went off: the two low-silage reference counties, Waukesha and
+# Rock (three drawn blocks), read 15.0 % for 4.5 % in the 2022 Census (limit 12.5 %), so by the
+# locked rule the state figure is reported as unreliable for 2025. Beside it, both failing: the
+# update from the last official share (19.8 %, itself 1.8 off) gives 12.9 %, 8.7 off; the update
+# from the land-use figure gives 11.6 %, 10.0 off.
 WISCONSIN_2025 = {
     "blocks": 150, "fields": 8_199, "seen": 96, "clear_tier_area": 88,
-    "ours": 16.5, "ours_range": (13.7, 19.4), "usda": 21.6, "points_low": 5.1, "pass_mark": 5,
+    "ours": 16.6, "ours_exact": 16.62, "ours_range": (13.8, 19.5), "single_crop": 16.5,
+    "usda": 21.6, "points_low": 5.0, "points_low_exact": 4.98, "pass_mark": 5,
     "predicted_below": 16.6,
     "last_official": 19.8, "last_official_off": 1.8, "updated": 12.9, "updated_off": 8.7,
     "land_use_updated": 11.6, "land_use_off": 10.0,
     "guard": {"counties": "Waukesha and Rock", "blocks": 3, "ours": 15.0, "census": 4.5, "limit": 12.5},
+}
+
+# Pennsylvania 2025, the second: same procedure, run once (log 01:50 for the command, 01:53 for
+# the result). 3,931 corn fields in 150 blocks, Sentinel-2 plus Landsat, 98 % of the corn area
+# seen. Headline with double-crop corn 15.2 % [12.9, 17.5] for NASS 32.8 %: 17.6 points low, a
+# FAIL. Single-crop corn alone 9.5 % [7.7, 11.6]. The warning check did not go off (Northampton
+# and Lehigh read 4.1 % for 3.8 % in the 2022 Census). The written prediction (below 27.8 %) held.
+# Beside it, both failing: the update from the last official share (31.4 %, itself 1.4 off) gives
+# 18.7 %, 14.1 off; the update from the land-use figure gives 13.1 %, 19.7 off.
+PENNSYLVANIA_2025 = {
+    "blocks": 150, "fields": 3_931, "seen": 98, "clear_tier_area": 85,
+    "ours": 15.2, "ours_range": (12.9, 17.5), "single_crop": 9.5,
+    "usda": 32.8, "points_low": 17.6, "pass_mark": 5, "predicted_below": 27.8,
+    "last_official": 31.4, "last_official_off": 1.4, "updated": 18.7, "updated_off": 14.1,
+    "land_use_updated": 13.1, "land_use_off": 19.7,
+    "guard": {"counties": "Northampton and Lehigh", "ours": 4.1, "census": 3.8, "flagged": False},
 }

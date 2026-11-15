@@ -124,8 +124,8 @@ ONE_MINUTE = """
 3. Our model had never seen an American field. At Beltsville it got 42 of USDA's 44 labelled fields right.
 4. In counties where silage is rare, our numbers are close to USDA's.
 5. Where clouds hid the harvest, a second satellite, Landsat, brought most of it back into view.
-6. In dairy country we read low. For all of Wisconsin in 2025, a state we had never looked at, we said 16.5 percent. USDA says 21.6.
-7. Next we need labelled fields from northern dairy country, because silage there is cut later than in Europe.
+6. In dairy states we read low. We tested two states we had never looked at. Wisconsin: 16.6 percent, where USDA says 21.6. Pennsylvania: 15 percent, where USDA says 33.
+7. So the next step is American labelled fields. A model taught in Europe reads American dairy silage low.
 
 === 一分钟版本（上面七句的中文） ===
 1. 美国农业部问：从太空看，一块玉米地是切碎做了青贮，还是收了籽粒？
@@ -133,8 +133,8 @@ ONE_MINUTE = """
 3. 我们的模型从没见过美国的地。在 Beltsville，美国农业部 44 个带标签的地块它对了 42 个。
 4. 在青贮很少的县，我们的数字和美国农业部的很接近。
 5. 云挡住收割期的地方，第二颗卫星 Landsat 把其中大部分又看回来了。
-6. 在奶牛产区我们读得偏低。2025 年的威斯康星全州，我们之前从没看过：我们读出 16.5%，美国农业部是 21.6%。
-7. 下一步我们需要北方奶牛产区带标签的地块，因为那里的青贮比欧洲割得晚。"""
+6. 在奶牛产区的州我们读得偏低。我们测了两个从没看过的州。威斯康星：我们 16.6%，美国农业部 21.6%。宾夕法尼亚：我们 15%，美国农业部 33%。
+7. 所以下一步是美国本土带标签的地块。在欧洲学出来的模型，读美国奶牛产区的青贮会偏低。"""
 
 
 def build(out):
@@ -257,16 +257,15 @@ def build(out):
           "我们的模型从没见过美国的地。在美国农业部 44 个带标签的地块上，它对了 42 个。12 块青贮地找到了 11 块，只有一次误报。在笔记本电脑上，一个县大约一分钟算完（实测）。")
 
     # 6  the scoreboard against USDA ---------------------------------------------------------------------
-    s = new_slide(prs, "Ten places checked against USDA: close where silage is rare, low in dairy country")
+    s = new_slide(prs, "Close where silage is rare, low in dairy country: 5 points in Wisconsin, 18 in Pennsylvania")
     body_picture(s, "s06_scoreboard.png")
-    notes(s, "Then we tried to break it. We compared ten places with USDA's own numbers. "
-             "We are close where silage is rare. In dairy country we read low. "
-             "For all of Wisconsin in 2025, a state we had never looked at, we say 16.5 percent and USDA says 21.6. "
-             "We wrote down before the test that it would read low. A warning check we had set up also went off there. "
-             "By the rule we wrote down first, that marks this figure as unreliable.",
-          "然后我们想办法把它考倒：拿十个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；在奶牛产区我们读得偏低。"
-          "2025 年的威斯康星全州，我们之前从没看过：我们读出 16.5%，美国农业部是 21.6%。测试之前我们就写下了预测：会偏低。"
-          "我们事先设的一个预警也在那里触发了；按我们事先写下的规则，这个数字要标为“不可靠”。")
+    notes(s, "Then we tried to break it. We compared eleven places with USDA's own numbers. "
+             "We are close where silage is rare. In dairy country we read low: 5 points in Wisconsin, 18 in Pennsylvania. "
+             "Those are two whole states we had never looked at. In Pennsylvania we saw almost all the corn, so clouds are not the reason. "
+             "In Wisconsin a warning check we had set up went off. By the rule we wrote down first, that marks the Wisconsin figure as unreliable.",
+          "然后我们想办法把它考倒：拿十一个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；在奶牛产区我们读得偏低："
+          "威斯康星低 5 个点，宾夕法尼亚低 18 个点。这两个州我们之前从没看过。在宾夕法尼亚我们几乎看到了所有玉米，所以原因不是云。"
+          "在威斯康星，我们事先设的一个预警触发了；按我们事先写下的规则，威斯康星这个数字要标为“不可靠”。")
 
     # 7  a second satellite for the cloudy counties --------------------------------------------------------------
     s = new_slide(prs, "A second satellite sees past the clouds: in the three cloudy counties our figure moved towards USDA's")
@@ -274,24 +273,25 @@ def build(out):
     notes(s, "In three counties, clouds hid the harvest. So we added a second satellite, Landsat, and in all three our figure "
              "moved towards USDA's. Kent is almost right now; Marathon is only partly fixed. "
              "In a fourth county, which clouds did not hit, it changed little. "
-             "In the Wisconsin 2025 state test the two satellites together saw 96 percent of the corn.",
+             "In the 2025 state tests the two satellites together saw 96 percent of the corn in Wisconsin and 98 percent in Pennsylvania.",
           "有三个县的收割期被云挡住了，所以我们加了第二颗卫星 Landsat，这三个县的读数都向美国农业部的数字靠拢。"
           "Kent 县现在几乎对了，Marathon 县只修好了一部分。第四个县没有被云影响，读数几乎没变。"
-          "在 2025 年威斯康星全州的测试里，两颗卫星合起来看到了 96% 的玉米。")
+          "在 2025 年的两个州级测试里，两颗卫星合起来在威斯康星看到了 96% 的玉米，在宾夕法尼亚看到了 98%。")
 
     # 8  what the data taught us ---------------------------------------------------------------------------
     s = new_slide(prs, "What went wrong while we built it, and what it taught us")
     f = N.FIRST_COUNTY_TOTAL
+    pa = N.PENNSYLVANIA_2025
     lessons = [
         ("Do not count what you cannot see",
          f"Our first county total said {f['ours']:.0f}% silage. USDA says {f['census']}%. Counting only fields whose harvest we saw: 4%.", False),
         ("Test your own fix",
          "A clever correction failed the test we had written for it (21% for 5.5%). We dropped it.", False),
-        ("Green is not always silage",
-         "Some grain is cut early, still green. Crop history tells them apart; the picture cannot.", False),
-        ("Clouds hid a harvest. A second satellite found most of it",
-         f"In the heaviest dairy county we read 4% for USDA's 50%. Landsat brought {N.LANDSAT_MARATHON['seen_after']}% of the corn "
-         "back into view and the reading rose to 14%. The rest needs northern fields to learn from.", True),
+        ("A second satellite sees past the clouds",
+         "In three cloudy counties, Landsat brought the corn back into view and our figure moved towards USDA's.", False),
+        ("In dairy states we read low, even when we see the fields",
+         f"Pennsylvania 2025: {pa['seen']}% of the corn seen, and we read {pa['ours']}% where USDA has {pa['usda']}%. "
+         "So the limit is not clouds. The next step is American labelled fields.", True),
     ]
     for i, (head, line, open_) in enumerate(lessons):
         x = MX + (i % 2) * (half + 0.4)
@@ -301,9 +301,9 @@ def build(out):
         text(s, x + 1.2, y + 0.3, half - 1.5, 0.9, head, size=21, bold=True, color=WHITE if open_ else INK, spacing=1.05)
         text(s, x + 1.2, y + 1.2, half - 1.5, 1.2, line, size=15, color=WHITE if open_ else INK2, spacing=1.15)
     notes(s, "The data taught us four things on the way. Do not count what you cannot see. Test your own fix. "
-             "And when clouds hid a whole harvest, a second satellite brought most of it back.",
-          "一路上数据教了我们四件事：看不见的不要数；自己的修正也要检验；绿的不一定是青贮；"
-          "还有，云挡住了一整个收割期的时候，第二颗卫星把大部分又看回来了。")
+             "A second satellite sees past clouds. And in dairy states we read low, even when we see the fields.",
+          "一路上数据教了我们四件事：看不见的不要数；自己的修正也要检验；第二颗卫星能看穿云层；"
+          "还有，在奶牛产区的州，即使看清了地块，我们的读数还是偏低。")
 
     # 8  the whole team system -------------------------------------------------------------------------------
     s = new_slide(prs, "Where our model sits in the team's system")
@@ -350,22 +350,24 @@ def build(out):
     s = new_slide(prs, "What USDA gets today, and what comes next")
     card(s, MX, 1.5, half, 3.55)
     text(s, MX + 0.4, 1.7, half - 0.8, 0.5, "Today", size=24, bold=True, color=BLUE)
-    text(s, MX + 0.4, 2.4, half - 0.8, 2.6, "A call for every corn field, with the evidence behind it.\n\n"
-         "County and state totals, with how much of the corn we could see.\n\n"
+    text(s, MX + 0.4, 2.4, half - 0.8, 2.6, "A call for every corn field, with the evidence behind it: 42 of 44 right where we could check.\n\n"
+         "County totals where silage is rare. Elsewhere, a plain warning that we read low.\n\n"
          "Free public data, no US labels, about a minute per county on a laptop.", size=16, color=INK, spacing=1.08)
     card(s, MX + half + 0.4, 1.5, half, 3.55)
     text(s, MX + half + 0.8, 1.7, half - 0.8, 0.5, "Next", size=24, bold=True, color=BLUE)
-    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "The second satellite, Landsat, everywhere: it brought three cloud-hidden counties back into view.\n\n"
-         "Labelled fields from northern dairy country, where silage is cut later than in Europe.\n\n"
-         "Count the corn sown after a small grain.", size=16, color=INK, spacing=1.08)
+    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "American labelled fields, or training against USDA's county totals: a model taught in Europe reads dairy states low.\n\n"
+         "Landsat, the second satellite, everywhere.\n\n"
+         "Labelled double-crop corn fields: those calls are untested.", size=16, color=INK, spacing=1.08)
     card(s, MX, 5.3, FULL, 1.6, fill=BLUE, line=None)
     text(s, MX + 0.4, 5.42, FULL - 0.8, 0.7, "We do not ask you to trust the model. We show where it can be trusted, and where not yet.",
          size=22, bold=True, color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
-    text(s, MX + 0.4, 6.15, FULL - 0.8, 0.65, "A preliminary baseline, checked in Maryland, Michigan and Wisconsin. "
+    text(s, MX + 0.4, 6.15, FULL - 0.8, 0.65, "A preliminary baseline, checked in four states. "
          "Predictions anywhere else are examples, not verified results.", size=14, color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
     notes(s, "So what does USDA get? A call for every field, with its evidence, from free data. "
-             "And we show where it can be trusted, and where not yet.",
-          "那么美国农业部能得到什么？每块地一个判断，附上依据，用的是免费数据。并且我们说清楚哪里可以信，哪里还不行。")
+             "County totals where silage is rare. In dairy states we read low, and we say so. "
+             "Next we need American labelled fields.",
+          "那么美国农业部能得到什么？每块地一个判断，附上依据，用的是免费数据；青贮少的县，有县级总数。"
+          "在奶牛产区的州我们读得偏低，我们照实说。下一步需要美国本土带标签的地块。")
 
     # ===== more detail: each slide stands on its own ====================================================================
 
@@ -401,22 +403,24 @@ def build(out):
     body_picture(s, "s05_places.png")
     notes(s, "Every place we compared with USDA, with both ways of adding up the fields. "
              "The grey bands are the ranges USDA's own figures allow. "
-             "The newest row is Wisconsin 2025: 16.5 percent for USDA's 21.6, five points low. Our pass mark was five points, so it just missed.",
+             "The newest rows are two whole states. Wisconsin 2025: 16.6 percent for USDA's 21.6, right on our pass mark of five points. "
+             "Pennsylvania 2025: 15.2 percent for 32.8, a clear miss.",
           "所有和美国农业部对比过的地方，两种加总方式都列出来。灰色带是美国农业部自己的数字允许的范围。"
-          "最新的一行是 2025 年威斯康星全州：我们 16.5%，美国农业部 21.6%，低了 5 个点。我们定的及格线是 5 个点以内，所以差一点没过。")
+          "最新的两行是两个州。2025 年威斯康星：我们 16.6%，美国农业部 21.6%，正好压在我们 5 个点的及格线上。"
+          "2025 年宾夕法尼亚：我们 15.2%，美国农业部 32.8%，明显读低了。")
 
-    s = new_slide(prs, "Starting from USDA's last figure: closer in six of eight counties we tuned on, worse in both states")
+    s = new_slide(prs, "Starting from USDA's last figure: closer in six of eight counties we tuned on, worse in all three states")
     body_picture(s, "s_update.png")
     notes(s, "USDA already has an older number for every place. We tried starting from it and letting the pictures update it, field by field. "
-             "In six of the eight counties we tuned on, it moved closer to the truth. In both states it moved away. "
+             "In six of the eight counties we tuned on, it moved closer to the truth. In all three states it moved away. "
              "So we do not rely on it.",
           "美国农业部对每个地方都已经有一个旧数字。我们试过从它出发，让卫星图片逐块更新它。"
-          "在调优用过的八个县里，有六个更接近真值；但在两个州，它都离真值更远了。所以我们不依赖它。")
+          "在调优用过的八个县里，有六个更接近真值；但在三个州，它都离真值更远了。所以我们不依赖它。")
 
     s = new_slide(prs, "What went wrong, what we did, and what came out")
     cols = [(MX, 4.75, "What went wrong"), (MX + 4.95, 3.75, "What we did"), (MX + 8.9, FULL - 8.9, "What came out")]
     for x, w, head in cols:
-        text(s, x + 0.2, 1.42, w - 0.2, 0.35, head, size=14, bold=True, color=BLUE)
+        text(s, x + 0.2, 1.36, w - 0.2, 0.35, head, size=14, bold=True, color=BLUE)
     fixes = [
         ("The first county total read far too high: 22% for 1.3%",
          "Count only the fields seen clearly around the cut", "That county: 22% → 4%"),
@@ -434,18 +438,21 @@ def build(out):
          "and our \"not seen\" measure did not flag it",
          "Added Landsat, a second satellite: corn seen 29% → 83%. Repairing the measure so such a county is reported as a range",
          "4.3% → 13.8% (USDA 49.9%). The rest needs northern training fields"),
+        ("Dairy states read low even with the corn in view: Pennsylvania 15.2% for 32.8%",
+         "Measured on two state samples never looked at before", "Not solved: needs American labelled fields"),
     ]
-    y = 1.85
+    y = 1.76
     for i, cells in enumerate(fixes):
-        rh = 1.08 if i == len(fixes) - 1 else 0.6
+        rh = 1.0 if len(cells[0]) > 120 else 0.52
         card(s, MX, y, FULL, rh)
         for (x, w, _), cell, strong in zip(cols, cells, (False, False, True)):
             text(s, x + 0.2, y, w - 0.3, rh, cell, size=13.5, bold=strong, color=INK, anchor=MSO_ANCHOR.MIDDLE, spacing=1.05)
         y += rh + 0.06
     notes(s, "The tuning in one table: each row is a problem the data showed us, what we did, and what came out. "
-             "Early green grain is not solved, and the cloudy dairy county is only partly fixed.",
+             "Early green grain is not solved, the cloudy dairy county is only partly fixed, and dairy states still read low.",
           "一张表讲完调优过程：每一行是数据暴露出的一个问题、我们的做法和结果。"
-          "趁绿早收的籽粒玉米还没解决；多云的那个奶牛县只修好了一部分。")
+          "趁绿早收的籽粒玉米还没解决；多云的那个奶牛县只修好了一部分。"
+          "奶牛产区的州仍然读得偏低。")
 
     s = new_slide(prs, "Why we count only the fields we saw clearly")
     body_picture(s, "s09_gap_evidence.png")
@@ -492,24 +499,33 @@ def build(out):
           "我们留下小模型，因为一句话就能讲清它；序列模型在影像缺失时更稳，所以它是下一个要试的。")
 
     s = new_slide(prs, "Each test had its rule written down before it was run")
-    ph = 3.25
-    picture(s, "s10_maryland_test.png", MX, 1.4, ph * 1920 / 972)
-    text(s, MX + ph * 1920 / 972 + 0.3, 1.6, FULL - ph * 1920 / 972 - 0.3, 3.0, "Every test rule went into a log, with the time, before the "
-         "test ran.\n\nThe 44 labelled fields were scored four times, each time logged, and never used for training.\n\n"
+    ph = 2.65
+    pw = ph * 1920 / 972
+    picture(s, "s10_maryland_test.png", MX, 1.35, pw)
+    text(s, MX + pw + 0.3, 1.45, FULL - pw - 0.3, 2.6, "Every test rule went into a log, with the time, before the test ran.\n\n"
+         "The 44 labelled fields were scored four times, each time logged, and never used for training.\n\n"
          "Failures are shown as failures. In Wisconsin 2025 a warning check we had written first went off, so by our own rule "
-         "that figure is marked unreliable.", size=15, color=INK, spacing=1.15)
-    text(s, MX, 4.8, FULL, 0.35, "From the log: the rule first, then the test", size=14, bold=True, color=INK)
-    logged = [("16:12", "16:40", "Queen Anne's", "failed"), ("17:30", "18:11", "Kent", "failed"),
-              ("18:25", "19:11", "Michigan", "passed"), ("18:25", "19:14", "Maryland 2025", "reads low"),
-              ("22:55", "22:58", "Wisconsin 2023", "failed"), ("00:18", "01:43", "Wisconsin 2025", "5.1 low, mark 5,\nunreliable")]
-    sw = (FULL - 5 * 0.2) / 6
+         "that figure is marked unreliable.", size=15, color=INK, spacing=1.12)
+    text(s, MX, 4.12, FULL, 0.35, "From the log: the rule first, then the test", size=14, bold=True, color=INK)
+    wi, pa = N.WISCONSIN_2025, N.PENNSYLVANIA_2025
+    logged = [
+        ("16:12", "16:40", "Queen Anne's", "failed: 22% for USDA's 1.3%"),
+        ("17:30", "18:11", "Kent", "failed: 21% for USDA's 5.5%"),
+        ("18:25", "19:11", "Michigan, two counties", "passed: 2.1% and 30.0% for USDA's 1.8% and 24.2%"),
+        ("18:25", "19:14", "Maryland 2025", "reads low: 4.75% for USDA's 8.9%"),
+        ("22:55", "22:58", "Wisconsin 2023, two counties", "failed: Marathon 4.3% for USDA's 32 to 50%"),
+        ("00:18", "01:43", "Wisconsin 2025", f"on the pass mark, marked unreliable: {wi['ours']}% for USDA's {wi['usda']}%"),
+        ("00:18", "01:53", "Pennsylvania 2025", f"failed: {pa['ours']}% for USDA's {pa['usda']}%"),
+    ]
+    rh = 0.27
     for i, (rule_at, test_at, what, result) in enumerate(logged):
-        x = MX + i * (sw + 0.2)
-        good = result == "passed"
-        card(s, x, 5.25, sw, 1.65, fill=BLUE if good else WHITE, line=None if good else GREY)
-        text(s, x + 0.2, 5.33, sw - 0.3, 0.35, f"{rule_at}  rule written", size=12, color=WHITE if good else INK2)
-        text(s, x + 0.2, 5.6, sw - 0.3, 0.35, f"{test_at}  test run once", size=12, color=WHITE if good else INK2)
-        text(s, x + 0.2, 5.95, sw - 0.3, 0.85, f"{what}:\n{result}", size=14, bold=True, color=WHITE if good else INK)
+        y = 4.5 + i * (rh + 0.03)
+        good = result.startswith("passed")
+        card(s, MX, y, FULL, rh, fill=BLUE if good else WHITE, line=None if good else GREY)
+        text(s, MX + 0.2, y, 3.6, rh, f"{rule_at} rule written    {test_at} test run once", size=12, color=WHITE if good else INK2,
+             anchor=MSO_ANCHOR.MIDDLE)
+        text(s, MX + 3.6, y, 2.8, rh, what, size=12.5, bold=True, color=WHITE if good else INK, anchor=MSO_ANCHOR.MIDDLE)
+        text(s, MX + 6.4, y, FULL - 6.6, rh, result, size=12.5, color=WHITE if good else INK, anchor=MSO_ANCHOR.MIDDLE)
     notes(s, "Every test rule was written in a log before the test ran. "
              "The 44 labelled fields were scored four times, each time logged. "
              "In Wisconsin 2025 our own warning check went off, so by our rule that figure is marked unreliable.",
