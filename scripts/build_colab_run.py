@@ -49,6 +49,36 @@ def extractor_defaults(code_dir):
         sys.path.remove(str(code_dir))
 
 
+def start_fresh_run(run_dir, fields, code_dir, template_dir):
+    """Create the laptop run folder for a run that will be extracted entirely on Colab.
+
+    Parameters come from a finished run with the same code (template). The stub
+    manifest carries the signature the extractor computes for these fields, arguments
+    and code, so the merge can verify Colab's run and the local finalising run accepts
+    the folder. Nothing is read from the network here.
+    """
+    template = json.loads((template_dir / "manifest.json").read_text())
+    params = dict(template["parameters"])
+    digest = fingerprint(code_dir / "fieldvision")
+    if digest != template["source_sha256"]:
+        raise SystemExit("template run used different code")
+    signature = hashlib.sha256(fields.read_bytes() + json.dumps(params, sort_keys=True).encode()
+                               + digest.encode()).hexdigest()
+    sys.path.insert(0, str(code_dir))
+    try:
+        from fieldvision.s2.geometry import load_fields, make_blocks
+        block_count = len(make_blocks(load_fields(fields, params["year"]), params["block_size"]))
+    finally:
+        sys.path.remove(str(code_dir))
+    (run_dir / "blocks").mkdir(parents=True, exist_ok=True)
+    manifest = {"signature": signature, "source_sha256": digest, "parameters": params,
+                "fields_file": str(fields.resolve()), "block_count": block_count, "started_at": None,
+                "status": "colab_pending", "blocks": {},
+                "note": f"stub written by build_colab_run.py; parameters from {template_dir.name}; extraction runs on Colab"}
+    (run_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    return manifest
+
+
 def cli_from_manifest(params, defaults):
     cli = ["--year", str(params["year"])]
     for key, value in params.items():
@@ -331,9 +361,17 @@ def main():
     parser.add_argument("--fields", type=Path, required=True)
     parser.add_argument("--code", type=Path, required=True, help="folder containing fieldvision/ (frozen copy)")
     parser.add_argument("--check-local", nargs="*", default=[], help="finished block ids of this run")
+    parser.add_argument("--check-external", nargs="*", default=[],
+                        help="run_dir|labels_file|block_id of another finished run with the same code")
+    parser.add_argument("--template-run", type=Path, help="for a run with no laptop folder yet: copy its settings")
     parser.add_argument("--dest", type=Path, required=True)
     args = parser.parse_args()
     run = args.run_dir.name
+    if not (args.run_dir / "manifest.json").exists():
+        if not args.template_run:
+            raise SystemExit("no laptop run yet: pass --template-run")
+        start_fresh_run(args.run_dir, args.fields, args.code, args.template_run)
+        print("created laptop run folder with stub manifest:", args.run_dir)
     manifest = json.loads((args.run_dir / "manifest.json").read_text())
     digest = fingerprint(args.code / "fieldvision")
     if digest != manifest["source_sha256"]:
@@ -388,11 +426,33 @@ def main():
             archive.write(args.run_dir / "blocks" / f"{block_id}.parquet", f"{prefix}/reference.parquet")
             archive.writestr(f"{prefix}/settings.json", json.dumps({"year": params["year"], "parameters": params,
                                                                      "source_run": run, "fields": "MAIN"}))
+        for spec in args.check_external:
+            other_dir, labels, block_id = spec.split("|")
+            other_dir, labels = Path(other_dir), Path(labels)
+            other = json.loads((other_dir / "manifest.json").read_text())
+            if other["source_sha256"] != digest:
+                raise SystemExit(f"check run {other_dir.name} used different code")
+            status = json.loads((other_dir / "blocks" / f"{block_id}.json").read_text())
+            if status["status"] != "complete" or status.get("scene_errors"):
+                raise SystemExit(f"check block {block_id} is not cleanly complete")
+            # The label block's fields reproduce the same read blocks in make_blocks.
+            features = json.loads(labels.read_text(encoding="utf-8"))
+            ids = set(status["field_ids"])
+            label_block = next(f["properties"]["block_id"] for f in features["features"] if f["properties"]["field_id"] in ids)
+            subset = dict(features, features=[f for f in features["features"] if f["properties"].get("block_id") == label_block])
+            prefix = f"check/{block_id}"
+            archive.writestr(f"{prefix}/fields.geojson", json.dumps(subset))
+            archive.writestr(f"{prefix}/catalog.json", strip_catalog(other_dir / "catalog" / f"{block_id}.json"))
+            archive.write(other_dir / "blocks" / f"{block_id}.parquet", f"{prefix}/reference.parquet")
+            archive.writestr(f"{prefix}/settings.json", json.dumps({"year": other["parameters"]["year"],
+                                                                     "parameters": other["parameters"],
+                                                                     "source_run": other_dir.name}))
+    check_ids = [*args.check_local, *(s.split("|")[2] for s in args.check_external)]
 
     bundle = {"run": run, "code_zip": code_name, "code_sha256": digest, "fields": fields_name, "cli": cli,
               "block_count": manifest["block_count"], "catalog_parts": catalog_parts, "block_parts": block_parts,
               "laptop_blocks_at_build": {s: list(statuses.values()).count(s) for s in set(statuses.values())},
-              "catalog_files": n_catalog, "check_blocks": args.check_local, "pins": PINS, "laptop": LAPTOP_LIBS,
+              "catalog_files": n_catalog, "check_blocks": check_ids, "pins": PINS, "laptop": LAPTOP_LIBS,
               "result_part_mb": RESULT_PART_MB}
     (args.dest / "bundle.json").write_text(json.dumps(bundle, indent=2), encoding="utf-8")
     write_notebook(args.dest / f"extract_{run}.ipynb", bundle)
