@@ -111,6 +111,9 @@ def read_chip(item, geometry_ll, collection):
     return np.moveaxis(rgb, 0, -1), outline
 
 
+DPI, SIZE_LIMIT = 100, 400_000
+
+
 def draw(pick, run_dir, labels_path, out_path):
     field_id, year = pick["field_id"], 2022
     feats = json.loads(Path(labels_path).read_text())["features"]
@@ -165,9 +168,9 @@ def draw(pick, run_dir, labels_path, out_path):
     fig.text(0.05, 0.885, f"Field {field_id}, {pick['area_ha']:.1f} ha{gap}. Sentinel-2 true colour, 10 m.",
              fontsize=9, color=MUTED)
     buffer = io.BytesIO()
-    fig.savefig(buffer, dpi=100, facecolor=BG)
+    fig.savefig(buffer, dpi=DPI, facecolor=BG)
     plt.close(fig)
-    save_small(Image.open(buffer), out_path)
+    save_small(Image.open(buffer), out_path, SIZE_LIMIT)
     return out_path
 
 
@@ -188,7 +191,11 @@ def main():
     parser.add_argument("--picks", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--only", nargs="*", default=[])
+    parser.add_argument("--dpi", type=int, default=100, help="160 gives 1920 px wide strips for slides")
+    parser.add_argument("--size-limit", type=int, default=400_000)
     args = parser.parse_args()
+    global DPI, SIZE_LIMIT
+    DPI, SIZE_LIMIT = args.dpi, args.size_limit
     args.out.mkdir(parents=True, exist_ok=True)
     picks = json.loads(args.picks.read_text())
     made = []
