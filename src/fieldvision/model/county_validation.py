@@ -49,7 +49,8 @@ def composite_pool(run_dir, scheme, year=None, spread_limit=0.5):
     pool = pd.DataFrame({"y": meta["y"].to_numpy(int), "p": P.mean(axis=1).to_numpy(),
                          "abstain": meta["low_evidence"].to_numpy(bool)
                          | ((votes > 0) & (votes < P.shape[1]) & (spread >= spread_limit)),
-                         "area": area, "year": meta["year"].astype(str).to_numpy()}, index=P.index)
+                         "area": area, "year": meta["year"].astype(str).to_numpy(),
+                         "country": meta["country"].astype(str).to_numpy()}, index=P.index)
     if year is not None:
         pool = pool[pool["year"] == str(year)]
     return pool[np.isfinite(pool["area"])]
@@ -70,7 +71,8 @@ def model_pool(run_dir, scheme, model="composite", year=None, max_bracket=None, 
                              "abstain": m["low_evidence"].to_numpy(bool),
                              "area": feats.set_index("field_id")["area_ha"].reindex(m.index)
                              .to_numpy(float),
-                             "year": m["year"].astype(str).to_numpy()}, index=m.index)
+                             "year": m["year"].astype(str).to_numpy(),
+                             "country": m["country"].astype(str).to_numpy()}, index=m.index)
     if max_bracket is not None:
         br = pd.read_parquet(Path(run_dir) / "features.parquet",
                              columns=["field_id", "q_harv_width_days"]).set_index("field_id")
@@ -106,27 +108,28 @@ def em_share(p, a, train_prior=0.5, tol=1e-6, max_iter=500):
 
 
 def local_threshold_share(c, ref, source, alpha=0.10, tpr_offset=0.0):
-    """The local-threshold county layer (fieldvision.anomaly.local), area-weighted here.
+    """The local-threshold county layer, area-weighted, using fieldvision.anomaly.local.
 
-    Threshold = the reference county's (1 - alpha) quantile of scores (labels not read);
-    TPR = share of source silage above the score that flags alpha of source grain
-    (out-of-fold source scores); share = (flagged - reference flagged) / (TPR - reference
-    flagged), clipped to [0, 1]. Non-abstained fields only.
+    Threshold = the reference county's (1 - alpha) quantile of scores over its non-abstained
+    fields (labels not read); matched recall from non-abstained source fields, measured inside
+    each source domain (country-year) and averaged (anomaly.local.matched_tpr); share =
+    adjusted_share(target flagged, reference flagged, recall). Non-abstained fields only.
+    `source` = (scores, labels, groups) or (scores, labels).
     """
+    from ..anomaly.local import adjusted_share, matched_tpr
     rok = ~ref["abstain"].to_numpy()
     rp, ra = ref["p"].to_numpy()[rok], ref["area"].to_numpy()[rok]
     t = float(np.quantile(rp, 1 - alpha))
     ref_flag = float(np.sum(ra * (rp >= t)) / np.sum(ra))
-    sp, sy = source
-    t_s = float(np.quantile(sp[sy == 0], 1 - alpha))
-    tpr = float((sp[sy == 1] >= t_s).mean()) + (tpr_offset or 0.0)
     ok = ~c["abstain"].to_numpy()
     p, a = c["p"].to_numpy()[ok], c["area"].to_numpy()[ok]
     flag = float(np.sum(a * (p >= t)) / np.sum(a))
     if tpr_offset is None:          # the plain locally flagged share, no adjustment
         return flag
-    den = tpr - ref_flag
-    return float(np.clip((flag - ref_flag) / den, 0, 1)) if den > 1e-9 else np.nan
+    sp, sy = source[0], source[1]
+    sg = source[2] if len(source) > 2 else None
+    _, tpr = matched_tpr(sp, sy, alpha, sg)
+    return adjusted_share(flag, ref_flag, tpr + tpr_offset)
 
 
 def estimates(c, tpr, fpr, ref_counted=None, ref_share=None, ref=None, source=None, tpr_offset=0.0):
@@ -196,6 +199,24 @@ def summarise(sim, setting):
     return tab, overall
 
 
+def heldout_source(run, scheme, model, max_bracket=None):
+    """Rates and source scores for one setting: the run's spatial out-of-fold fields that are not
+    in the held-out group (loco:X drops country X, loyo:Y drops year Y), non-abstained only.
+    Returns (tpr, fpr, (scores, labels, country-year groups))."""
+    src = model_pool(run, "spatial", model, max_bracket=max_bracket)
+    src = src[~src["abstain"]]
+    kind, _, grp = scheme.partition(":")
+    if kind == "loco":
+        src = src[src["country"] != grp]
+    elif kind == "loyo":
+        src = src[src["year"] != grp]
+    y, call = src["y"].to_numpy(int), src["p"].to_numpy() >= 0.5
+    tpr = float((call & (y == 1)).sum() / max((y == 1).sum(), 1))
+    fpr = float((call & (y == 0)).sum() / max((y == 0).sum(), 1))
+    groups = (src["country"] + "-" + src["year"]).to_numpy()
+    return tpr, fpr, (src["p"].to_numpy(), y, groups)
+
+
 def parse_setting(text):
     """NAME=RUN_DIR|SCHEME[|YEAR]"""
     name, rest = text.split("=", 1)
@@ -216,6 +237,10 @@ def main(argv=None):
     ap.add_argument("--setting", action="append", default=[],
                     help="NAME=RUN_DIR|SCHEME[|YEAR], repeatable; replaces the default settings")
     ap.add_argument("--n-fields", type=int, default=250)
+    ap.add_argument("--source-from-run", action="store_true",
+                    help="per setting, take the European rates and the local threshold's source "
+                         "from the setting's own run: spatial out-of-fold fields outside the "
+                         "held-out country or year, recall measured per country-year")
     ap.add_argument("--reps", type=int, default=200)
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
@@ -227,11 +252,14 @@ def main(argv=None):
     src = model_pool(a.rates_run, "spatial", a.model, max_bracket=a.max_bracket)
     src = src[~src["abstain"]]
     source = (src["p"].to_numpy(), src["y"].to_numpy(int))
+    sources = {}
     if a.setting:
         settings = {}
         for text in a.setting:
             name, run, scheme, year = parse_setting(text)
             settings[name] = model_pool(run, scheme, a.model, year=year, max_bracket=a.max_bracket)
+            if a.source_from_run:
+                sources[name] = heldout_source(run, scheme, a.model, a.max_bracket)
     else:
         settings = {
             "same year (2024 fields, spatial CV)": model_pool(a.run, "spatial", a.model, year=2024,
@@ -241,8 +269,9 @@ def main(argv=None):
         }
     tables, overall = [], []
     for k, (name, pool) in enumerate(settings.items()):
-        sim = simulate(pool, tpr, fpr, n_fields=a.n_fields, n_ref=a.n_fields, reps=a.reps,
-                       seed=a.seed, tpr_offsets=(0.0, -0.1, 0.1), source=source)
+        s_tpr, s_fpr, s_source = sources.get(name, (tpr, fpr, source))
+        sim = simulate(pool, s_tpr, s_fpr, n_fields=a.n_fields, n_ref=a.n_fields, reps=a.reps,
+                       seed=a.seed, tpr_offsets=(0.0, -0.1, 0.1), source=s_source)
         sim.to_csv(out / f"sim_{k}.csv", index=False)
         for off in (0.0, -0.1, 0.1):
             t, o = summarise(sim[sim["tpr_offset"] == off], name)
