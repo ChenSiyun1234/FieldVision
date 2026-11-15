@@ -77,6 +77,23 @@ the Census by 10-20 %.
 * Census acres are harvested acres reported by farms by farm headquarters county, not by field
   location; CSB is located by field.
 
+## Choosing the untouched test county
+
+Frederick's partial snapshot has been looked at and Queen Anne's serves as the grain reference,
+so the test of the county procedure is a third Maryland county, chosen by this rule (written
+before any field file for it was made), applied to the Census 2022 county rows after the
+`quickstats.select` rule:
+
+1. Maryland, year 2022, grain and silage harvested acres both published (neither withheld).
+2. Grain + silage harvested at least 10,000 acres.
+3. Silage share at least 3.0 % (more than twice Queen Anne's 1.3 %) and not within 2 points
+   of Frederick's 19.6 % (that is, outside 17.6-21.6 %), so the test differs from both.
+4. Not Frederick (24021) or Queen Anne's (24035).
+5. Among those, the most grain + silage acres; the runner-up is the second test county.
+
+`python scripts/pick_test_county.py --quickstats <csv>` applies the rule and prints the ranking.
+No model is run on a test county until the county procedure is fixed and logged.
+
 ## Time series and the toolbox copy
 
 `C:\t\fv\data\timeseries\us_<fips>_2022`, extractor defaults (`--year 2022`, April 1 to
