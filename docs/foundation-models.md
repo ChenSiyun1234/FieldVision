@@ -377,6 +377,79 @@ change of processing; but the source-fixed pairs use one training year
 (1,200 or 1,600 fields), so they are noisier and their training sets
 smaller than in the full hold-out.
 
+### Can augmentation stop the big model memorising? (three-country hold-out)
+
+Question: the 135-feature LightGBM reaches 0.763 against the 6-feature
+logistic's 0.765 when each country is held out in turn; does training it
+on deliberately perturbed copies of the training fields, or regularising
+it, make it lose less out of country? Code:
+`src/fieldvision/foundation/augment.py`, `augment_eval.py`, tests
+`tests/test_augment.py`; run `C:\t\fv\data\foundation\augment\three_country`.
+
+Augmentation acts on the time series of training fields only, before the
+features are computed; each training field gets 3 copies, test fields are
+always scored on their real data, and a copy keeps its original's block,
+so it never crosses a split. Magnitudes were fixed in advance from the
+request, nothing was chosen on a held-out country:
+- shift: the whole season moved by a whole number of days, uniform in
+  +/-21 days;
+- thin: each observation kept with probability 0.7, then one window of
+  10-20 days dropped (cloud gaps, different revisit between sources);
+- gain: per band, reflectance x U(0.95, 1.05) + U(-0.01, +0.01);
+- all: the three together.
+Regularisation (gbm|reg): 7 leaves instead of 15, at least 100 fields per
+leaf, 30% instead of 50% of features per tree, L2 5 instead of 1. The
+135 features are the "relative" variant, which already contains no
+absolute-calendar feature (no calendar bins, no day-of-year columns), so
+there was nothing further to remove. The same augmentations were applied
+to the 6-feature logistic as a control. Splits, paired comparisons and
+intervals as in the three-country table above (8,000 fields, none dropped).
+
+ROC-AUC on the held-out country; in brackets the paired difference to the
+unaugmented 135-feature GBM on the same fields, block-bootstrap 95 % CI;
+"mean loss" = in-country spatial CV minus out of country, averaged over
+the three countries:
+
+| arm | test Austria | test France | test Netherlands | mean out | mean loss | mean diff vs 6-feature logistic |
+|---|---|---|---|---:|---:|---:|
+| gbm, base | 0.770 | 0.810 | 0.713 | 0.764 | 0.047 | -0.001 |
+| gbm, regularised | 0.773 (+0.003 [-0.001, +0.008]) | 0.809 (-0.001 [-0.007, +0.007]) | 0.711 (-0.002 [-0.010, +0.007]) | 0.765 | 0.047 | -0.001 |
+| gbm, shift | 0.775 (+0.005 [-0.000, +0.010]) | 0.809 (-0.001 [-0.011, +0.008]) | 0.715 (+0.002 [-0.005, +0.010]) | 0.766 | 0.045 | +0.001 |
+| gbm, thin | 0.791 (+0.022 [+0.013, +0.030]) | 0.826 (+0.016 [+0.000, +0.031]) | 0.723 (+0.010 [+0.002, +0.017]) | 0.780 | 0.035 | +0.015 |
+| gbm, gain | 0.764 (-0.006 [-0.012, -0.001]) | 0.792 (-0.018 [-0.035, -0.001]) | 0.718 (+0.005 [-0.008, +0.018]) | 0.758 | 0.053 | -0.007 |
+| gbm, all three | 0.793 (+0.023 [+0.015, +0.031]) | 0.825 (+0.015 [+0.001, +0.028]) | 0.721 (+0.008 [-0.001, +0.017]) | 0.780 | 0.038 | +0.014 |
+| gbm, all three + regularised | 0.793 (+0.023 [+0.017, +0.030]) | 0.818 (+0.008 [-0.002, +0.018]) | 0.720 (+0.007 [-0.002, +0.015]) | 0.777 | 0.035 | +0.012 |
+| logistic (6 features), base | 0.754 | 0.826 | 0.717 | 0.765 | 0.005 | reference |
+| logistic, thin | 0.755 | 0.825 | 0.720 | 0.767 | 0.005 | +0.001 |
+| logistic, all three | 0.756 | 0.823 | 0.706 | 0.762 | 0.007 | -0.003 |
+
+Against the 6-feature logistic, the thinned GBM is ahead on Austria
+(+0.038 [+0.024, +0.051]) and level on France (+0.000 [-0.021, +0.022])
+and the Netherlands (+0.006 [-0.019, +0.032]). At the 0.5 cut-off it
+keeps the Netherlands' calibration problem (FPR 0.55, the logistic 0.49).
+
+Reading:
+- Dropping observation dates is the one augmentation that helps: it
+  raises the big model out of country in all three countries, with every
+  interval clear of zero (France only just), and cuts its average loss
+  from 0.047 to 0.035. The plausible reason is that the features most
+  sensitive to how often and when a field was seen (exact harvest bracket,
+  slopes over few points) are the ones that change between countries and
+  imagery sources, and thinning teaches the model not to trust them.
+- Shifting the season does nothing, as expected: the features are already
+  measured from each field's own peak. The per-band gain hurts slightly
+  (France -0.018), and stronger regularisation alone changes nothing; it
+  is the input perturbation, not a smaller model, that matters.
+- The logistic barely moves under any augmentation (its six features are
+  already robust), so the control behaves as it should.
+- Even augmented, the big model is level with the 6-feature logistic on
+  two of the three countries and still loses about seven times as much out
+  of country (0.035 against 0.005). Six arms were tried and "thin" is
+  picked after seeing them, so the size of its gain should be confirmed
+  once on new data before it is relied on. Evaluation 2's primary stays the
+  6-feature logistic; the thinned GBM is a candidate second member, to be
+  tested once on Beltsville by the modelling session.
+
 ## Field plus surroundings
 
 The idea raised in the team: let a model look at a field and at the fields
