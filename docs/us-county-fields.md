@@ -200,7 +200,39 @@ archive there (3.76 GB; the NASS server returns an empty body to a plain GET, so
 for each state, `from_file` with the same filters per county, `county_corn_check.py` against TIGER
 (downloaded there too), then extract in the same session. Only the county field files (a few MB
 each), the check JSONs and the finished blocks come back. Needed: a Colab session with this
-branch's code, the Census CSV uploaded (1 MB), and about 15 GB of Colab disk.
+branch's code, the Census CSV uploaded (6.5 MB), and about 15 GB of Colab disk.
+
+**First pair if the answer is yes: Michigan, Gratiot (24.2 %) and Branch (1.8 %).** It gives the
+most share contrast per block: 22.4 points for about 115 blocks (0.19 points per block), against
+Wisconsin 27.2 points / ~235 blocks (0.12), Texas 37.5 / ~245 (0.15, and the riskiest calendar),
+Iowa 15.1 / ~180 (0.08), Minnesota 15.0 / ~240 (0.06), South Dakota 7.9 / ~330. Both counties lie in
+UTM zone 16 (EPSG:32616). The Colab bundle for the field files is ready, not started, in
+`C:\t\fv\colab\fields_26_2022\` (notebook, code at 62d26e2, Census table); its code was checked by
+rebuilding the Kent field file from the Maryland subset byte for byte.
+
+## Corn outside the scored field set (Frederick, Queen Anne's)
+
+From the Maryland CSB subset, county polygons by their 2022 CDL class (acres in UTM 18N):
+
+| | Frederick | Queen Anne's |
+|---|---:|---:|
+| scored: class 1 corn | 39,030 | 51,533 |
+| double crop triticale/corn (228) | 1,846 | 211 |
+| double crop winter wheat/corn (225) | 895 | 0 |
+| double crop barley/corn (237) | 623 | 12 |
+| double crop oats/corn (226) | 0 | 3 |
+| sweet corn (12) | 9 | 398 |
+| dropped by a size filter | 0 (none applied; smallest CSB polygon 2.06 acres) | 0 (2.19 acres) |
+| Census grain + silage | 31,752 + 7,748 = 39,500 | 53,815 + 715 = 54,530 |
+
+Frederick has 3,364 acres of small-grain/corn double crops outside the scored set, 43 % of its
+Census silage area. If all of it were silage, the silage left inside the scored 39,030 acres would
+be 4,384 acres, an 11.2 % share, which is much closer to the corrected estimates (7-9 %) than
+19.6 %. These polygons are fields whose 2022 majority class was the double crop, so this is an upper
+bound on the silage they hold and says nothing about corn in polygons whose majority is another
+crop. What would answer that: the 2022 CDL corn pixel acres for each county (CropScape county
+statistics, a small table) set beside the class-1 and double-crop polygon acres. Queen Anne's has
+225 acres of such double crops, too few to matter.
 
 **Caution.** What worked in Maryland may not carry over. Harvest calendars differ: Texas Panhandle
 silage is cut in July-August and southern Texas grain is harvested from July, so the April-November
