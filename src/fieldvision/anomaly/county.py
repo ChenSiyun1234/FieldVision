@@ -55,6 +55,34 @@ def shares(calls, area, ok):
     return by_n, by_area
 
 
+def failure_checks(ref_p, ref_a, tgt_p, tgt_a, src_p, src_y, est, alphas=(0.05, 0.10, 0.20, 0.30)):
+    """Signs that the reference county's grain does not stand in for the target's grain.
+
+    alpha_sweep  adjusted area share at several alphas; if local grain behaves like the
+                 reference's they agree within noise, if the target's grain sits higher
+                 (or lower) the estimate drifts systematically with alpha
+    lower_tail   target area below the reference's median score, observed vs expected from
+                 the estimate (reference share below its median x (1 - est) + est x the share
+                 of source silage below the source grain median); a ratio far from 1 means
+                 the bulk of the target's grain is shifted relative to the reference
+    clipped      the estimate hit 0 or 1
+    """
+    from .local import local_share
+    f = np.isfinite(src_p)
+    sp, sy = src_p[f], np.asarray(src_y)[f]
+    sweep = {f"{a:.2f}": local_share(ref_p, sp, sy, tgt_p, a, ref_a, tgt_a) for a in alphas}
+    med = float(np.median(ref_p))
+    ref_below = float(np.sum(ref_a * (ref_p < med)) / np.sum(ref_a))
+    sil_below = float((sp[sy == 1] < np.median(sp[sy == 0])).mean())
+    obs = float(np.sum(tgt_a * (tgt_p < med)) / np.sum(tgt_a))
+    exp = ref_below * (1 - est) + est * sil_below if np.isfinite(est) else float("nan")
+    vals = np.array(list(sweep.values()), dtype=float)
+    return {"alpha_sweep": sweep, "alpha_sweep_range": float(np.nanmax(vals) - np.nanmin(vals)),
+            "lower_tail_observed": obs, "lower_tail_expected": exp,
+            "lower_tail_ratio": obs / exp if exp else float("nan"),
+            "clipped": bool(np.isfinite(est) and (est <= 0 or est >= 1))}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("--source-features", required=True, help="features.parquet from anomaly.local_eval")
@@ -113,6 +141,18 @@ def main(argv=None):
                    "local_adjusted_share_area": adjusted_share(flag_a, fpr_a, lt.tpr),
                    "distance_flag_share_n_area": shares(d_tgt, a_tgt, ok_tgt)},
     }
+    res["target"]["diagnostics"] = failure_checks(p_ref[ok_ref], a_ref[ok_ref], p_tgt[ok_tgt], a_tgt[ok_tgt],
+                                                  s_src, y_src, res["target"]["local_adjusted_share_area"])
+    from .local import stratified_share
+    from .local_eval import stratum
+    s_s = stratum(Xs)
+    res["target"]["stratified_adjusted_share_area"] = stratified_share(
+        p_ref[ok_ref], stratum(ref)[ok_ref], s_src, y_src, s_s, p_tgt[ok_tgt], stratum(tgt)[ok_tgt],
+        args.alpha, a_ref[ok_ref], a_tgt[ok_tgt])
+    res["target"]["stratum_area_share"] = {k: float(a_tgt[ok_tgt][stratum(tgt)[ok_tgt] == k].sum()
+                                                    / a_tgt[ok_tgt].sum()) for k in ("tight", "loose")}
+    res["reference"]["stratum_area_share"] = {k: float(a_ref[ok_ref][stratum(ref)[ok_ref] == k].sum()
+                                                       / a_ref[ok_ref].sum()) for k in ("tight", "loose")}
     o = ok_tgt
     res["target"]["agreement"] = {
         "local_and_fixed_both_flag": int(((tgt_calls == 1) & (fixed_tgt == 1))[o].sum()),

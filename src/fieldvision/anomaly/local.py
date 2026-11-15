@@ -46,7 +46,12 @@ def adjusted_share(flag_rate, fpr, tpr):
 
 
 class LocalThreshold:
-    """Fit on classifier scores; nothing here reads target labels."""
+    """Fit on classifier scores; nothing here reads target labels.
+
+    Pass reference and source scores from the same kind of field the target share will use
+    (fields that are not low evidence): source scores of low-evidence fields understate the
+    matched recall and overstate the adjusted share. NaN scores are ignored.
+    """
 
     def __init__(self, alpha=DEFAULT_ALPHA):
         self.alpha = alpha
@@ -78,6 +83,50 @@ class LocalThreshold:
     def describe(self):
         return (f"local threshold {self.threshold:.3f} = reference's {1 - self.alpha:.0%} quantile "
                 f"({self.n_reference} fields); source tpr at matched fpr {self.alpha:.0%}: {self.tpr:.3f}")
+
+
+def _wmean(x, w):
+    x = np.asarray(x, dtype=float)
+    w = np.ones_like(x) if w is None else np.asarray(w, dtype=float)
+    ok = np.isfinite(x) & np.isfinite(w)
+    return float(np.sum(x[ok] * w[ok]) / np.sum(w[ok])) if ok.any() and np.sum(w[ok]) > 0 else float("nan")
+
+
+def local_share(ref_p, src_p, src_y, tgt_p, alpha=DEFAULT_ALPHA, ref_w=None, tgt_w=None, adjust=True):
+    """One county-wide local threshold; shares weighted by `*_w` (e.g. area) when given."""
+    ref_p = np.asarray(ref_p, dtype=float)
+    t = float(np.nanquantile(ref_p, 1 - alpha))
+    ref_flag = _wmean(ref_p >= t, ref_w)
+    flag = _wmean(np.asarray(tgt_p, dtype=float) >= t, tgt_w)
+    if not adjust:
+        return flag
+    _, tpr = matched_tpr(src_p, src_y, alpha)
+    return adjusted_share(flag, ref_flag, tpr)
+
+
+def stratified_share(ref_p, ref_s, src_p, src_y, src_s, tgt_p, tgt_s, alpha=DEFAULT_ALPHA,
+                     ref_w=None, tgt_w=None, min_ref=30):
+    """Local threshold per stratum of evidence quality (threshold, reference flagged share and
+    matched recall all within the stratum), combined by the target's weight per stratum.
+    A stratum with fewer than `min_ref` reference fields uses the county-wide threshold."""
+    ref_p, ref_s = np.asarray(ref_p, float), np.asarray(ref_s)
+    src_p, src_y, src_s = np.asarray(src_p, float), np.asarray(src_y).astype(int), np.asarray(src_s)
+    tgt_p, tgt_s = np.asarray(tgt_p, float), np.asarray(tgt_s)
+    rw = np.ones(len(ref_p)) if ref_w is None else np.asarray(ref_w, float)
+    tw = np.ones(len(tgt_p)) if tgt_w is None else np.asarray(tgt_w, float)
+    est, wsum = 0.0, 0.0
+    for k in np.unique(tgt_s):
+        tk = tgt_s == k
+        rk, sk = ref_s == k, src_s == k
+        fin = np.isfinite(src_p)
+        if rk.sum() < min_ref or (fin & sk & (src_y == 0)).sum() < min_ref or (fin & sk & (src_y == 1)).sum() < min_ref:
+            rk, sk = np.ones(len(ref_p), bool), np.ones(len(src_p), bool)
+        e = local_share(ref_p[rk], src_p[sk], src_y[sk], tgt_p[tk], alpha, rw[rk], tw[tk])
+        if not np.isfinite(e):
+            return float("nan")
+        est += e * tw[tk].sum()
+        wsum += tw[tk].sum()
+    return est / wsum if wsum > 0 else float("nan")
 
 
 def emulate_counties(target, source_scores, source_y, alpha=DEFAULT_ALPHA, ref_silage=0.013,

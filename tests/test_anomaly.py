@@ -162,3 +162,46 @@ def test_local_threshold_recovers_share_under_a_location_shift():
     flag, est = lt.county_share(tgt)
     assert abs(lt.calls(tgt[:1600]).mean() - 0.10) < 0.03   # local grain flagged at ~alpha
     assert abs(est - 0.20) < 0.04
+
+
+def test_stratified_share_handles_strata_mixed_differently_in_reference_and_target():
+    from fieldvision.anomaly.local import local_share, stratified_share
+    rng = np.random.default_rng(1)
+
+    def draw(n, share, shift):
+        k = int(share * n)
+        return np.r_[rng.normal(shift, 1, n - k), rng.normal(shift + 2.5, 1, k)], np.r_[np.zeros(n - k), np.ones(k)]
+    # stratum "loose" scores sit 1.5 higher for both classes (worse evidence -> more false alarms)
+    sp_t, sy_t = draw(3000, 0.5, 0.0)
+    sp_l, sy_l = draw(3000, 0.5, 1.5)
+    src_p, src_y = np.r_[sp_t, sp_l], np.r_[sy_t, sy_l].astype(int)
+    src_s = np.r_[["tight"] * 3000, ["loose"] * 3000]
+    rp_t, _ = draw(1800, 0.01, 0.0)       # reference mostly tight
+    rp_l, _ = draw(200, 0.01, 1.5)
+    tp_t, ty_t = draw(500, 0.2, 0.0)      # target mostly loose
+    tp_l, ty_l = draw(1500, 0.2, 1.5)
+    ref_p, ref_s = np.r_[rp_t, rp_l], np.r_[["tight"] * 1800, ["loose"] * 200]
+    tgt_p, tgt_s = np.r_[tp_t, tp_l], np.r_[["tight"] * 500, ["loose"] * 1500]
+    strat = stratified_share(ref_p, ref_s, src_p, src_y, src_s, tgt_p, tgt_s, 0.10)
+    whole = local_share(ref_p, src_p, src_y, tgt_p, 0.10)
+    assert abs(strat - 0.2) < 0.05
+    assert whole - 0.2 > 0.1                # one threshold over-counts in the loose-heavy county
+
+
+def test_failure_checks_flag_a_shifted_target():
+    from fieldvision.anomaly.county import failure_checks
+    from fieldvision.anomaly.local import local_share
+    rng = np.random.default_rng(2)
+    src_p = np.r_[rng.normal(0, 1, 4000), rng.normal(2, 1, 4000)]
+    src_y = np.r_[np.zeros(4000, int), np.ones(4000, int)]
+    ref = rng.normal(0, 1, 1500)
+    ones = lambda n: np.ones(n)
+    good = np.r_[rng.normal(0, 1, 1600), rng.normal(2, 1, 400)]
+    bad = np.r_[rng.normal(0.8, 1, 1600), rng.normal(2.8, 1, 400)]      # target grain shifted up
+    for tgt, ok in ((good, True), (bad, False)):
+        est = local_share(ref, src_p, src_y, tgt, 0.10, ones(len(ref)), ones(len(tgt)))
+        d = failure_checks(ref, ones(len(ref)), tgt, ones(len(tgt)), src_p, src_y, est)
+        if ok:
+            assert abs(d["lower_tail_ratio"] - 1) < 0.15 and d["alpha_sweep_range"] < 0.08
+        else:
+            assert d["lower_tail_ratio"] < 0.75 and d["alpha_sweep_range"] > 0.08

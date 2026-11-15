@@ -6,19 +6,31 @@ A score that only measures how unlike normal grain a field looks does not find s
 on Austrian data every one-class scorer we tried ranks silage worse than the
 supervised 6-feature logistic (best ROC-AUC 0.69 against 0.77), because silage is a
 shifted part of the grain distribution, not something outside it, and the score flags
-odd grain fields (second green-up, cloudy series) just as readily. What does carry
-over from the idea is learning the *threshold* from local, mostly-grain fields while
-keeping the classifier's direction: in Austrian held-out years this holds the
-false-positive rate on new grain at the chosen 10% (instead of 23-34% at the
-classifier's own cut-off) and brings the estimated silage share of a 20%-silage
-"county" to 13-21% instead of 33-44%.
+odd grain fields (second green-up, cloudy series, early harvest) just as readily; it
+stays in the code only as a diagnostic of unusual fields, never as a silage vote.
+What does carry over is learning the classifier's *threshold* from local, mostly-grain
+fields: on Austrian pseudo-counties it never fails badly (mean absolute error of the
+area share 0.10-0.13 in every held-out year, where counting at the classifier's own
+cut-off ranges from 0.08 to 0.33), but in Maryland its one real test so far, Frederick's
+partial snapshot, comes out at 15% against the Census 19.6% with both of its failure
+checks firing, so the Queen Anne's reference probably does not stand in for that part
+of Frederick and the number should not be trusted.
 
-In Maryland, with Queen Anne's County as the mostly-grain reference and the recipe
-committed before Frederick County was read, Frederick's partial snapshot (11% of its
-corn acres) comes out at 19% silage by area against the Census 19.6%, where the
-classifier at its own cut-off finds almost the same share in both counties; the
-interval (3-36%) is too wide to call that confirmed, so the full county and the two
-untouched counties are the real test.
+**Known weak point, up front.** Any reference-county method assumes the target
+county's grain looks to the classifier like the reference county's grain. The
+modelling session found on the same partial Frederick snapshot that the false-positive
+rate taken from Queen Anne's at the 0.5 cut-off (0.218) is larger than Frederick's whole
+counted share (18.9%), so a reference county's rate need not carry to its neighbour.
+This method does not escape that assumption; it only moves it from the 0.5 cut-off to
+the reference's 90th percentile. When it fails, the adjusted share is biased in the
+direction of the shift (target grain scoring higher -> over-count, lower -> under-count,
+clipped at 0), and it shows through two checks computed from the two counties' scores
+alone, with no labels: (1) the estimate drifts with alpha (estimates at alpha 0.05,
+0.10, 0.20 and 0.30 disagree), and (2) the share of the target's area below the
+reference's median score differs from what the estimate implies. On Austrian
+pseudo-counties of Frederick's size both checks together reach Frederick's values in
+under 1% of draws. When they fire, the county figure should be reported as "reference
+does not match", not as a number.
 
 ## Stage 1: distance-to-normal scorers on European data
 
@@ -138,7 +150,61 @@ is about right on average but a single county's estimate is noisy (the 5-95% ran
 spans 0 to about 0.5 with 300-750 fields per half), and 2022 comes out low because the
 two classes separate less well that year than in the training years, which the matched
 recall cannot know. The European year shift is also much smaller than the shift to
-Maryland, so this checks the mechanics, not the size of the effect there.
+Maryland, so this checks the mechanics, not the size of the effect there. (This check
+scores every field of the test county, so its matched recall from all source fields
+is consistent with it; see the correction below for the county recipe.)
+
+### Correction: the matched recall must come from the same kind of field
+
+The county recipe scores only fields that are not low evidence, but its first version
+measured the matched recall on all source fields, low-evidence ones included. Those
+separate worse, so the recall was understated (Austria, at a 10% local false-positive
+rate on fields that are not low evidence: target-year recall 0.56 in 2022 and 0.67 in
+2024, against 0.49 and 0.44 from all source fields) and the adjusted share overstated,
+by more the more silage there is. Found on the Austrian pseudo-counties below, after
+the Frederick snapshot had been scored once; fixed by dropping low-evidence fields from
+the source scores (`local_eval.source_and_target_scores`, default). With it, the
+matched recall for Maryland is 0.535 instead of 0.462. Both Frederick numbers are
+reported below.
+
+### Pseudo-counties, on the modelling session's footing
+
+The modelling session's county check (`fieldvision.model.county_validation`) draws
+pseudo-counties of 250 held-out fields at silage shares from 1% to 50%, with a separate
+250-field reference county at about 1%, 200 draws, and scores the area share against
+the truth. The same construction here, on the 6-feature logistic trained on the other
+two Austrian years, plus a harder version where the reference and the target come from
+different random halves of the held-out year's blocks (neighbouring, not identical,
+counties). Estimators, all over the area that is not low evidence:
+
+- counted: share of area at or above the classifier's 0.5;
+- Europe-adjusted: counted, corrected with the TPR and FPR at 0.5 from the source;
+- local: this recipe, one threshold for the whole county (corrected matched recall);
+- local, not adjusted: the share of area above the local threshold, as it is;
+- local, stratified: the same per stratum of evidence quality (harvest bracket at most
+  10 days, or 11-20 days; the cut was fixed from the feature's distribution before any
+  result), each with its own threshold and matched recall, combined by area.
+
+Mean absolute error of the area share over all shares (1-50%), block-split version
+(the random version in brackets):
+
+| held out | counted | Europe-adjusted | local | local, not adjusted | local, stratified |
+|---|---:|---:|---:|---:|---:|
+| 2022 | 0.159 (0.152) | 0.082 (0.064) | 0.129 (0.120) | 0.107 (0.098) | 0.122 (0.106) |
+| 2023 | 0.327 (0.327) | 0.446 (0.447) | 0.099 (0.059) | 0.093 (0.079) | 0.114 (0.072) |
+| 2024 | 0.077 (0.076) | 0.112 (0.112) | 0.111 (0.103) | 0.072 (0.069) | 0.127 (0.118) |
+| mean | 0.188 | 0.213 | 0.113 | 0.091 | 0.121 |
+
+- The stratified version is not better than one threshold in any year, so the
+  whole-county threshold stays.
+- Counting and Europe-adjusted counting are best in one year and fail in another
+  (2023, where the classifier's calibration moved: errors 0.33 and 0.45); the two local
+  versions never exceed 0.13. That robustness is the reason to use a local reference.
+- The plain locally-flagged share has the lower mean error: it is better at 10-30%
+  silage and worse at 1-5% (it cannot read below about the alpha share), the same
+  pattern the modelling session found on its composite scores. The adjusted version
+  still over-counts by about 0.08 in 2022 and 2024, because those years separate the
+  classes better than the training years, which the matched recall cannot know.
 
 ## Recipe for Maryland, fixed before scoring Frederick
 
@@ -147,7 +213,8 @@ on Frederick or on any Census number.
 
 - Classifier: the main line's 6-feature logistic (`make_factories(..., "relative")["logistic"]`),
   trained on all 4,800 labelled Austrian fields (2022, 2023, 2024).
-- Matched recall: out-of-fold scores from 5 spatial folds on the same 4,800 fields.
+- Matched recall: out-of-fold scores from 5 spatial folds on the same 4,800 fields
+  (corrected later to the fields that are not low evidence; see the correction above).
 - Reference: Queen Anne's County (24035) 2022, every corn field with a feature row that
   is not low evidence (1,054 of 1,449); labels are not read (there are none).
 - alpha = 0.10, so the local threshold is the reference's 90th percentile of scores
@@ -179,31 +246,49 @@ The Census share (19.6%) was not used for anything below.
 | classifier at 0.5, share of area | 0.181 | 0.195 [0.14, 0.26] |
 | classifier at 0.5, share of fields | 0.149 | 0.256 |
 | local threshold, flagged share of area | 0.115 | 0.180 |
-| local threshold, **adjusted share of area** (primary) | 0 (by construction) | **0.187 [0.03, 0.36]** |
-| local threshold, adjusted share of fields | 0 (by construction) | 0.384 [0.25, 0.54] |
+| local threshold, adjusted share of area, first version (recall 0.462) | 0 (by construction) | 0.187 [0.03, 0.36] |
+| local threshold, **adjusted share of area, corrected** (recall 0.535) | 0 (by construction) | **0.154** |
+| local threshold, adjusted share of fields, corrected | 0 (by construction) | 0.320 |
+| local threshold, stratified (not adopted), share of area | | 0.211 |
 | distance view, flagged share of area | 0.008 | 0.043 |
 
 Intervals: 2,000 bootstrap resamples of Frederick's scored fields; they leave out the
 uncertainty in the reference and the matched recall and the clustering of fields in
-blocks, so the real uncertainty is wider (the European check gave 0 to about 0.5 for a
-single county). Agreement: the local threshold flags 57 fields, all of which the
-classifier at 0.5 also flags; the classifier flags 4 more. The distance view flags 7
-fields, one of them also flagged by both.
+blocks, so the real uncertainty is wider. Agreement: the local threshold flags 57
+fields, all of which the classifier at 0.5 also flags; the classifier flags 4 more.
+The distance view flags 7 fields, one of them also flagged by both.
+
+**Failure checks** (corrected recipe): the adjusted area share at alpha 0.05 / 0.10 /
+0.20 / 0.30 is 0.35 / 0.15 / 0 / 0, and 62% of Frederick's scored area lies below
+Queen Anne's median score where the estimate implies 40% (ratio 1.56). Frederick's
+grain sits mostly lower than Queen Anne's while its top few percent sit higher, so no
+single local rate fits both. To judge whether that is just noise at this size, the same
+checks were run on 1,200 Austrian pseudo-counties of 240 scored fields with a reference
+of 96-340 scored fields (all smaller than Queen Anne's 1,054, so if anything noisier):
+the alpha drift reached 0.35 in 4.8% of them (0.8% in 2023 and 2024), the lower-tail
+ratio reached 1.56 in 1.9% (none in 2023 and 2024), and both together in 0.8% (none in
+2023 and 2024). Where the alpha drift was in its top 10%, the error was twice as large
+(0.17 against 0.085). So the checks say the reference does not match this part of
+Frederick.
 
 Reading: at its own cut-off the classifier finds about as much silage in Queen Anne's
-as in Frederick (18% and 20% of area) while the Census puts them 18 points apart; with
-the threshold learned from Queen Anne's, Frederick's estimate (19% of area) lands on
-the Census figure, though with an interval far too wide to call it confirmed, on 11% of
-the county. The count-based share is about twice the area share because the flagged
-fields are smaller (median 4.0 ha against 5.7 ha); which of the two is right is not
-known from this sample. The full Frederick extraction is the real test, and Kent and
-Carroll, untouched, should be scored with exactly this recipe.
+as in Frederick (18% and 20% of area) while the Census puts them 18 points apart, so
+the plain classifier cannot tell these counties apart. The local threshold does
+separate them, but on this snapshot its estimate depends on alpha and its checks fire,
+so it should be reported as "reference does not match" rather than as 15%. The snapshot
+is 7 adjacent blocks in one corner of a county that spans very different terrain from
+Queen Anne's; the full Frederick extraction will show whether the mismatch is that
+corner or the county. Kent and Carroll, untouched, should be scored with exactly this
+recipe and checks, read as numbers only when the checks pass.
 
 ## The importable layer
 
 `fieldvision.anomaly.local.LocalThreshold` (fit on reference scores plus source
-out-of-fold scores and labels; `calls(scores)`, `county_share(scores)`) is the county
-layer recommended here. `fieldvision.anomaly.api` holds the distance view:
+out-of-fold scores and labels, all from fields that are not low evidence;
+`calls(scores)`, `county_share(scores)`) is the county layer recommended here, with
+`fieldvision.anomaly.county.failure_checks` reported next to every county figure.
+`local.local_share` and `local.stratified_share` are the area-weighted functions used
+on the pseudo-counties. `fieldvision.anomaly.api` holds the distance view:
 `fit_reference(reference_table)` and `score_target(model, target_table)` work on the
 feature table that `features.build.build_features` produces (plus the monthly
 composite columns for the raw input), and `confidence_tier(classifier_pred,
