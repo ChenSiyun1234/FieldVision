@@ -377,3 +377,9 @@ Not finished:
   `us_55_2025_s1..s3\` (50 read blocks each, `--year 2025`, upload the 5 files on README line 1, run cells 1-7),
   laptop run folders with stub manifests in `C:\t\fv\data\timeseries\`. Draws: Pennsylvania 150 of 3,106 read
   blocks (5.1 % of frame acres), Wisconsin 150 of 4,433 (3.4 %).
+- 22:55 PT: Racine and Marathon merged by the extraction session, verified (42 and 70 blocks complete, 1,946 and
+  3,448 fields usable, Collection 1, no failures), READY lines written (Marathon marked as a seeded draw), toolbox
+  folders `C:\t\fv\data\counties\55101\2023\` and `55073\2023\` (fields, series, coverage, unscored_corn.json,
+  county_check.json, sample.json). `references.json`: 55073 -> 55101, year 2023, share 0.0237 from the 2023
+  county survey (no Census in 2023; recorded in the entry's share_source). Untouched until the modelling session
+  runs them once under its 19:33 rule.
