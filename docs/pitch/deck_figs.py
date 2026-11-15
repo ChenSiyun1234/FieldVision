@@ -145,6 +145,67 @@ def places():
     put(fig, "s05_places")
 
 
+# --- the scoreboard: every place against USDA, in plain view ----------------------------------------
+def scoreboard():
+    def pct(v):
+        return f"{v:.2f}%" if round(v * 100) % 10 else f"{v:.1f}%"
+
+    zones = [("Little silage", "we are close", lambda u: u < 8),
+             ("Some silage", "off by 4 to 6 points", lambda u: 8 <= u < 40),
+             ("Mostly silage", "we miss it", lambda u: u >= 40)]
+    rows = sorted(N.PLACES, key=lambda r: r[2])
+    fig = body()
+    ax = fig.add_axes([0.36, 0.13, 0.63, 0.8])
+    D.clean(ax, grid=None)
+    ax.set_xlim(-0.8, 108)
+    y = 0.0
+    placed, spans = [], []
+    for zone_name, verdict, inside in zones:
+        members = [r for r in rows if inside(r[2])]
+        first = y
+        for r in members:
+            placed.append((y, r))
+            y -= 1.0
+        spans.append((zone_name, verdict, first, y + 1.0))
+        y -= 0.55
+    bottom = y + 0.55
+    ax.set_ylim(bottom - 0.75, 0.9)
+    for yy, (group, name, usda, band, plain, window, unseen) in placed:
+        ours = window if unseen > N.NOT_SEEN_SWITCH else plain
+        missed = name in N.PLACE_MISSES
+        ax.text(-1.6, yy, name, ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
+        ax.plot([min(usda, ours), max(usda, ours)], [yy, yy], color=GREY, lw=2.4, zorder=2)
+        ax.scatter([ours], [yy], s=170, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
+        ax.scatter([usda], [yy], s=140, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
+        ax.text(57, yy, f"USDA {pct(usda)}", fontsize=13.5, color=INK2, va="center")
+        ax.text(74.5, yy, f"we say {pct(ours)}", fontsize=14.5, fontweight="bold", color=INK if missed else BLUE, va="center")
+        ax.text(94.5, yy, "tuned here" if group == "tuning" else "test", fontsize=12, color=INK2, va="center",
+                style="italic" if group == "tuning" else "normal")
+    for x in (0, 10, 20, 30, 40, 50):
+        ax.plot([x, x], [bottom - 0.6, 0.6], color=GRID, lw=1, zorder=0)
+    ax.set_yticks([])
+    ax.set_xticks([0, 10, 20, 30, 40, 50])
+    ax.set_xticklabels(["0%", "10%", "20%", "30%", "40%", "50%"])
+    # the three zones, named down the left edge of the figure
+    to_fig = lambda yy: fig.transFigure.inverted().transform(ax.transData.transform((0, yy)))[1]  # noqa: E731
+    for zone_name, verdict, y_top, y_low in spans:
+        mid = (to_fig(y_top) + to_fig(y_low)) / 2
+        last = zone_name.startswith("Mostly")
+        fig.text(0.02, mid + 0.028, zone_name, fontsize=17, fontweight="bold", color=INK, va="center")
+        fig.text(0.02, mid - 0.028, verdict, fontsize=14, color=INK if last else BLUE, fontweight="bold", va="center")
+        fig.add_artist(plt.Line2D([0.185, 0.185], [to_fig(y_low) - 0.03, to_fig(y_top) + 0.03], color=GREY, lw=2,
+                                  transform=fig.transFigure))
+    handles = [
+        plt.Line2D([], [], marker="D", ls="", markersize=11, markerfacecolor=INK, markeredgecolor=BG, label="what USDA reports"),
+        plt.Line2D([], [], marker="o", ls="", markersize=12, markerfacecolor=BLUE, markeredgecolor=BG, label="what we read from space"),
+    ]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.35, 1.0), ncol=2, frameon=False, fontsize=13,
+               labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
+    fig.text(0.02, 0.02, "Share of the corn area that is silage. The four Maryland counties (2022) were used to tune the method; "
+             "the other five places were tests, each run once.", fontsize=11.5, color=INK2, va="bottom")
+    put(fig, "s06_scoreboard")
+
+
 # --- slide 7: why simple won ---------------------------------------------------------------------
 def transfer_summary():
     fig = body()
@@ -377,6 +438,7 @@ if __name__ == "__main__":
     D.labelled_fields()
     D.state_2025()
     places()
+    scoreboard()
     transfer_summary()
     gap_evidence()
     maryland_test()

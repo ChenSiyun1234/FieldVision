@@ -73,9 +73,10 @@ and run the script again.
 
 ## The slide deck
 
-The deck itself (twelve plain slides and three backup slides, 16:9, speaker notes in English and
-Chinese on every slide) is built from the same numbers. Earlier versions (16 slides, then ten) are
-in this folder's history. The PowerPoint and PDF files are not in git; they are made by:
+The deck itself (a nine-slide story for the judges, then eight backup slides, 16:9, speaker notes
+in English and Chinese on every slide) is built from the same numbers. Earlier versions (16
+slides, ten, twelve) are in this folder's history. The PowerPoint and PDF files are not in git;
+they are made by:
 
 ```
 python docs/pitch/deck_figs.py --pictures <folder with strip_*.png> --maps <folder with map_*.png>
@@ -86,13 +87,24 @@ pwsh docs/pitch/export_deck.ps1 -Pptx <folder>/FieldVision_model_story.pptx
 `deck_figs.py` draws the figure bodies into `docs/pitch/deck/` (the slide carries the title, so
 these have none) and cuts the field pictures and county maps out of the sheets made by the
 extraction work. `build_deck.py` needs python-pptx; titles, cards and notes are editable text.
-`export_deck.ps1` asks PowerPoint for the PDF. The story: the problem and its catch, what the
-satellite sees, the small model and its field test, every place checked against USDA (the four
-Maryland counties used while tuning, the Michigan test, Maryland 2025), what went wrong and what
-we did in one table, then the same in four slides (the county total that went wrong, two lessons
-from the data, what could not be fixed), where the model sits in the team's system, and what the
-team gets. Backup slides: why the simple model won, how the tests were logged, Maryland 2025 in
-detail. To add a place to the results slide, add a row to `PLACES` in `pitch_numbers.py`.
+`export_deck.ps1` asks PowerPoint for the PDF. To add a place to the results slides, add a row to
+`PLACES` in `pitch_numbers.py`.
+
+**Who the story is for.** Ten judges: five from USDA (the question is theirs), two from NVIDIA, two
+from Niantic Spatial, one from UC Davis. Five minutes, no questions. The rubric is USDA's and its
+words are on the slides: presentation 40 % ("demonstrating the solution and its value", "explain
+their process and how it could be developed further"); technical quality 20 % (precision, recall,
+false positive rate, response time); innovation 20 % ("a new data source or harvest signal");
+feasibility 20 % ("potential to be developed further").
+
+**The story, nine slides.** 1 USDA's own question, with a real field. 2 The catch and the idea: no
+US labels, so learn from European farm registries (the new data source). 3 The signal, in real
+pictures: silage is cut green and wet (the harvest signal). 4 How it works in three plain steps,
+and the rule that a hidden harvest is not guessed. 5 The test on USDA's 44 labelled fields, with
+the rubric's four measures. 6 The scoreboard: nine places against USDA, close where silage is
+rare, a miss where it is everywhere. 7 What went wrong on the way and what it taught us (the
+process). 8 Where the model sits in the team's system. 9 What USDA gets today, what comes next,
+and the closing line. Everything more detailed is in the backup slides.
 
 ## Still to come
 

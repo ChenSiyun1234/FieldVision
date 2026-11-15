@@ -240,3 +240,13 @@ MARATHON_NOT_JUDGED = 48
 NOT_SEEN_SWITCH = 20
 # Not opened: kept as the clean test of the next change to the module (log 23:00).
 PLACES_HELD = ["Pennsylvania, Wisconsin 2025"]
+
+# The judges' rubric asks for precision, recall, false positive rate and response time. On the 44
+# labelled field-years the small model's calls were (log 18:02): 11 silage found, 1 silage missed,
+# 1 grain called silage, 31 grain right. So recall 11 of 12, precision 11 of 12, false positive
+# rate 1 of 32.
+CONFUSION = {"silage_found": 11, "silage_missed": 1, "grain_called_silage": 1, "grain_right": 31}
+# Response time, from the log's own times: Branch and Gratiot (3,390 + 3,463 fields) were each
+# classified and added up between 19:07 and 19:10 (log 19:07, 19:11), on a laptop, with the
+# satellite series already extracted.
+RESPONSE_TIME = {"fields": 3_390 + 3_463, "counties": 2, "minutes": 3}
