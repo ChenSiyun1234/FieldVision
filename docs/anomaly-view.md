@@ -13,8 +13,12 @@ false-positive rate on new grain at the chosen 10% (instead of 23-34% at the
 classifier's own cut-off) and brings the estimated silage share of a 20%-silage
 "county" to 13-21% instead of 33-44%.
 
-Stage 2 (Maryland) result: see the section at the end; the recipe was fixed and
-committed before the target county was scored.
+In Maryland, with Queen Anne's County as the mostly-grain reference and the recipe
+committed before Frederick County was read, Frederick's partial snapshot (11% of its
+corn acres) comes out at 19% silage by area against the Census 19.6%, where the
+classifier at its own cut-off finds almost the same share in both counties; the
+interval (3-36%) is too wide to call that confirmed, so the full county and the two
+untouched counties are the real test.
 
 ## Stage 1: distance-to-normal scorers on European data
 
@@ -164,7 +168,36 @@ session's 22.4% because that check used its own trained model and abstention rul
 
 ## Stage 2: Frederick County
 
-(pending: scored after the recipe above was committed)
+Scored at 16:55 on 14 November, after the recipe above was committed, on the partial
+snapshot available then: 248 fields in 7 adjacent blocks of 70 (about 11% of the
+county's corn acres), so not a sample of the whole county. 238 are not low evidence.
+The Census share (19.6%) was not used for anything below.
+
+| | Queen Anne's (reference, Census 1.3%) | Frederick, partial (Census 19.6%) |
+|---|---:|---:|
+| fields scored | 1,054 | 238 |
+| classifier at 0.5, share of area | 0.181 | 0.195 [0.14, 0.26] |
+| classifier at 0.5, share of fields | 0.149 | 0.256 |
+| local threshold, flagged share of area | 0.115 | 0.180 |
+| local threshold, **adjusted share of area** (primary) | 0 (by construction) | **0.187 [0.03, 0.36]** |
+| local threshold, adjusted share of fields | 0 (by construction) | 0.384 [0.25, 0.54] |
+| distance view, flagged share of area | 0.008 | 0.043 |
+
+Intervals: 2,000 bootstrap resamples of Frederick's scored fields; they leave out the
+uncertainty in the reference and the matched recall and the clustering of fields in
+blocks, so the real uncertainty is wider (the European check gave 0 to about 0.5 for a
+single county). Agreement: the local threshold flags 57 fields, all of which the
+classifier at 0.5 also flags; the classifier flags 4 more. The distance view flags 7
+fields, one of them also flagged by both.
+
+Reading: at its own cut-off the classifier finds about as much silage in Queen Anne's
+as in Frederick (18% and 20% of area) while the Census puts them 18 points apart; with
+the threshold learned from Queen Anne's, Frederick's estimate (19% of area) lands on
+the Census figure, though with an interval far too wide to call it confirmed, on 11% of
+the county. The count-based share is about twice the area share because the flagged
+fields are smaller (median 4.0 ha against 5.7 ha); which of the two is right is not
+known from this sample. The full Frederick extraction is the real test, and Kent and
+Carroll, untouched, should be scored with exactly this recipe.
 
 ## The importable layer
 
