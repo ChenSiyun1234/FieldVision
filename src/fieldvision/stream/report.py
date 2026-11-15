@@ -189,15 +189,17 @@ def figure(table, models, path, title):
     ax.set_xlim(0.5, max(0.9, float(table["auc_out"].max()) + 0.03))
     ax.tick_params(axis="both", length=0, labelcolor=ink)
     ax.tick_params(axis="x", labelsize=8, labelcolor=muted)
-    ax.set_xlabel("ROC-AUC on the country that was held out (grey bar: mean of the three; "
-                  "dashed line: the 6-feature logistic's mean)", fontsize=8.5, color=muted)
-    ax.set_title(title, fontsize=11.5, loc="left", color=ink, pad=10)
-    ax.legend(frameon=False, fontsize=8.5, loc="lower right", labelcolor=ink)
+    ax.set_xlabel("ROC-AUC on the country that was held out\n"
+                  "grey bar: mean of the three countries; dashed line: the 6-feature logistic's mean",
+                  fontsize=8.5, color=muted)
+    fig.suptitle(title, x=0.012, y=0.985, ha="left", va="top", fontsize=11.5, color=ink)
+    ax.legend(frameon=False, fontsize=8.5, loc="lower left", bbox_to_anchor=(0.0, 1.0), ncol=3,
+              borderaxespad=0.1, handletextpad=0.2, columnspacing=1.6, labelcolor=ink)
     for side in ("top", "right", "left", "bottom"):
         ax.spines[side].set_visible(False)
     ax.grid(axis="x", color="#e9e8e4", linewidth=0.8, zorder=0)
     ax.set_axisbelow(True)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.965))
     fig.savefig(path, facecolor=surface)
     plt.close(fig)
 
