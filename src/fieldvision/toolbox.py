@@ -51,7 +51,9 @@ MODULE_V1_MODEL = "composite_v1"
 MODULE_V2_MODEL = "eu2_logistic_v1"
 CLEAR_BRACKET_DAYS = 12.0
 # module_v2's county step on the clear tier: "local_threshold", "reference", "europe" or "counted"
-MODULE_V2_COUNTY_STEP = "local_threshold"     # fixed by the rule logged at 17:30, see docs/module.md
+MODULE_V2_COUNTY_STEP = "counted"     # decision A, logged 18:25 / 18:37 (the local threshold failed on Kent)
+MIN_CLEAR_FIELDS = 100                # no headline below this clear tier (logged 18:37)
+MIN_CLEAR_AREA_SHARE = 0.15
 
 
 def evidence_tier(row):
@@ -450,12 +452,24 @@ class Toolbox:
                "reference": "clear_silage_share_reference_calibrated",
                "europe": "clear_silage_share_europe_adjusted",
                "counted": "clear_silage_share_counted"}.get(MODULE_V2_COUNTY_STEP)
-        if key and out.get(key) is not None:
+        out["clear_tier_fields"] = int(clear.sum())
+        both = (clear | wide)
+        out["clear_wide_share_called_silage"] = (round(float(np.sum(a[both] * call[both]) / np.sum(a[both])), 4)
+                                                 if both.any() else None)
+        enough = (clear.sum() >= MIN_CLEAR_FIELDS and total
+                  and ac / total >= MIN_CLEAR_AREA_SHARE)
+        if not enough:
+            out["silage_share_headline"] = None
+            out["headline_method"] = (f"no county estimate: clear tier {int(clear.sum())} fields, "
+                                      f"{(ac / total if total else 0):.0%} of area, below the minimum of "
+                                      f"{MIN_CLEAR_FIELDS} fields and {MIN_CLEAR_AREA_SHARE:.0%}; the clear + wide "
+                                      "counted share is context only")
+        elif key and out.get(key) is not None:
             out["silage_share_headline"] = out[key]
             out["headline_method"] = f"module_v2 county step '{MODULE_V2_COUNTY_STEP}' on the clear tier"
         else:
             out["silage_share_headline"] = out["clear_silage_share_counted"]
-            out["headline_method"] = "module_v2: counted share of the clear tier (county step not set or not available)"
+            out["headline_method"] = "module_v2: counted share of the clear tier"
         out["module_headline_share"] = out["silage_share_headline"]
         out["module_headline_method"] = out["headline_method"]
         out.update(self._unscored(fips, year, out["silage_share_headline"], total))

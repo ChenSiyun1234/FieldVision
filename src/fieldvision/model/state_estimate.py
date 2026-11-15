@@ -176,6 +176,8 @@ def main(argv=None):
                     help="reference counted clear share above which the headline is flagged")
     ap.add_argument("--secondary-model", default=None,
                     help="also report this model's counted clear share (shown beside)")
+    ap.add_argument("--min-clear-fields", type=int, default=300)
+    ap.add_argument("--min-clear-area", type=float, default=0.15)
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
@@ -193,10 +195,14 @@ def main(argv=None):
     ref_share = float(sum(shares[f] * w[f] for f in w.index) / w.sum()) if len(w) else float("nan")
     point, ranges, n_blocks = block_bootstrap(table, ref_mask, ref_share, tpr_clear, local_tpr,
                                               n_boot=a.n_boot)
-    head = point[a.headline]
-    lo, hi = ranges[a.headline]
+    n_clear = int((table["tier"] == "clear").sum())
+    enough = n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
+    head = point[a.headline] if enough else float("nan")
+    lo, hi = ranges[a.headline] if enough else (float("nan"), float("nan"))
     report = {
         "headline_estimate": a.headline, "headline_share": head, "headline_range_5_95": [lo, hi],
+        "clear_tier_fields": n_clear, "headline_reported": bool(enough),
+        "minimum": {"clear_fields": a.min_clear_fields, "clear_share_of_area": a.min_clear_area},
         "shift_guard": {"reference_counted_clear": point["reference_counted_clear"],
                         "limit": a.guard,
                         "flagged": bool(point["reference_counted_clear"] > a.guard)},
@@ -205,8 +211,9 @@ def main(argv=None):
         "reference_blocks": int(table.loc[ref_mask, "block_id"].nunique()),
         "reference_share_from_2022_census": ref_share, "tpr_clear": tpr_clear, "local_tpr": local_tpr,
         "sample_double_crop_acres": sample_dc_acres,
-        "acres": to_acres(head, lo, hi, a.class1_acres,
-                          a.double_crop_acres if a.double_crop_acres is not None else 0.0),
+        "acres": (to_acres(head, lo, hi, a.class1_acres,
+                           a.double_crop_acres if a.double_crop_acres is not None else 0.0)
+                  if enough else {"note": "clear tier below the minimum: no state figure"}),
         "model": a.model,
     }
     if a.secondary_model:

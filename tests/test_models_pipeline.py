@@ -420,7 +420,8 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
                   "clear_silage_share_local_threshold", "clear_reference",
                   "clear_silage_share_local_flagged", "local_per_tier_share", "local_per_tier_detail",
                   "unscored_corn_acres", "county_share_with_unscored_low",
-                  "county_share_with_unscored_high"}
+                  "county_share_with_unscored_high", "clear_tier_fields",
+                  "clear_wide_share_called_silage"}
     assert set(am) == STUB_KEYS["aggregate"] | extra | clear_keys
     rows = [json.loads(l) for l in open(c2["results_path"].replace(".parquet", ".jsonl"))]
     assert {r["model"] for r in rows} == {"eu2_logistic_v1"}
