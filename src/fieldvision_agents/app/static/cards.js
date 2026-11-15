@@ -143,14 +143,16 @@ export function renderCard(card, ctx) {
 
 const UNIT = { bu: (v) => `${big(v)} bu`, "bu/acre": (v) => `${fmt(v)} bu/ac`, acres: (v) => `${big(v)} ac`, "%": (v) => `${fmt(v)}%`, "$/bu": (v) => money(v) };
 
+// One row per USDA indicator: value, change against its stated comparison, and the source, aligned for reading down.
 export function supplyTiles(tiles) {
-  return el("div", { class: "tiles" }, tiles.map((t) => {
-    const arrow = t.change_pct == null ? "" : t.change_pct > 0 ? "▲" : t.change_pct < 0 ? "▼" : "■";
-    const delta = t.change_pct != null ? el("span", {}, el("b", {}, `${arrow} ${fmt(Math.abs(t.change_pct))}%`), ` vs ${t.vs}`)
-      : t.change_pts != null ? el("span", {}, el("b", {}, `${t.change_pts > 0 ? "+" : ""}${fmt(t.change_pts)} pts`), ` vs ${t.vs}`) : "";
-    return el("div", { class: "tile" }, el("div", { class: "label" }, t.label),
-      el("div", { class: "value" }, (UNIT[t.unit] || ((v) => fmt(v)))(t.value)), el("div", { class: "delta" }, delta), el("div", { class: "src" }, t.source));
-  }));
+  const change = (t) => t.change_pct != null ? `${t.change_pct > 0 ? "+" : ""}${fmt(t.change_pct)}%`
+    : t.change_pts != null ? `${t.change_pts > 0 ? "+" : ""}${fmt(t.change_pts)} pts` : "—";
+  return el("div", { class: "scroll-x" }, el("table", { class: "data indicators" },
+    el("thead", {}, el("tr", {}, el("th", {}, "Indicator"), el("th", { class: "num" }, "Value"), el("th", { class: "num" }, "Change"),
+      el("th", {}, "Compared with"), el("th", {}, "Source"))),
+    el("tbody", {}, tiles.map((t) => el("tr", {}, el("td", {}, t.label),
+      el("td", { class: "num" }, el("b", {}, (UNIT[t.unit] || ((v) => fmt(v)))(t.value))), el("td", { class: "num" }, change(t)),
+      el("td", { class: "muted" }, t.vs || ""), el("td", { class: "muted small" }, t.source))))));
 }
 
 export function whatIfCard(w) {

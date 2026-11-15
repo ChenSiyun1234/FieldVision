@@ -17,6 +17,15 @@ const binOf = (v) => { const i = BINS.findIndex((b) => v < b); return i === -1 ?
 const ramp = (v) => cssVar(`--q${binOf(v) + 1}`);
 const light = isLight;
 
+// Build the map only once its box has a size: on first load the page is laid out after this runs, and a
+// zero-size map gives Leaflet no bounds to clip shapes against ("reading min").
+function whenSized(node, fn) {
+  const ready = () => node.isConnected && node.clientWidth > 0 && node.clientHeight > 0;
+  if (ready()) return setTimeout(fn, 0);             // not requestAnimationFrame: it stalls in background tabs
+  const ro = new ResizeObserver(() => { if (ready()) { ro.disconnect(); fn(); } });
+  ro.observe(node);
+}
+
 async function shapes() {
   if (!topo) topo = await (await fetch("/vendor/us-atlas/counties-10m.json")).json();
   return { states: window.topojson.feature(topo, topo.objects.states), counties: window.topojson.feature(topo, topo.objects.counties) };
@@ -121,8 +130,8 @@ export async function usMapPage(app) {
   const [{ states, counties }, stateShares, dairies] = await Promise.all([shapes(), api("/api/geo/states"), api("/api/geo/dairies").catch(() => null)]);
   panel.replaceChildren(nationPanel(stateShares));
 
-  requestAnimationFrame(() => {
-    const map = L.map(mapNode, { zoomSnap: 1, scrollWheelZoom: true });   // whole zooms keep label tiles crisp
+  whenSized(mapNode, () => {
+    const map = L.map(mapNode, { zoomSnap: 1, scrollWheelZoom: true, zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false });   // whole zooms keep label tiles crisp; no zoom animation, which also stops layers being added mid-zoom (Leaflet "reading min" error)
     map.createPane("labels"); map.getPane("labels").style.zIndex = 650; map.getPane("labels").style.pointerEvents = "none";
     const tone = light() ? "Light" : "Dark";
     const street = L.tileLayer(ESRI_TILE(`Canvas/World_${tone}_Gray_Base`), { maxZoom: 16, attribution: "Basemap © Esri" });
@@ -170,6 +179,8 @@ export async function usMapPage(app) {
       const s = seasons.find((x) => Number(x.year) === Number(app.ctx.year)) || seasons[seasons.length - 1];
       const fc = await api(`/api/geo/fields/${fips}/${s.year}`);
       if (!mapNode.isConnected) return null;                 // the view changed while this loaded
+      // a field whose outline came back empty breaks Leaflet's clipping ("reading min"): leave it off the map
+      fc.features = fc.features.filter((f) => f.geometry && f.geometry.coordinates.flat(Infinity).length >= 6);
       const color = { silage: cssVar("--silage"), grain: cssVar("--grain"), "not judged": cssVar("--abstain") };
       fieldLayer = L.geoJSON(fc, {
         style: (f) => ({ color: color[f.properties.call], weight: 1, fillColor: color[f.properties.call], fillOpacity: 0.62 }),

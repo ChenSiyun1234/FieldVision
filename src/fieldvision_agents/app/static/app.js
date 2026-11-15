@@ -81,7 +81,7 @@ function openAsk(question) {
 }
 function closeAsk() { $("#drawer").hidden = true; $("#ask-fab").hidden = !app.role; }
 
-function paintTheme() { $("#theme").textContent = isLight() ? "☾" : "☀"; $("#theme").title = isLight() ? "Dark mode" : "Light mode"; }
+function paintTheme() { $("#theme").textContent = isLight() ? "Dark" : "Light"; $("#theme").title = isLight() ? "Switch to dark mode" : "Switch to light mode"; }
 
 app.renderTabs = () => {
   $("#tabs").replaceChildren(...ROLES[app.role].tabs.map(([id, label]) =>
@@ -114,7 +114,7 @@ app.refreshSide = async () => {
   const mode = el("div", { class: "seg", role: "group", "aria-label": "Agent" },
     ["nemotron", "offline"].map((m) => el("button", { "aria-pressed": String(app.mode === m), disabled: m === "nemotron" && !online,
       onclick: () => { app.mode = m; app.refreshSide(); } }, m === "nemotron" ? "Nemotron" : "Offline rules")));
-  const pickOnMap = el("button", { class: "small", style: "width:100%;margin:-4px 0 12px", onclick: () => app.goTab("usmap") }, "🗺 Pick on the US map");
+  const pickOnMap = el("button", { class: "small", style: "width:100%;margin:-4px 0 12px", onclick: () => app.goTab("usmap") }, "Pick on the map");
   const asked = app.threads[app.role].filter((m) => m.role === "user").slice(-8).reverse();
   const history = el("div", {}, el("h3", {}, "History"), asked.length
     ? el("ul", { class: "history" }, asked.map((m) => el("li", {}, el("button", { title: m.content, onclick: () => openAsk() }, m.content))))
@@ -166,7 +166,7 @@ function messageNode(m, question) {
   if (m.meta) body.append(el("div", { class: "meta" }, el("span", {}, m.meta.mode), ...(m.meta.tools || []).map((t) => el("span", { class: "tool" }, t)),
     el("span", {}, m.meta.grounded ? "· every number checked" : "· contains [unverified] numbers"),
     el("button", { class: "dl", title: "Download this answer as a PDF",
-      onclick: () => downloadDoc(question || "FieldVision answer", body, `Answer by ${m.meta.mode}`) }, "⬇ Download")));
+      onclick: () => downloadDoc(question || "FieldVision answer", body, `Answer by ${m.meta.mode}`) }, "Download PDF")));
   return node;
 }
 

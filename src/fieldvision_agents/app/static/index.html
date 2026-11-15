@@ -23,49 +23,40 @@
     <nav id="tabs" class="tabs" aria-label="Views" hidden></nav>
     <div class="top-right">
       <div id="status" class="chips" aria-live="polite"></div>
-      <button id="download-view" class="ghost small" hidden title="Download this view as a PDF">⬇ Download</button>
-      <button id="theme" class="ghost icon-btn" title="Light or dark mode" aria-label="Switch light or dark mode"></button>
+      <button id="download-view" class="ghost small" hidden title="Download this view as a PDF">Download PDF</button>
+      <button id="theme" class="ghost small" title="Light or dark mode" aria-label="Switch light or dark mode"></button>
       <button id="switch-role" class="ghost small" hidden>Switch role</button>
     </div>
   </header>
 
   <!-- Who are you? -->
   <main id="landing" class="landing">
-    <section class="hero">
-      <img src="/static/img/hero_fields.jpg" alt="Two corn fields in Frederick County, Maryland, July to October 2022, seen by Sentinel-2. Top: cut green in early September (silage). Bottom: browned first, cut in October (grain).">
-      <div class="copy">
-        <div class="eyebrow">Hack the Harvest · USDA NASS challenge</div>
-        <h1>Chopped for silage, or combined for grain?</h1>
-        <p>FieldVision reads every corn field from free satellite images, explains each call, and adds them up for the people who need the answer.</p>
-        <div class="tags">
-          <span class="tag"><i style="background:var(--silage)"></i>Silage: cut green, within days</span>
-          <span class="tag"><i style="background:var(--grain)"></i>Grain: dries down first</span>
-        </div>
-      </div>
-    </section>
-
-    <section class="stats" aria-label="Headline numbers">
-      <div class="stat"><b class="silage-t">42 of 44</b><span>labelled US fields right, trained only on Europe (always-grain gets 32)</span></div>
-      <div class="stat"><b>8,000</b><span>labelled European fields to learn from</span></div>
-      <div class="stat"><b class="usda-t">6.19 M</b><span>US acres cut for silage in 2025 (USDA)</span></div>
-      <div class="stat"><b class="grain-t">3,231</b><span>counties on the map, with USDA's silage share</span></div>
-    </section>
-
+    <h1>Corn silage vs grain, field by field</h1>
+    <p class="lede">FieldVision reads each corn field's harvest from Sentinel-2 and Landsat imagery, calls it silage or grain
+      (or leaves it unjudged), adds the calls up by county and checks them against USDA NASS. Figures are model estimates,
+      not NASS statistics.</p>
     <div class="roles">
       <button class="role-card" data-role="dairy">
-        <span class="role-icon" aria-hidden="true">🐄</span>
-        <span class="role-title">I run a dairy</span>
-        <span class="role-text">Find standing corn near you that you could still buy and chop: tons, haul distance and a delivered price range, on a map.</span>
-        <span class="role-go">Find silage →</span>
+        <span class="role-title">Dairy owner</span>
+        <span class="role-text">Standing corn near a dairy that could still be bought for silage: tons, haul distance and a delivered price range.</span>
+        <span class="role-go">Open silage finder</span>
       </button>
       <button class="role-card" data-role="usda">
-        <span class="role-icon" aria-hidden="true">📊</span>
-        <span class="role-title">I'm a USDA analyst</span>
-        <span class="role-text">Run counties through the agent, read its evidence and report, plan field visits, and see supply, stocks and price beside our silage estimates.</span>
-        <span class="role-go">Open the analyst desk →</span>
+        <span class="role-title">USDA analyst</span>
+        <span class="role-text">County and state silage shares against USDA, the evidence behind each run, field-visit plans, supply and price context.</span>
+        <span class="role-go">Open analyst workspace</span>
       </button>
     </div>
-    <p class="muted small">Acres here are model estimates, not NASS statistics. Field data covers past seasons, so the dairy view replays a season as of a date.</p>
+    <h3>How far the estimates can be trusted</h3>
+    <table class="data evidence">
+      <tbody>
+        <tr><td>Labelled US field-years (Beltsville, MD)</td><td>42 of 44 right; always-grain gets 32</td></tr>
+        <tr><td>Training data</td><td>8,000 labelled European fields; no US labels used</td></tr>
+        <tr><td>Blind state and county comparisons</td><td>4 of 6 within 5 points of USDA; misses: Pennsylvania 2025, Frederick 2022</td></tr>
+        <tr><td>Known weak spot</td><td>Northern silage cut after the crop yellows reads as grain (Marathon, WI)</td></tr>
+        <tr><td>USDA reference</td><td>Census 2012, 2017, 2022 by county; NASS 2025 survey by state (6.19 M silage acres)</td></tr>
+      </tbody>
+    </table>
   </main>
 
   <div id="workspace" class="workspace" hidden>
@@ -73,10 +64,10 @@
     <section id="view" class="view"></section>
   </div>
 
-  <button id="ask-fab" class="ask-fab" hidden aria-label="Ask the agent"><svg><use href="#logo"/></svg>Ask</button>
+  <button id="ask-fab" class="ask-fab" hidden>Ask the agent</button>
   <section id="drawer" class="drawer" hidden aria-label="Ask the agent">
     <div class="drawer-head"><b>Ask the agent</b>
-      <button id="drawer-dl" class="dl" title="Download this conversation as a PDF">⬇ Download</button>
+      <button id="drawer-dl" class="dl" title="Download this conversation as a PDF">Download PDF</button>
       <button id="drawer-close" class="ghost icon-btn" aria-label="Close">✕</button></div>
     <div id="drawer-body" class="drawer-body" style="display:flex;flex-direction:column;flex:1;min-height:0"></div>
   </section>

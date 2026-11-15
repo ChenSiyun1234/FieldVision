@@ -2,36 +2,36 @@
    Field green surfaces, corn gold for grain and highlights, silage green, sky blue for USDA's own figures.
    Every series and ramp colour below was run through the dataviz palette validator on both surfaces. */
 :root {
-  --bg: #0b1410; --bg-2: #0f1a15; --panel: #13201a; --panel-2: #1a2a22; --panel-3: #22352b; --line: #2a3d33;
-  --text: #eef3ee; --muted: #a7b8ad; --faint: #73887b;
+  --bg: #151716; --bg-2: #1a1c1b; --panel: #1d201f; --panel-2: #242827; --panel-3: #2c312f; --line: #343a38;
+  --text: #e8eae9; --muted: #a6adaa; --faint: #858d89;
   --silage: #14a37f; --grain: #c98500; --usda: #4b8fe2; --abstain: #73887b;
   --gold: #f2c14e;                                  /* brand highlight: corn, never a data series */
   --s1: var(--usda); --s2: var(--silage);           /* chart series: USDA, our model */
   --q1: #11654e; --q2: #13845f; --q3: #14a37f; --q4: #4fc79f; --q5: #9be3c6;   /* silage share ramp */
   --ok: #57d18f; --warn: #f2c14e; --fail: #ff7a6b;
-  --user: #1d3a2e; --shadow: 0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.28);
-  --radius: 14px; --radius-sm: 9px;
+  --user: #242827; --shadow: none;
+  --radius: 4px; --radius-sm: 3px;
   --font: "Inter", "Segoe UI", system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: dark;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme="dark"]) {
-    --bg: #f3f6f4; --bg-2: #eaf0ec; --panel: #ffffff; --panel-2: #f1f5f2; --panel-3: #e4ece7; --line: #d5dfd8;
-    --text: #13221b; --muted: #4c5f54; --faint: #7b8d82;
+    --bg: #f5f5f3; --bg-2: #efefec; --panel: #ffffff; --panel-2: #f2f2ef; --panel-3: #e7e7e3; --line: #dadad5;
+    --text: #1b1f1d; --muted: #4f5653; --faint: #6b7370;
     --silage: #0e8a68; --grain: #c98500; --usda: #2a78d6; --abstain: #8a9a90; --gold: #b07400;
     --q1: #5fc29b; --q2: #35ad84; --q3: #12906c; --q4: #0d7055; --q5: #0a5242;
     --ok: #1f8a4c; --warn: #9a6a00; --fail: #b3261e;
-    --user: #ddefe6; --shadow: 0 1px 2px rgba(19,34,27,.06), 0 8px 24px rgba(19,34,27,.08);
+    --user: #f2f2ef; --shadow: none;
     color-scheme: light;
   }
 }
 :root[data-theme="light"] {
-  --bg: #f3f6f4; --bg-2: #eaf0ec; --panel: #ffffff; --panel-2: #f1f5f2; --panel-3: #e4ece7; --line: #d5dfd8;
-  --text: #13221b; --muted: #4c5f54; --faint: #7b8d82;
+  --bg: #f5f5f3; --bg-2: #efefec; --panel: #ffffff; --panel-2: #f2f2ef; --panel-3: #e7e7e3; --line: #dadad5;
+  --text: #1b1f1d; --muted: #4f5653; --faint: #6b7370;
   --silage: #0e8a68; --grain: #c98500; --usda: #2a78d6; --abstain: #8a9a90; --gold: #b07400;
   --q1: #5fc29b; --q2: #35ad84; --q3: #12906c; --q4: #0d7055; --q5: #0a5242;
   --ok: #1f8a4c; --warn: #9a6a00; --fail: #b3261e;
-  --user: #ddefe6; --shadow: 0 1px 2px rgba(19,34,27,.06), 0 8px 24px rgba(19,34,27,.08);
+  --user: #f2f2ef; --shadow: none;
   color-scheme: light;
 }
 * { box-sizing: border-box; }
@@ -285,3 +285,77 @@ details summary { cursor: pointer; color: var(--muted); margin-top: 6px; }
 .pdf-doc .doc-head { border-bottom: 1px solid var(--line); margin-bottom: 14px; }
 .pdf-doc h1 { font-size: 20px; margin: 0 0 4px; }
 .pdf-doc .card, .pdf-doc .msg { box-shadow: none; }
+
+/* ---- Analysis workspace: flat neutral surfaces, ink for interaction, colour kept for data ---- */
+body { background: var(--bg); font-size: 13.5px; font-variant-numeric: tabular-nums; }
+h1 { font-size: 20px; letter-spacing: 0; margin-bottom: 6px; }
+h2 { font-size: 15px; letter-spacing: 0; }
+h3 { font-size: 11px; letter-spacing: .05em; margin-bottom: 8px; }
+button { transition: none; border-radius: var(--radius-sm); }
+button:hover:not(:disabled) { border-color: var(--muted); background: var(--panel-2); }
+button:active:not(:disabled) { transform: none; }
+button.primary { background: var(--text); border-color: var(--text); color: var(--bg); }
+button.primary:hover:not(:disabled) { background: var(--text); opacity: .88; }
+select, input, textarea { transition: none; border-radius: var(--radius-sm); background: var(--panel); }
+select:focus, input:focus, textarea:focus { border-color: var(--text); box-shadow: none; }
+:focus-visible { outline: 2px solid var(--text); outline-offset: 1px; }
+.card { box-shadow: none; padding: 14px; }
+.top { background: var(--panel); backdrop-filter: none; padding: 0 16px; min-height: 46px; gap: 20px; position: static; }
+.brand { font-size: 15px; } .logo { width: 20px; height: 20px; }
+.tabs { background: none; border: 0; padding: 0; border-radius: 0; gap: 4px; align-self: stretch; }
+.tabs button { border-radius: 0; padding: 0 10px; border-bottom: 2px solid transparent; color: var(--muted); }
+.tabs button:hover:not(:disabled) { background: none; color: var(--text); }
+.tabs button[aria-selected="true"] { background: none; box-shadow: none; color: var(--text); border-bottom-color: var(--text); }
+#status .chip { border: 0; background: none; padding: 0 2px; border-radius: 0; }
+.chip { border-radius: var(--radius-sm); }
+.composer .suggest .chip { background: var(--panel); color: var(--text); padding: 4px 9px; }
+.seg { border-radius: var(--radius-sm); padding: 0; gap: 0; background: var(--panel); }
+.seg button { border-radius: 0; padding: 6px; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--text); color: var(--bg); }
+.workspace { grid-template-columns: 272px minmax(0, 1fr); }
+.side { background: var(--panel); padding: 14px 16px; gap: 16px; }
+.side > div + div { border-top: 1px solid var(--line); padding-top: 14px; }
+.page { padding: 16px 20px 28px; gap: 16px; }
+.page > div > h2 { font-size: 15px; margin-bottom: 8px; }
+.msg.user { border-radius: var(--radius); background: var(--panel-2); border: 1px solid var(--line); }
+.msg.assistant { grid-template-columns: minmax(0, 1fr); }
+.msg.assistant .avatar { display: none; }
+.msg .meta .tool { border-radius: 2px; }
+.thinking::after { animation: none; }
+.intro h2 { font-size: 16px; }
+.composer { backdrop-filter: none; background: var(--panel); }
+.composer form { border-radius: var(--radius); }
+.v { font-size: 20px; } .v.big { font-size: 22px; }
+.badge { border-radius: 2px; background: none; padding: 0 6px; }
+.tile { box-shadow: none; padding: 10px 12px; }
+.tile .value { font-size: 20px; letter-spacing: 0; }
+.tip, .leaflet-tooltip { border-radius: var(--radius-sm); }
+.minimap, .usmap { border-radius: var(--radius); box-shadow: none; }
+.usmap { height: calc(100vh - 150px); min-height: 460px; }
+.leaflet-control-layers, .map-legend { border-radius: var(--radius-sm) !important; }
+.legend i, .map-legend i { border-radius: 2px; }
+.icon-btn { border-radius: var(--radius-sm); width: 30px; height: 30px; }
+.ask-fab { border-radius: var(--radius); background: var(--text); color: var(--bg); padding: 9px 14px; font-weight: 600;
+  box-shadow: 0 4px 14px rgba(0,0,0,.22); }
+.ask-fab svg { display: none; }
+.drawer { border-radius: var(--radius); }
+.drawer-head { background: var(--panel-2); }
+.dl, .msg .meta button.dl { border-radius: var(--radius-sm); }
+
+/* landing: one screen that says what the tool does and lets you pick a role */
+.landing { max-width: 880px; padding: 32px 20px 40px; }
+.landing .lede { color: var(--muted); max-width: 70ch; margin-bottom: 20px; }
+.roles { grid-template-columns: 1fr 1fr; gap: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); margin-bottom: 24px; }
+.role-card { display: block; padding: 16px 18px; border: 0; border-radius: 0; background: none; box-shadow: none; }
+.role-card + .role-card { border-left: 1px solid var(--line); }
+.role-card:hover:not(:disabled) { background: var(--panel-2); transform: none; }
+.role-title { display: block; font-size: 15px; font-weight: 650; margin-bottom: 4px; }
+.role-text { display: block; font-size: 13px; }
+.role-go { display: block; margin-top: 10px; font-size: 13px; color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.evidence { width: 100%; max-width: 880px; }
+.evidence td:first-child { color: var(--muted); width: 46%; }
+@media (max-width: 760px) { .roles { grid-template-columns: 1fr; } .role-card + .role-card { border-left: 0; border-top: 1px solid var(--line); } }
+.usmap-page { max-width: none; padding: 12px 14px 16px; }
+.usmap-grid { grid-template-columns: minmax(0, 1fr) 380px; gap: 12px; }
+@media (max-width: 1000px) { .usmap-grid { grid-template-columns: 1fr; } }
