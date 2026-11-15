@@ -191,7 +191,8 @@ def build(out):
     text(s, bx, 6.85, bw, 0.4, "Two corn fields in Frederick County, Maryland, 2022. Sentinel-2 true colour, 10 m pixels. "
          "The calls are the model's: these fields have no label.", size=12)
     notes(s, "These are real satellite pictures of two Maryland fields. The top field was still green on 31 August and was cut around "
-             "2 September. The model calls it silage. The bottom field turned brown first and was cut in October. The model calls it grain.",
+             "2 September, so the model calls it silage. The bottom field turned brown first and was cut in October, so the model "
+             "calls it grain.",
           "这是马里兰两块地的真实卫星图片。上面这块 8 月 31 日还是绿的，9 月 2 日前后就割了，模型判为青贮。下面这块先变黄，10 月才收，模型判为籽粒。")
 
     # 5 ------------------------------------------------------------------------------------------
@@ -233,8 +234,8 @@ def build(out):
          size=14)
     text(s, MX, 5.45, full, 1.6, "Where silage is rare, a few false alarms on a lot of grain add up to a large wrong total.\n"
          "The tuning starts here: four steps, each driven by what the data showed.", size=20, color=INK, spacing=1.2)
-    notes(s, "Then we added fields up to a county. The first attempt failed. In Queen Anne's County we said 22 percent silage. "
-             "The Census says 1.3. From here on, the data told us what to fix.",
+    notes(s, "Then we added fields up to a county, and the first attempt failed. In Queen Anne's County we said 22 percent silage "
+             "where the Census says 1.3. From here on, the data told us what to fix.",
           "接着我们把地块加总到县。第一次尝试失败了：Queen Anne's 县我们算出青贮占 22%，而普查是 1.3%。从这里开始，是数据告诉我们该改什么。")
 
     # 9 ------------------------------------------------------------------------------------------
@@ -247,8 +248,8 @@ def build(out):
     # 10 -----------------------------------------------------------------------------------------
     s = new_slide(prs, "Tuning 2: an honest test, and our correction step failed it")
     body_picture(s, "s10_maryland_test.png")
-    notes(s, "Next we tested honestly. We wrote the pass and fail lines before opening two new counties. "
-             "Kent read 21 percent against 5.5. That is a fail. So we dropped the correction step.",
+    notes(s, "Next we tested honestly: we wrote the pass and fail lines before opening two new counties. "
+             "Kent read 21 percent against 5.5, which is a fail. So we dropped the correction step.",
           "接下来是老老实实的检验。在打开两个新的县之前，我们先写下了及格线和不及格线。Kent 县读数 21%，普查是 5.5%，不及格。所以我们放弃了这个校正步骤。")
 
     # 11 -----------------------------------------------------------------------------------------
@@ -258,7 +259,7 @@ def build(out):
     text(s, MX + pw + 0.3, 1.6, full - pw - 0.3, 1.8, "A Kent County field, 2022.\nLast clear look on 2 September, the next on "
          "17 September: 15 days apart. The cut is somewhere in between.", size=14, spacing=1.15)
     picture(s, "s11_window_fix.png", MX, 3.6, full)
-    notes(s, "Why Kent? On the Eastern Shore more than half of the corn was cut in one cloudy fortnight. No field was seen clearly "
+    notes(s, "On the Eastern Shore more than half of the corn was cut in one cloudy fortnight. No field was seen clearly "
              "in those two weeks. Adding up by harvest window cut the worst miss from 7.4 to 3.8 points. "
              "But we found this on counties we had already seen, so it is not proof.",
           "为什么是 Kent？在东岸，一半以上的玉米是在同一个多云的两周里收的，那两周没有一块地被看清。按收割窗口加总，最大偏差从 7.4 降到 3.8 个百分点。"
@@ -270,8 +271,8 @@ def build(out):
     text(s, MX + pw + 0.3, 1.6, full - pw - 0.3, 1.8, "A Kent County field the model calls silage.\nGreen on 23 August, bare by "
          "2 September, green again in October.", size=14, spacing=1.15)
     picture(s, "s12_crop_history.png", MX, 3.75, full)
-    notes(s, "What are Kent's early green fields? Their crop history is soybeans and wheat, with almost no hay. "
-             "So they are probably grain cut early while still green. In the pictures they look just like silage. "
+    notes(s, "What are Kent's early green fields? Their crop history is soybeans and wheat, with almost no hay, "
+             "so they are probably grain cut early while still green. In the pictures they look just like silage. "
              "We cannot tell them apart, and we say so.",
           "Kent 县那些很早就割掉的绿色地块是什么？它们的轮作历史是大豆和小麦，几乎没有牧草。所以很可能是趁绿早收的籽粒玉米。"
           "在图片上它们和青贮一模一样，我们分不开，也如实这么说。")
@@ -279,14 +280,14 @@ def build(out):
     # 13 -----------------------------------------------------------------------------------------
     s = new_slide(prs, "The clean test: two Michigan counties we had never looked at. It passed")
     body_picture(s, "s13_michigan.png")
-    notes(s, "Then the clean test. Two Michigan counties that we had never looked at. The rule was written first. "
+    notes(s, "Then the clean test: two Michigan counties that we had never looked at, with the rule written first. "
              "We read 2.1 percent against 1.8, and 30.0 against 24.2. It passed.",
           "然后是干净的检验：密歇根两个我们从没看过的县，规则事先写好。我们读出 2.1%（普查 1.8%）和 30.0%（普查 24.2%）。通过了。")
 
     # 14 -----------------------------------------------------------------------------------------
     s = new_slide(prs, "The state the organisers score: Maryland 2025 reads low, and we say so")
     body_picture(s, "state_2025.png")
-    notes(s, "The organisers score state acres. For Maryland in 2025 we read 4.75 percent silage. USDA says 8.9. We are low. "
+    notes(s, "The organisers score state acres. For Maryland in 2025 we read 4.75 percent silage where USDA says 8.9, so we are low. "
              "Double-crop corn that we did not score explains part of the gap, not all of it. This is open, and we say it is open.",
           "主办方按州级面积打分。2025 年的马里兰，我们读出青贮占 4.75%，美国农业部是 8.9%，我们偏低。没有打分的双季玉米能解释一部分差距，但不是全部。"
           "这个问题还没解决，我们也明说它没解决。")

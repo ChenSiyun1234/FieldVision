@@ -414,7 +414,7 @@ def state_2025():
         ("With double-crop corn scored too (added after the result was seen)", with_dc,
          lambda v: f"{v[0]:,} acres, {v[1]:g}%  (range {v[2][0]:g} to {v[2][1]:g}%)"),
         ("Upper bound: every double-crop acre counted as silage", md.get("upper_bound_silage_acres"),
-         lambda v: f"{v:,} acres, {md['share_if_all_double_crop_is_silage']:g}%"),
+         lambda v: f"{v:,} acres, {md['share_if_all_double_crop_is_silage']:.1f}%"),
     ]
     for i, (label, value, fmt) in enumerate(beside):
         y = 2.92 - i * 0.43
