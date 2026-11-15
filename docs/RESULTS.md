@@ -61,6 +61,36 @@ imagery cannot tell it from silage. **Why Maryland 2025 reads low:** not diagnos
 fields are called silage far more often (38 % against 4.75 %), and corn after a small grain is
 outside the scored set; scoring it lifts the figure to 6.7 %.
 
+## After 22:50 (work resumed at the user's request)
+
+**Wisconsin 2023.** Racine read 6.4 % (band 2.4-6.4 %, inside); Marathon read 4.3 % against the 2023
+survey's 49.9 % (band 32.1-49.9 %): fail. Why: 39 % of Marathon's fields have a harvest bracket over
+20 days (last standing look at median 20 September, next clear look 15 October); clear looks per field
+were 1.1 in September against 4.0 in Racine. The silage harvest fell in one cloudy spell; the clear
+tier is mostly the late grain harvest, which the classifier calls grain. No Sentinel-1 scene covers
+Marathon between 18 September and 12 October 2023, so radar cannot fill the gap; Landsat has scenes on
+1 and 9 October and is being extracted.
+
+**Seen and unseen corn (logged 23:17).** A two-week window of the harvest-bracket midpoint counts as
+seen when clear-tier fields hold half of its corn area. Seen share / lower / upper bound: Queen
+Anne's 14 % / 1.2 / 87.0, Kent 9 % / 0.0 / 91.3, Marathon 29 % / 0.8 / 72.0, Carroll 83 % / 2.3 / 19.7,
+Frederick 71 % / 8.2 / 37.7, Branch 90 % / 1.4 / 11.7, Gratiot 74 % / 25.1 / 51.7, Racine 80 % / 2.8 /
+22.6, Maryland 2025 67 % / 3.8 / 37.0. Where less than half is seen the headline is the range.
+
+**Safety net beside the headline.** Mean absolute error on the eight seen counties, satellite /
+land-use prior / mean of the two: 8.6 / 8.2 / 6.8 points against the official figure, 4.6 / 5.6 / 3.9
+against the official band. The prior's fit includes these counties, so its numbers here are
+in-sample. Maryland 2025: 4.75 and 10.6 average 7.7 against NASS 8.9.
+
+**Two-ended check (report only).** Wide and abstained fields scored with the harvest at either end
+of their bracket, accepted where both agree: mean absolute error against the bands 3.9 points
+against 5.7 for the counted clear share (Marathon 17.1 %, Carroll and Frederick inside their bands,
+Branch worse at 7.9 %).
+
+**Response time** (measured by the coordinator at 23:30 on the laptop with other jobs running):
+`Toolbox.classify('26057', 2022, 'module_v2')` 46.7 s for Gratiot's 3,463 fields, about 14 ms per
+field; `aggregate` another 56.9 s, mostly re-classifying the reference county, which is now cached.
+
 ## Open leads, in the order we would try them
 
 1. **Harvest detector taking a later drop.** Example: Frederick field `csb-241825014024676`, cut on

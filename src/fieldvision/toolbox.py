@@ -375,15 +375,21 @@ class Toolbox:
         return out
 
     def _tier_frame(self, fips, year, policy="module_v2"):
-        """Per-field area, score, call and evidence tier for one county under module_v2."""
+        """Per-field area, score, call and evidence tier for one county under module_v2 (cached:
+        a reference county is classified once per toolbox, not again for every target)."""
+        key = ("tier_frame", str(fips), int(year), policy, self.module_model)
+        if key in self._cache:
+            return self._cache[key]
         rows, _, _ = self._policy_predictions(fips, year, policy)
         f, _, _, _ = self._data(fips, year)
         area = f.set_index("field_id")["area_ha"].astype(float) * HA_TO_ACRE
         d = pd.DataFrame(rows)
-        return pd.DataFrame({"a": d["source_field_id"].map(area).to_numpy(float),
-                             "p": d["p_silage"].to_numpy(float),
-                             "call": (d["label"] == "silage").to_numpy(),
-                             "tier": [e["evidence_tier"] for e in d["evidence"]]})
+        out = pd.DataFrame({"a": d["source_field_id"].map(area).to_numpy(float),
+                            "p": d["p_silage"].to_numpy(float),
+                            "call": (d["label"] == "silage").to_numpy(),
+                            "tier": [e["evidence_tier"] for e in d["evidence"]]})
+        self._cache[key] = out
+        return out
 
     def _clear_tier(self, fips, year, df, a):
         """module_v2 county step: estimates on the clear tier, with the wide tier beside it."""
