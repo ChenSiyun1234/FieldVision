@@ -63,6 +63,18 @@ read low), and the label-free checks did not catch that failure.**
 - **Minimum evidence.** No county figure unless the clear tier has at least 100 fields and 15 % of
   the scored corn area; no state figure unless the drawn blocks hold 300 clear fields and 15 %.
   Otherwise the clear + wide counted share is shown as context and the figure is not reported.
+- **Headline from 18:54 on: harvest-window weighted share.** Every scored field goes into a
+  two-week window of its drop day, whatever its tier; each window's silage share comes from its own
+  clear-tier fields and is weighted by all the corn cut in that window. A window with fewer than ten
+  clear fields is blind and counts as no silage: we count silage only where the harvest was seen,
+  and report how much corn we could not see (the blind share) and an upper figure with blind windows
+  at the previous window's share. On the four seen counties it reads 2.0 / 5.1 / 15.1 / 6.2 % (Queen
+  Anne's / Carroll / Frederick / Kent; worst error 3.8 points against 7.4 for the counted clear
+  share). Found on those same counties after Kent failed, with the fill chosen among four there; only
+  Queen Anne's and Kent (57 % and 54 % of their corn cut in one cloudy fortnight, days 252-265) have
+  blind windows to test it. A county with more than 60 % of its corn in blind windows is not testable.
+  `fieldvision.model.windows`; for the state sample the windows are formed within three regions
+  (Eastern Shore, Western, Central and Southern).
 - **Michigan 2022** (Gratiot 24.2 %, Branch 1.8 %) is the one clean test left of whether the counted
   clear share follows the silage share: pass only if Gratiot reads at least 10 points above Branch
   and neither is more than 10 points off (logged before opening).

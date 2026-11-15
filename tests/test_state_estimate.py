@@ -44,3 +44,17 @@ def test_to_acres_range_with_double_crops():
     a = to_acres(0.1, 0.08, 0.12, 400_000, 20_000)
     assert a["silage_acres"] == 40_000 and a["grain_acres"] == 360_000
     assert a["share_all_corn_if_double_crop_grain"] < 0.1 < a["share_all_corn_if_double_crop_silage"]
+
+
+def test_window_share_blind_windows_count_zero_and_upper_borrows():
+    from fieldvision.model.windows import window_share
+    rng = np.random.default_rng(1)
+    n = 300
+    drop = np.r_[np.full(100, 240.0), np.full(100, 256.0), np.full(100, 270.0)]
+    clear = np.r_[np.ones(100, bool), np.zeros(100, bool), np.ones(100, bool)]   # middle window blind
+    call = np.r_[rng.random(100) < 0.5, np.zeros(100, bool), np.zeros(100, bool)]
+    acres = np.ones(n)
+    out, det = window_share(drop, clear, call, acres)
+    assert abs(out["blind_share"] - 1 / 3) < 1e-9
+    assert out["window_zero"] < out["window_upper"]
+    assert abs(out["window_zero"] - call[:100].mean() / 3) < 1e-9

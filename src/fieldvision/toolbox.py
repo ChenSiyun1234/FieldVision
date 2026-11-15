@@ -51,7 +51,8 @@ MODULE_V1_MODEL = "composite_v1"
 MODULE_V2_MODEL = "eu2_logistic_v1"
 CLEAR_BRACKET_DAYS = 12.0
 # module_v2's county step on the clear tier: "local_threshold", "reference", "europe" or "counted"
-MODULE_V2_COUNTY_STEP = "counted"     # decision A, logged 18:25 / 18:37 (the local threshold failed on Kent)
+MODULE_V2_COUNTY_STEP = "window_zero"  # harvest-window weighted, blind windows at 0 (logged 18:54)
+MAX_BLIND_SHARE = 0.60               # above this a county figure is not testable (logged 18:54)
 MIN_CLEAR_FIELDS = 100                # no headline below this clear tier (logged 18:37)
 MIN_CLEAR_AREA_SHARE = 0.15
 
@@ -448,7 +449,18 @@ class Toolbox:
                                           "flagged_share_reference": round(ref_flag, 4),
                                           "flagged_share_target": round(flag, 4),
                                           "matched_tpr": mt, "tpr": rates["tpr"]}
-        key = {"local_threshold": "clear_silage_share_local_threshold",
+        # harvest-window weighting (fieldvision.model.windows): every tier, windows of the drop day
+        from .model.windows import window_share
+        drop = pd.to_datetime([e.get("drop_date") for e in df["evidence"]], errors="coerce")
+        drop_doy = np.asarray(drop.dayofyear, dtype=float)
+        ww, _ = window_share(np.where(fin, drop_doy, np.nan), clear, call, np.where(fin, a, 0.0))
+        out["window_weighted_share"] = round(ww["window_zero"], 4) if np.isfinite(ww["window_zero"]) else None
+        out["window_weighted_upper"] = round(ww["window_upper"], 4) if np.isfinite(ww["window_upper"]) else None
+        out["blind_window_share_of_area"] = round(ww["blind_share"], 4) if np.isfinite(ww["blind_share"]) else None
+        out["clear_tier_lower_bound"] = (round(float(np.sum(a[clear] * call[clear]) / total), 4)
+                                         if total else None)
+        key = {"window_zero": "window_weighted_share",
+               "local_threshold": "clear_silage_share_local_threshold",
                "reference": "clear_silage_share_reference_calibrated",
                "europe": "clear_silage_share_europe_adjusted",
                "counted": "clear_silage_share_counted"}.get(MODULE_V2_COUNTY_STEP)
@@ -466,7 +478,13 @@ class Toolbox:
                                       "counted share is context only")
         elif key and out.get(key) is not None:
             out["silage_share_headline"] = out[key]
-            out["headline_method"] = f"module_v2 county step '{MODULE_V2_COUNTY_STEP}' on the clear tier"
+            out["headline_method"] = (
+                "harvest-window weighted share, blind windows counted as no silage"
+                if MODULE_V2_COUNTY_STEP == "window_zero"
+                else f"module_v2 county step '{MODULE_V2_COUNTY_STEP}' on the clear tier")
+            if (out.get("blind_window_share_of_area") or 0) > MAX_BLIND_SHARE:
+                out["headline_method"] += (f"; NOT TESTABLE: {out['blind_window_share_of_area']:.0%} of "
+                                           "the corn area was cut in windows with no clear harvest seen")
         else:
             out["silage_share_headline"] = out["clear_silage_share_counted"]
             out["headline_method"] = "module_v2: counted share of the clear tier"

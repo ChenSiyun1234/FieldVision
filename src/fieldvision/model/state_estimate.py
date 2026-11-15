@@ -37,8 +37,21 @@ import pandas as pd
 from ..anomaly.local import adjusted_share
 from .artifacts import write_json
 
-ESTIMATES = ("counted_clear", "reference_calibrated", "local_threshold", "local_flagged",
-             "local_per_tier", "wide_called", "raw_sum")
+ESTIMATES = ("window_zero", "counted_clear", "reference_calibrated", "local_threshold",
+             "local_flagged", "local_per_tier", "window_upper", "blind_share", "lower_bound",
+             "wide_called", "raw_sum")
+# harvest-window regions for Maryland (logged 18:55, geography only)
+MD_REGIONS = {
+    "eastern_shore": ("24015", "24029", "24035", "24011", "24041", "24019", "24045", "24039", "24047"),
+    "western": ("24023", "24001", "24043", "24021"),
+}
+
+
+def region_of(fips):
+    for name, members in MD_REGIONS.items():
+        if str(fips) in members:
+            return name
+    return "central_southern"
 HA_TO_ACRE = 2.47105
 
 
@@ -58,6 +71,21 @@ def estimates(df, ref_mask, ref_share, tpr_clear, local_tpr, alpha=0.10, min_ref
     out["counted_clear"] = _share(a[clear], call[clear])
     out["wide_called"] = _share(a[wide], call[wide])
     out["raw_sum"] = _share(a[ok], p[ok])
+    out["lower_bound"] = float(np.sum(a[clear] * call[clear]) / np.sum(a)) if np.sum(a) > 0 else float("nan")
+    if "drop_doy" in df:                 # harvest-window weighting within regions
+        from .windows import window_share
+        reg = df["region"].to_numpy() if "region" in df else np.full(len(df), "all")
+        drop = df["drop_doy"].to_numpy(float)
+        z = u = blind = 0.0
+        for r in np.unique(reg):
+            m = reg == r
+            ww, _ = window_share(drop[m], clear[m], call[m], a[m])
+            if np.isfinite(ww["silage_acres_zero"]):
+                z += ww["silage_acres_zero"]
+                u += ww["silage_acres_upper"]
+                blind += ww["blind_share"] * float(np.sum(a[m]))
+        tot = float(np.sum(a))
+        out["window_zero"], out["window_upper"], out["blind_share"] = z / tot, u / tot, blind / tot
     rc = clear & ref_mask
     out["reference_counted_clear"] = _share(a[rc], call[rc])
     out["clear_share_of_area"] = _share(a, clear)
@@ -155,7 +183,10 @@ def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 
         "county_fips": ids.map(meta["county_fips"].astype(str)).to_numpy(),
         "acres": ids.map(meta["area_ha"]).to_numpy(float) * HA_TO_ACRE,
         "p": r["p_silage"].to_numpy(float), "call": (r["label"] == "silage").to_numpy(),
-        "tier": [evidence_tier(x) for x in rows]})
+        "tier": [evidence_tier(x) for x in rows],
+        "drop_doy": np.asarray(pd.to_datetime([x["evidence"].get("drop_date") for x in rows],
+                                              errors="coerce").dayofyear, dtype=float)})
+    table["region"] = [region_of(f) for f in table["county_fips"]]
     dca = float(fields.loc[np.asarray(dc), "area_ha"].sum() * HA_TO_ACRE)
     return table, dca
 
@@ -171,7 +202,8 @@ def main(argv=None):
     ap.add_argument("--class1-acres", type=float, required=True)
     ap.add_argument("--double-crop-acres", type=float, default=None,
                     help="state double-crop corn acres; default: none given (sample's own shown)")
-    ap.add_argument("--headline", required=True, choices=ESTIMATES[:5])
+    ap.add_argument("--headline", default="window_zero", choices=ESTIMATES[:6])
+    ap.add_argument("--max-blind", type=float, default=0.60)
     ap.add_argument("--guard", type=float, default=0.10,
                     help="reference counted clear share above which the headline is flagged")
     ap.add_argument("--secondary-model", default=None,
@@ -196,7 +228,8 @@ def main(argv=None):
     point, ranges, n_blocks = block_bootstrap(table, ref_mask, ref_share, tpr_clear, local_tpr,
                                               n_boot=a.n_boot)
     n_clear = int((table["tier"] == "clear").sum())
-    enough = n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
+    enough = (n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
+              and not (point.get("blind_share", 0) > a.max_blind))
     head = point[a.headline] if enough else float("nan")
     lo, hi = ranges[a.headline] if enough else (float("nan"), float("nan"))
     report = {
