@@ -195,8 +195,20 @@ Mean absolute error of the area share over all shares (1-50%), block-split versi
 | 2024 | 0.077 (0.076) | 0.112 (0.112) | 0.111 (0.103) | 0.072 (0.069) | 0.127 (0.118) |
 | mean | 0.188 | 0.213 | 0.113 | 0.091 | 0.121 |
 
-- The stratified version is not better than one threshold in any year, so the
-  whole-county threshold stays.
+Across countries (France 2022 added, 1,600 fields; trained on one country, scored on
+the other), block-split (random in brackets):
+
+| held out | counted | Europe-adjusted | local | local, not adjusted | local, stratified |
+|---|---:|---:|---:|---:|---:|
+| Austria (trained on France) | 0.252 (0.255) | 0.242 (0.245) | 0.090 (0.063) | 0.092 (0.080) | 0.091 (0.065) |
+| France (trained on Austria) | 0.080 (0.080) | 0.067 (0.068) | 0.089 (0.077) | 0.074 (0.073) | 0.087 (0.081) |
+
+The same pattern as across years: counting at 0.5 and the Europe-adjusted count are
+fine in one direction and fail in the other (0.25 when the model trained on France
+meets Austria), while the local versions stay at 0.06-0.09 both ways.
+
+- The stratified version is not better than one threshold in any year or country, so
+  the whole-county threshold stays.
 - Counting and Europe-adjusted counting are best in one year and fail in another
   (2023, where the classifier's calibration moved: errors 0.33 and 0.45); the two local
   versions never exceed 0.13. That robustness is the reason to use a local reference.
