@@ -55,6 +55,32 @@ def composite_pool(run_dir, scheme, year=None, spread_limit=0.5):
     return pool[np.isfinite(pool["area"])]
 
 
+def model_pool(run_dir, scheme, model="composite", year=None, max_bracket=None, spread_limit=0.5):
+    """Out-of-fold pool for one model of a run ('composite' = member average); with
+    max_bracket, fields whose harvest bracket is wider count as abstained (clear tier only)."""
+    if model == "composite":
+        pool = composite_pool(run_dir, scheme, spread_limit=spread_limit)
+    else:
+        cv = pd.read_parquet(Path(run_dir) / "cv_predictions.parquet")
+        variant = json.loads((Path(run_dir) / "run.json").read_text(encoding="utf-8"))["variant"]
+        m = cv[(cv["variant"] == variant) & (cv["scheme"] == scheme)
+               & (cv["model"] == model)].set_index("field_id")
+        feats = pd.read_parquet(Path(run_dir) / "features.parquet", columns=["field_id", "area_ha"])
+        pool = pd.DataFrame({"y": m["y"].to_numpy(int), "p": m["p"].to_numpy(float),
+                             "abstain": m["low_evidence"].to_numpy(bool),
+                             "area": feats.set_index("field_id")["area_ha"].reindex(m.index)
+                             .to_numpy(float),
+                             "year": m["year"].astype(str).to_numpy()}, index=m.index)
+    if max_bracket is not None:
+        br = pd.read_parquet(Path(run_dir) / "features.parquet",
+                             columns=["field_id", "q_harv_width_days"]).set_index("field_id")
+        width = br["q_harv_width_days"].reindex(pool.index).to_numpy(float)
+        pool["abstain"] = pool["abstain"].to_numpy(bool) | ~(width <= max_bracket)
+    if year is not None:
+        pool = pool[pool["year"] == str(year)]
+    return pool[np.isfinite(pool["area"])]
+
+
 def draw_county(pool, share, n, rng, exclude=()):
     """n fields whose silage share by count is `share` (at least one of each class)."""
     avail = pool.drop(index=list(exclude), errors="ignore")
@@ -170,31 +196,54 @@ def summarise(sim, setting):
     return tab, overall
 
 
+def parse_setting(text):
+    """NAME=RUN_DIR|SCHEME[|YEAR]"""
+    name, rest = text.split("=", 1)
+    parts = rest.split("|")
+    return name, parts[0], parts[1], (parts[2] if len(parts) > 2 else None)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="County estimators on European pseudo-counties.")
-    ap.add_argument("--run", required=True, help="run with Austria 2022 + 2024 out-of-fold predictions")
-    ap.add_argument("--rates-run", required=True, help="run whose spatial CV gives the European rates")
+    ap.add_argument("--run", help="run with Austria 2022 + 2024 out-of-fold predictions "
+                                  "(default settings; not needed with --setting)")
+    ap.add_argument("--rates-run", required=True, help="run whose spatial CV gives the European rates "
+                                                      "and the source scores of the local threshold")
     ap.add_argument("--out", required=True)
+    ap.add_argument("--model", default="composite", help="model name in the runs (composite = member mean)")
+    ap.add_argument("--max-bracket", type=float, default=None,
+                    help="clear tier only: fields with a wider harvest bracket count as abstained")
+    ap.add_argument("--setting", action="append", default=[],
+                    help="NAME=RUN_DIR|SCHEME[|YEAR], repeatable; replaces the default settings")
+    ap.add_argument("--n-fields", type=int, default=250)
     ap.add_argument("--reps", type=int, default=200)
     ap.add_argument("--seed", type=int, default=0)
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    rates = rates_from_run(a.rates_run, "composite")["spatial"]
+    rates = rates_from_run(a.rates_run, a.model, max_bracket=a.max_bracket)["spatial"]
     tpr, fpr = rates["tpr"], rates["fpr"]
-    # source scores for the local-threshold layer: out-of-fold composite scores of the rates run
-    src = composite_pool(a.rates_run, "spatial")
+    # source scores for the local-threshold layer: out-of-fold scores of the rates run
+    src = model_pool(a.rates_run, "spatial", a.model, max_bracket=a.max_bracket)
     src = src[~src["abstain"]]
     source = (src["p"].to_numpy(), src["y"].to_numpy(int))
-    settings = {
-        "same year (2024 fields, spatial CV)": composite_pool(a.run, "spatial", year=2024),
-        "held-out year (2022 fields, model trained on 2024)": composite_pool(a.run, "loyo:2022"),
-    }
+    if a.setting:
+        settings = {}
+        for text in a.setting:
+            name, run, scheme, year = parse_setting(text)
+            settings[name] = model_pool(run, scheme, a.model, year=year, max_bracket=a.max_bracket)
+    else:
+        settings = {
+            "same year (2024 fields, spatial CV)": model_pool(a.run, "spatial", a.model, year=2024,
+                                                              max_bracket=a.max_bracket),
+            "held-out year (2022 fields, model trained on 2024)": model_pool(
+                a.run, "loyo:2022", a.model, max_bracket=a.max_bracket),
+        }
     tables, overall = [], []
-    for name, pool in settings.items():
-        sim = simulate(pool, tpr, fpr, reps=a.reps, seed=a.seed, tpr_offsets=(0.0, -0.1, 0.1),
-                       source=source)
-        sim.to_csv(out / f"sim_{len(tables)}.csv", index=False)
+    for k, (name, pool) in enumerate(settings.items()):
+        sim = simulate(pool, tpr, fpr, n_fields=a.n_fields, n_ref=a.n_fields, reps=a.reps,
+                       seed=a.seed, tpr_offsets=(0.0, -0.1, 0.1), source=source)
+        sim.to_csv(out / f"sim_{k}.csv", index=False)
         for off in (0.0, -0.1, 0.1):
             t, o = summarise(sim[sim["tpr_offset"] == off], name)
             tables.append(t)
@@ -203,9 +252,11 @@ def main(argv=None):
     tab.to_csv(out / "pseudo_county_table.csv", index=False)
     ov = pd.DataFrame(overall)
     ov.to_csv(out / "pseudo_county_overall.csv", index=False)
-    write_json(out / "pseudo_county_rates.json", {"tpr": tpr, "fpr": fpr, "source": "composite, spatial CV"})
+    write_json(out / "pseudo_county_rates.json",
+               {"tpr": tpr, "fpr": fpr, "model": a.model, "max_bracket": a.max_bracket,
+                "source": "spatial CV of the rates run"})
     pd.set_option("display.width", 250)
-    print(f"European rates (composite, spatial CV of the rates run): TPR {tpr:.3f}, FPR {fpr:.3f}")
+    print(f"European rates ({a.model}, spatial CV of the rates run): TPR {tpr:.3f}, FPR {fpr:.3f}")
     print(ov.round(4).to_string(index=False))
     show = tab[tab["tpr_offset"] == 0.0][["setting", "target_share", "truth_mean"]
                                           + [f"{e}_mae" for e in ESTIMATORS]]

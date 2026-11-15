@@ -45,7 +45,21 @@ def _require_parquet_engine():
     import importlib.util
     if not any(importlib.util.find_spec(m) for m in ("pyarrow", "fastparquet")):
         raise ImportError(PARQUET_HINT)
-POLICIES = ("standard", "radar_first", "regional_threshold", "in_site", "module_v1")
+POLICIES = ("standard", "radar_first", "regional_threshold", "in_site", "module_v1", "module_v2")
+MODULE_V1_MODEL = "composite_v1"
+# module_v2's field classifier, chosen by the rule logged at 17:02 (see docs/module.md)
+MODULE_V2_MODEL = "eu_logistic_v1"
+CLEAR_BRACKET_DAYS = 12.0
+# module_v2's county step on the clear tier: "local_threshold", "reference", "europe" or "counted"
+MODULE_V2_COUNTY_STEP = "local_threshold"     # fixed by the rule logged at 17:30, see docs/module.md
+
+
+def evidence_tier(row):
+    """'clear' (bracket <= 12 days), 'wide' (up to the abstain limit) or 'abstain'."""
+    if row["abstain"]:
+        return "abstain"
+    d = row["evidence"].get("days_to_drop")
+    return "clear" if d is not None and d <= CLEAR_BRACKET_DAYS else "wide"
 ANOMALY_MODEL = "anomaly_v1"            # second opinion (layer 3); used when present in the registry
 IN_SITE_MODEL = "eu_barc_logistic_v1"   # Austria + Beltsville, fitted on these fields (fieldvision.beltsville)
 IN_SITE_FIPS = {"24033"}
@@ -78,7 +92,7 @@ class Toolbox:
     """Same interface as the team's StubToolbox; numbers from fieldvision code only."""
 
     def __init__(self, data_root="data/counties", registry="registry", out_root="results",
-                 standard_model="composite_v1",
+                 standard_model=MODULE_V2_MODEL,
                  rule_model="eu_timing_rule_v1", n_resample=2000, seed=0):
         """Relative paths are taken from the repo root, so Toolbox() works from anywhere."""
         _require_parquet_engine()
@@ -119,7 +133,9 @@ class Toolbox:
             fields = fields.drop(columns=[c for c in ("label", "y") if c in fields], errors="ignore")
             fields["year"] = int(year)
             ts, _ = load_timeseries(d / "timeseries.parquet", field_ids=fields["field_id"])
-            _, _, cfg = load_model(self.registry, self.standard_model)
+            cfg_model = (self.standard_model if (self.registry / self.standard_model).exists()
+                         else MODULE_V1_MODEL)
+            _, _, cfg = load_model(self.registry, cfg_model)
             X, info = build_features(ts, fields, cfg)
             self._cache[key] = (fields, ts, X, cfg)
         return self._cache[key]
@@ -195,12 +211,21 @@ class Toolbox:
             name = IN_SITE_MODEL
             note = (f"every field to {IN_SITE_MODEL}, fitted on these same Beltsville fields: these "
                     "calls are in-sample; its out-of-fold accuracy is in its model card")
-        elif policy in ("standard", "radar_first", "module_v1"):
-            model, mj, _ = load_model(self.registry, self.standard_model)
-            rows, _ = classify_rows(fields, ts, model, self.standard_model, cfg, mj["threshold"])
+        elif policy in ("standard", "radar_first", "module_v2"):
             name = self.standard_model
-            note = ("identical to 'standard': no radar model exists, so no field is routed to one"
-                    if policy == "radar_first" else f"every field to {name}")
+            model, mj, _ = load_model(self.registry, name)
+            rows, _ = classify_rows(fields, ts, model, name, cfg, mj["threshold"])
+            for r in rows:
+                r["evidence"]["evidence_tier"] = evidence_tier(r)
+            note = (f"module_v2: evidence tiers (clear <= {CLEAR_BRACKET_DAYS:g} days, wide up to "
+                    f"{cfg.low_evidence_max_interval_days:g}, else abstain), {name} as the field "
+                    "classifier (no calendar-date rule in the vote), county total on the clear tier")
+            if policy == "radar_first":
+                note = "identical to 'standard': no radar model exists, so no field is routed to one"
+        elif policy == "module_v1":
+            model, mj, _ = load_model(self.registry, MODULE_V1_MODEL)
+            rows, _ = classify_rows(fields, ts, model, MODULE_V1_MODEL, cfg, mj["threshold"])
+            name = MODULE_V1_MODEL
             if policy == "module_v1":
                 tiers, second = self._tiers(X, rows)
                 for r, t in zip(rows, tiers):
@@ -335,6 +360,87 @@ class Toolbox:
                              f"(EM) re-estimate from the county's own probabilities: "
                              + (f"{ps['silage_share_prior_shift']:.1%}" if ps["prior_shift_converged"]
                                 else "did not converge") + ".")
+        if policy in ("standard", "radar_first", "module_v2"):
+            out.update(self._clear_tier(fips, year, df, a))
+        return out
+
+    def _tier_frame(self, fips, year, policy="standard"):
+        """Per-field area, score, call and evidence tier for one county under module_v2."""
+        rows, _, _ = self._policy_predictions(fips, year, policy)
+        f, _, _, _ = self._data(fips, year)
+        area = f.set_index("field_id")["area_ha"].astype(float) * HA_TO_ACRE
+        d = pd.DataFrame(rows)
+        return pd.DataFrame({"a": d["source_field_id"].map(area).to_numpy(float),
+                             "p": d["p_silage"].to_numpy(float),
+                             "call": (d["label"] == "silage").to_numpy(),
+                             "tier": [e["evidence_tier"] for e in d["evidence"]]})
+
+    def _clear_tier(self, fips, year, df, a):
+        """module_v2 county step: estimates on the clear tier, with the wide tier beside it."""
+        tier = np.array([e.get("evidence_tier", "abstain") for e in df["evidence"]])
+        p = df["p_silage"].to_numpy(float)
+        call = (df["label"] == "silage").to_numpy()
+        fin = np.isfinite(a)
+        clear, wide = (tier == "clear") & fin, (tier == "wide") & fin
+        total = float(np.sum(a[fin]))
+        ac = float(np.sum(a[clear]))
+        out = {"clear_tier_share_of_area": round(ac / total, 4) if total else None,
+               "clear_tier_acres": round(ac, 1),
+               "wide_tier_acres": round(float(np.sum(a[wide])), 1),
+               "wide_tier_share_called_silage": round(float(np.sum(a[wide] * call[wide]) /
+                                                            np.sum(a[wide])), 4) if wide.any() else None}
+        counted = float(np.sum(a[clear] * call[clear]) / ac) if ac else float("nan")
+        out["clear_silage_share_counted"] = round(counted, 4) if ac else None
+        base = df["model"].iloc[0].split("+")[0]
+        rp = self.registry / base / "rates.json"
+        doc = json.loads(rp.read_text(encoding="utf-8")) if rp.exists() else None
+        rates = None
+        if doc:
+            rates = doc["sets"].get(doc.get("primary_clear", ""), doc["sets"][doc["primary"]])
+
+        def adj(share, tpr, fpr):
+            den = tpr - fpr
+            return float(np.clip((share - fpr) / den, 0, 1)) if den > 0.05 else None
+        out["clear_silage_share_europe_adjusted"] = (adj(counted, rates["tpr"], rates["fpr"])
+                                                     if rates and ac else None)
+        ref = self.references.get(str(fips))
+        out["clear_silage_share_reference_calibrated"] = None
+        out["clear_silage_share_local_threshold"] = None
+        out["clear_reference"] = None
+        # the reference must be from the same season: the local error rate moves with the year
+        if ref and str(ref["fips"]) != str(fips) and int(ref["year"]) == int(year) and rates and ac:
+            r = self._tier_frame(ref["fips"], ref["year"])
+            r = r[(r["tier"] == "clear") & np.isfinite(r["a"])]
+            if len(r) >= 50:
+                s_ref = float(ref["census_share"])
+                ref_counted = float(np.sum(r["a"] * r["call"]) / np.sum(r["a"]))
+                fpr_ref = float(np.clip((ref_counted - rates["tpr"] * s_ref) / (1 - s_ref), 0, 0.95))
+                out["clear_silage_share_reference_calibrated"] = adj(counted, rates["tpr"], fpr_ref)
+                t = float(np.quantile(r["p"], 0.90))
+                ref_flag = float(np.sum(r["a"] * (r["p"] >= t)) / np.sum(r["a"]))
+                flag = float(np.sum(a[clear] * (p[clear] >= t)) / ac)
+                mt = rates.get("matched_tpr_alpha_0.10")
+                if mt is not None:
+                    out["clear_silage_share_local_threshold"] = adj(flag, mt, ref_flag)
+                out["clear_reference"] = {"fips": ref["fips"], "year": ref["year"],
+                                          "census_share": s_ref, "clear_fields": int(len(r)),
+                                          "counted_share": round(ref_counted, 4),
+                                          "local_threshold": round(t, 4),
+                                          "flagged_share_reference": round(ref_flag, 4),
+                                          "flagged_share_target": round(flag, 4),
+                                          "matched_tpr": mt, "tpr": rates["tpr"]}
+        key = {"local_threshold": "clear_silage_share_local_threshold",
+               "reference": "clear_silage_share_reference_calibrated",
+               "europe": "clear_silage_share_europe_adjusted",
+               "counted": "clear_silage_share_counted"}.get(MODULE_V2_COUNTY_STEP)
+        if key and out.get(key) is not None:
+            out["silage_share_headline"] = out[key]
+            out["headline_method"] = f"module_v2 county step '{MODULE_V2_COUNTY_STEP}' on the clear tier"
+        else:
+            out["silage_share_headline"] = out["clear_silage_share_counted"]
+            out["headline_method"] = "module_v2: counted share of the clear tier (county step not set or not available)"
+        out["module_headline_share"] = out["silage_share_headline"]
+        out["module_headline_method"] = out["headline_method"]
         return out
 
     def _reference_calibrated(self, fips, year, model_name, a, called, ok):
@@ -362,7 +468,8 @@ class Toolbox:
                                        "No reference-calibrated total (reference is this county "
                                        "or the model has no European error rates).")
             return out
-        rows, _, _ = self._policy_predictions(ref["fips"], ref["year"], "standard")
+        ref_policy = "module_v1" if base == MODULE_V1_MODEL else "standard"
+        rows, _, _ = self._policy_predictions(ref["fips"], ref["year"], ref_policy)
         rf, _, _, _ = self._data(ref["fips"], ref["year"])
         rarea = rf.set_index("field_id")["area_ha"].astype(float) * HA_TO_ACRE
         rdf = pd.DataFrame(rows)

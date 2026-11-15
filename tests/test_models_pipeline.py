@@ -362,6 +362,9 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     registry.export(out, "timing_rule", "eu_timing_rule_v1", reg, files, "abc1234")
     registry.export_composite(out, "composite_v1", reg, files, "abc1234")
     registry.write_rates(reg / "composite_v1", "composite", {"syn": (out, "composite")}, "syn:spatial")
+    registry.export(out, "logistic", "eu_logistic_v1", reg, files, "abc1234")
+    registry.write_rates(reg / "eu_logistic_v1", "logistic", {"syn": (out, "logistic")}, "syn:spatial",
+                         max_bracket=12, primary_clear="clear:syn:spatial")
     fpath = next(fdir.glob("*AT*.geojson"))
     tpath = next(tdir.glob("*AT*.parquet"))
     make_pseudo_county(fpath, tpath, tmp_path / "counties", "24033", 2023)
@@ -374,7 +377,7 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     r = tb.route_options("24033", 2023)
     assert set(r) == STUB_KEYS["route_options"] | {"notes"}
     assert set(r["options"]) == {"standard", "radar_first", "regional_threshold", "in_site",
-                                 "module_v1"}
+                                 "module_v1", "module_v2"}
     for o in r["options"].values():
         assert {"models_used", "n_abstain"} <= set(o)
     assert r["options"]["radar_first"]["models_used"] == r["options"]["standard"]["models_used"]
@@ -395,7 +398,11 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
              "prior_shift_converged", "prior_shift_iterations", "silage_share_calibrated",
              "silage_share_calibrated_low", "silage_share_calibrated_high",
              "silage_acres_calibrated", "calibration_reference", "module_headline_share",
-             "module_headline_method", "calibration_note"}
+             "module_headline_method", "calibration_note", "clear_tier_share_of_area",
+             "clear_tier_acres", "wide_tier_acres", "wide_tier_share_called_silage",
+             "clear_silage_share_counted", "clear_silage_share_europe_adjusted",
+             "clear_silage_share_reference_calibrated", "clear_silage_share_local_threshold",
+             "clear_reference"}
     assert set(a1) == STUB_KEYS["aggregate"] | extra
     total = gj and sum(f["properties"]["area_ha"] for f in gj["features"]) * 2.47105
     assert abs(a1["silage_acres"] + a1["grain_acres"] + a1["abstained_acres"] - total) < 1.0
@@ -406,6 +413,10 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     assert a1["silage_acres_adjusted_low"] <= a1["silage_acres_adjusted"] <= a1["silage_acres_adjusted_high"]
     assert 0.0 <= a1["silage_share_adjusted"] <= 1.0
     assert "half the fields are silage" in a1["notes"]
+    rows = [json.loads(l) for l in open(c["results_path"].replace(".parquet", ".jsonl"))]
+    assert {r["evidence"]["evidence_tier"] for r in rows} <= {"clear", "wide", "abstain"}
+    assert all((r["evidence"]["evidence_tier"] == "abstain") == r["abstain"] for r in rows)
+    assert a1["clear_tier_acres"] + a1["wide_tier_acres"] + a1["abstained_acres"] - total < 1.0
     ab = tb.abstain_region("24033", 2023, "test")
     assert ab["abstained"] and ab["abstained_acres"] > 0
 

@@ -495,7 +495,8 @@ def export_composite(run_dir, name, registry_dir, training_files, git_commit, fa
 RATE_MEMBERS = {"composite": COMPOSITE_MEMBERS}
 
 
-def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), spread_limit=0.5):
+def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), spread_limit=0.5,
+                   max_bracket=None, alpha=0.10):
     """True/false positive counts on held-out fields that the model did not abstain on.
 
     Uses a run's out-of-fold predictions. For 'composite' in a run that predates it, the
@@ -506,6 +507,10 @@ def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), 
     cv = pd.read_parquet(Path(run_dir) / "cv_predictions.parquet")
     variant = json.loads((Path(run_dir) / "run.json").read_text(encoding="utf-8"))["variant"]
     cv = cv[cv["variant"] == variant]
+    feats = None
+    if max_bracket is not None:
+        feats = pd.read_parquet(Path(run_dir) / "features.parquet",
+                                columns=["field_id", "q_harv_width_days"]).set_index("field_id")
     out = {}
     for scheme, g in cv.groupby("scheme"):
         if not scheme.startswith(scheme_prefix):
@@ -513,6 +518,7 @@ def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), 
         if model in set(g["model"]):
             m = g[g["model"] == model].set_index("field_id")
             p, y, ab = m["p"].to_numpy(), m["y"].to_numpy(int), m["low_evidence"].to_numpy(bool)
+            ids = m.index
             if model == "composite":
                 P = g[g["model"].isin(COMPOSITE_MEMBERS)].pivot(index="field_id", columns="model",
                                                                 values="p").loc[m.index]
@@ -524,12 +530,16 @@ def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), 
             meta = g.drop_duplicates("field_id").set_index("field_id").loc[P.index]
             p = P.mean(axis=1).to_numpy()
             y = meta["y"].to_numpy(int)
+            ids = P.index
             votes = (P.to_numpy() >= 0.5).sum(axis=1)
             spread = (P.max(axis=1) - P.min(axis=1)).to_numpy()
             ab = meta["low_evidence"].to_numpy(bool) | ((votes > 0) & (votes < P.shape[1])
                                                         & (spread >= spread_limit))
         else:
             continue
+        if max_bracket is not None:      # the clear evidence tier only
+            br = feats["q_harv_width_days"].reindex(ids).to_numpy(float)
+            ab = ab | ~(br <= max_bracket)
         keep = ~ab
         pred = p[keep] >= 0.5
         yy = y[keep]
@@ -537,21 +547,33 @@ def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), 
         fn, tn = int((~pred & (yy == 1)).sum()), int((~pred & (yy == 0)).sum())
         out[scheme] = {"tp": tp, "fp": fp, "fn": fn, "tn": tn, "n": int(keep.sum()),
                        "tpr": tp / max(tp + fn, 1), "fpr": fp / max(fp + tn, 1)}
+        pk, yk = p[keep], yy
+        if (yk == 0).any() and (yk == 1).any():
+            # recall at the score that flags `alpha` of grain (for the local-threshold step)
+            t_s = float(np.quantile(pk[yk == 0], 1 - alpha))
+            out[scheme]["matched_tpr_alpha_0.10"] = float((pk[yk == 1] >= t_s).mean())
+            out[scheme]["n_silage"] = int((yk == 1).sum())
     return out
 
 
-def write_rates(folder, model, runs, primary):
+def write_rates(folder, model, runs, primary, max_bracket=None, primary_clear=None):
     """rates.json beside a frozen model: European held-out rates, used by the toolbox to
     correct counted silage area. runs: {label: (run_dir, model name in that run)}."""
     sets = {}
     for label, (run_dir, name) in runs.items():
         for scheme, r in rates_from_run(run_dir, name).items():
             sets[f"{label}:{scheme}"] = r
+        if max_bracket is not None:
+            for scheme, r in rates_from_run(run_dir, name, max_bracket=max_bracket).items():
+                sets[f"clear:{label}:{scheme}"] = r
     if primary not in sets:
         raise ValueError(f"primary rate set {primary!r} not among {sorted(sets)}")
     doc = {"note": "true/false positive rates of this model family on held-out European fields it "
                    "did not abstain on (no US labels); added after export, not read by the model",
            "primary": primary, "sets": sets}
+    if primary_clear:
+        doc["primary_clear"] = primary_clear
+        doc["clear_tier_max_bracket_days"] = max_bracket
     write_json(Path(folder) / "rates.json", portable(doc))
     return doc
 
