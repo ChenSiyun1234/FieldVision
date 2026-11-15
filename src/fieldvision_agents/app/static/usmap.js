@@ -2,7 +2,7 @@
 // share; a county with field data opens every field's call on satellite imagery. Dairies and place
 // labels are layers on top. Picking a county shows everything the pipeline has on it.
 import { lineChart } from "./charts.js";
-import { STATUS, api, el, fmt } from "./ui.js";
+import { STATUS, api, el, fmt, isLight } from "./ui.js";
 
 const BINS = [2, 5, 10, 20];                          // silage share of harvested corn, %
 const BIN_LABELS = ["under 2%", "2–5%", "5–10%", "10–20%", "20% or more"];
@@ -15,7 +15,7 @@ let topo = null;
 const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 const binOf = (v) => { const i = BINS.findIndex((b) => v < b); return i === -1 ? BINS.length : i; };
 const ramp = (v) => cssVar(`--q${binOf(v) + 1}`);
-const light = () => matchMedia("(prefers-color-scheme: light)").matches;
+const light = isLight;
 
 async function shapes() {
   if (!topo) topo = await (await fetch("/vendor/us-atlas/counties-10m.json")).json();
@@ -138,7 +138,11 @@ export async function usMapPage(app) {
         fillColor: cssVar("--usda"), fillOpacity: 0.95 }),
       onEachFeature: (f, l) => l.bindTooltip(`<b>${f.properties.dairy_id}</b><br>${f.properties.county || ""} ${f.properties.state || ""}<br>${f.properties.head ? `${fmt(f.properties.head, 0)} head` : "herd size unknown"}`),
     }) : null;
-    const layersCtl = L.control.layers({ "Map": street, "Satellite": satellite }, { "Place labels": labels, ...(dairyLayer ? { "Permitted dairies": dairyLayer } : {}) },
+    // ArcGIS Online basemaps (keyless tile services); the gray canvas is the default so shading reads cleanly
+    const arcgis = (svc, maxZoom = 18) => L.tileLayer(ESRI_TILE(svc), { maxZoom, attribution: "Basemap © Esri, ArcGIS Online" });
+    const layersCtl = L.control.layers({ "ArcGIS gray canvas": street, "ArcGIS imagery": satellite,
+      "ArcGIS topographic": arcgis("World_Topo_Map"), "ArcGIS streets": arcgis("World_Street_Map"),
+      "ArcGIS terrain": arcgis("World_Terrain_Base", 13) }, { "Place labels": labels, ...(dairyLayer ? { "Permitted dairies": dairyLayer } : {}) },
       { position: "topright", collapsed: true }).addTo(map);
     dairyLayer?.addTo(map);
 
@@ -165,6 +169,7 @@ export async function usMapPage(app) {
       if (!seasons.length) return null;
       const s = seasons.find((x) => Number(x.year) === Number(app.ctx.year)) || seasons[seasons.length - 1];
       const fc = await api(`/api/geo/fields/${fips}/${s.year}`);
+      if (!mapNode.isConnected) return null;                 // the view changed while this loaded
       const color = { silage: cssVar("--silage"), grain: cssVar("--grain"), "not judged": cssVar("--abstain") };
       fieldLayer = L.geoJSON(fc, {
         style: (f) => ({ color: color[f.properties.call], weight: 1, fillColor: color[f.properties.call], fillOpacity: 0.62 }),
@@ -188,6 +193,7 @@ export async function usMapPage(app) {
       if (target) map.fitBounds(target.getBounds(), { padding: [16, 16] });
       try {
         const c = await api(`/api/geo/county/${fips}`);
+        if (!mapNode.isConnected) return;
         const fieldInfo = await showFields(fips, c.seasons).catch(() => null);
         if (fieldInfo) map.fitBounds(fieldLayer.getBounds(), { padding: [12, 12] });
         panel.replaceChildren(countyPanel(c, app, () => { clearFields(); satellite.remove(); street.addTo(map); legend.set("state");
@@ -204,6 +210,7 @@ export async function usMapPage(app) {
       panel.replaceChildren(el("div", { class: "card" }, el("p", { class: "muted" }, "Loading the state…")));
       try { stateData = await api(`/api/geo/state/${sf}`); }
       catch (e) { panel.replaceChildren(el("div", { class: "card" }, el("p", { class: "err" }, e.message))); return; }
+      if (!mapNode.isConnected) return;
       countyLayer?.remove(); clearFields();
       countyLayer = L.geoJSON({ type: "FeatureCollection", features: counties.features.filter((f) => f.id.startsWith(sf)) }, {
         style: (f) => {

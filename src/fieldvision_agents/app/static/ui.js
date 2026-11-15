@@ -62,3 +62,28 @@ export function showTip(evt, html) {
   t.style.left = `${x}px`; t.style.top = `${y}px`;
 }
 export const hideTip = () => { tip().hidden = true; };
+
+// Light or dark: the choice is kept per browser; with none, the system setting decides.
+export const isLight = () => (document.documentElement.dataset.theme
+  ? document.documentElement.dataset.theme === "light" : matchMedia("(prefers-color-scheme: light)").matches);
+export function setTheme(theme) { document.documentElement.dataset.theme = theme; store.set("fv.theme", theme); }
+
+// Any result as a document: a standalone HTML file (opens in a browser or Word, prints to PDF) with the
+// page's own styles, minus controls and live maps, which do not survive outside the app.
+let cssText = null;
+export async function downloadDoc(title, node, subtitle = "") {
+  cssText ??= await fetch("/static/app.css").then((r) => r.text()).catch(() => "");
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll("button, input, select, textarea, form, .suggest, .hint, .avatar").forEach((n) => n.remove());
+  copy.querySelectorAll(".leaflet-container, .usmap, .map").forEach((n) => n.replaceWith(Object.assign(document.createElement("p"),
+    { className: "muted small", textContent: "[Interactive map: open FieldVision to see it.]" })));
+  const when = new Date().toLocaleString();
+  const html = `<!doctype html><html lang="en" data-theme="${isLight() ? "light" : "dark"}"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>${cssText}
+body{display:block;padding:32px;max-width:1000px;margin:0 auto;height:auto}.doc-head{border-bottom:1px solid var(--line);margin-bottom:20px}
+</style></head><body><div class="doc-head"><h1>${title}</h1><p class="muted small">${subtitle ? subtitle + " · " : ""}FieldVision · ${when}.
+Acres are model estimates, not NASS statistics.</p></div>${copy.outerHTML}</body></html>`;
+  const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(new Blob([html], { type: "text/html" })),
+    download: `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}.html` });
+  document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
