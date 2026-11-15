@@ -25,6 +25,7 @@ so it is not a clean test. Headline = what the log named as the headline when th
 | Marathon WI (drawn blocks) | 2023 | 4.3 % counted clear (window 10.0 %) | survey 2023 49.9 %; band 32.1-49.9 % | no: **fail**, 28 points low; 48 % of fields abstained (harvest bracket over 20 days) | 22:58 |
 | Wisconsin (150 random blocks), Sentinel-2 + Landsat | 2025 | 16.6 % [13.8, 19.5] all corn incl. double crops (single-crop 16.5 %); shift guard flagged; prior-updated 12.9 % (last official 19.8 %), 11.6 % (land-use) | NASS 21.6 % | no: **pass by 0.02 point** (4.98 low; first reported as a fail, corrected 01:53) | 01:43, 01:53 |
 | Pennsylvania (150 random blocks), Sentinel-2 + Landsat | 2025 | 15.2 % [12.9, 17.5] all corn incl. double crops (single-crop 9.5 %); guard clean; prior-updated 18.7 % (last official 31.4 %), 13.1 % (land-use) | NASS 32.8 % | no: **fail** (17.6 low), as predicted before opening | 01:53 |
+| Lancaster PA (70 of 113 blocks), Sentinel-2 + Landsat | 2023 | 26.6 % counted clear, seen 60 %, range 18.0-58.1 %; prior-updated 25.1 % (Census 27.4 %), 9.1 % (land-use) | Census 27.4 %; band 27.4-54.8 % | no: **pass** (0.8 low); teammates' independent run 35.2 % | 02:13 |
 
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
@@ -139,7 +140,9 @@ letting it update a good prior pulls the prior down.
 **Lancaster 2023.** An independent run by the teammates in their workspace, with our classifier on
 a smaller set of fields (1,057 clearly seen, 35.7 % of acres not judged), read 35.2 % against the
 2022 Census 27.4 %; it was seen by the coordinator at 01:50, before our own run, and is recorded in
-the log. Our run follows the procedure logged at 00:18.
+the log. Our run (02:11, procedure logged at 00:18, Landsat added) read 26.6 % on 6,404 clearly seen fields, 0.8 below the Census, and passes its mark; seen share 60 %, range 18.0-58.1 %.
+
+**Tally of the locked procedure, satellite alone:** Wisconsin 2025 passes by 0.02 point, Pennsylvania 2025 fails (17.6 low), Lancaster 2023 passes (0.8 low). The prior updates failed their marks in all three places.
 
 ## Open leads, in the order we would try them
 
