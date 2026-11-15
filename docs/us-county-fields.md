@@ -360,5 +360,20 @@ Not finished:
 - Landscape files for Michigan, Pennsylvania and Wisconsin: need their state CSB on Colab
   (`scripts/forage_landscape.py`).
 - Six-state proposal (above): not started.
-- County CDL statistics (CropScape) 2019-2025: `<data>\us\cropscape\county\`, about 2,885 counties per year,
-  complete; county table and land-use prior results in `<data>\us\landuse\` (docs/landuse-prior.md).
+- County CDL statistics (CropScape) 2019-2025: `C:\t\fv\data\us\cropscape\county\`, about 2,885 counties per year,
+  complete; county table and land-use prior results in `C:\t\fv\data\us\landuse\` (docs/landuse-prior.md).
+
+### Update, tuning resumed (14 Nov, about 20:15 PT)
+
+- Racine `us_55101_2023` (whole county, 1,946 fields, 39,472 acres) and Marathon `us_55073_2023` (seeded draw:
+  70 of 187 read blocks, 20 of 53 10-km blocks, 3,448 of 9,910 fields, 56,316 of 165,998 acres = 33.9 % of the
+  county's CSB corn; `sample.json` beside the field file): field files unpacked to `C:\t\fv\data\labels\<run>\`,
+  run folders created (stub signatures equal Colab's: f48235f505b6 and 99805e7b508e); merge by the extraction
+  session pending. Corn-area check: the 2023 survey and the 2022 Census agree for both counties and the boundaries
+  read high (Marathon polygons 165,998 acres against survey grain + silage 122,300 and Census 123,690; CDL 2023 corn
+  pixels 152,862. Racine 39,472 against 33,700 and 33,481; pixels 38,288). Silage share: survey 2023 Racine 2.4 %,
+  Marathon 49.9 %; Census 2022 6.4 % and 32.1 %.
+- Pennsylvania and Wisconsin 2025: six extraction bundles built in `C:\t\fv\colab\us_42_2025_s1..s3\` and
+  `us_55_2025_s1..s3\` (50 read blocks each, `--year 2025`, upload the 5 files on README line 1, run cells 1-7),
+  laptop run folders with stub manifests in `C:\t\fv\data\timeseries\`. Draws: Pennsylvania 150 of 3,106 read
+  blocks (5.1 % of frame acres), Wisconsin 150 of 4,433 (3.4 %).
