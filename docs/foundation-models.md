@@ -13,10 +13,12 @@ predictions.parquet, embeddings).
 better than simply handing our model the same monthly satellite values,
 so the small gain it adds inside Austria comes from the extra season-long
 data, not from pretraining. When the country changes, the richer models
-lose far more than the 6-feature logistic, so that trained on Austria and
-tested on France the simple model wins outright, as in Maryland, and
-trained on France and tested on Austria the richer ones keep only a small
-lead.
+lose far more than the 6-feature logistic (with three European countries
+it loses at most 0.015 ROC-AUC, they lose 0.02-0.19), so across countries
+the ordering depends on the pair, from the simple model winning outright
+(trained on Austria, tested on France, as in Maryland) to the richer ones
+keeping a small lead (tested on Austria), and in the Netherlands every
+model is equally poor.
 
 What that means for the main line: no change. Presto is not worth its
 extra complexity here, and it transfers worst of all (it loses 0.10-0.20
@@ -30,7 +32,8 @@ not re-checked here, this experiment never read the US data).
 Data: Austria 2024 (2,400 fields, 20 blocks) for the main table;
 Austria 2022 + 2024 (3,600 fields) for the first leave-one-year-out;
 Austria 2022, 2023, 2024 + France 2022 (6,400 fields) for
-leave-one-country-out and the country-to-country pairs.
+leave-one-country-out and the country-to-country pairs; the same plus the
+Netherlands 2025 (8,000 fields) for the three-country hold-out.
 
 ## Which model and why
 
@@ -332,6 +335,36 @@ leave-one-year-out in this run (with France 2022 inside the 2022 group)
 already narrows the richer models' lead: on 2022 none of them is clearly
 ahead of the logistic (phys-gbm +0.002 [-0.036, +0.040], both-gbm +0.023
 [-0.014, +0.059]).
+
+**Three countries, each left out in turn** (the Netherlands 2025 added,
+1,600 fields, Earth Search Collection 1; run
+`C:\t\fv\data\foundation\runs\at_fr_nl`, 8,000 fields, none dropped).
+Trained on the other two countries; ROC-AUC, paired difference to the
+6-feature logistic [95 % CI], and the loss against in-country spatial CV:
+
+| model | test Austria | loss | test France | loss | test Netherlands | loss |
+|---|---|---:|---|---:|---|---:|
+| phys-logistic (6 features) | 0.754 (ref) | 0.015 | 0.826 (ref) | 0.002 | 0.717 (ref) | -0.001 |
+| timing rule | 0.654, -0.100 [-0.128, -0.077] | -0.001 | 0.694, -0.132 [-0.169, -0.099] | -0.002 | 0.638, -0.079 [-0.141, -0.010] | 0.000 |
+| phys-rule | 0.746, -0.008 [-0.022, +0.005] | 0.000 | 0.772, -0.053 [-0.066, -0.039] | -0.001 | 0.665, -0.052 [-0.077, -0.026] | -0.002 |
+| phys-gbm | 0.770, +0.016 [+0.007, +0.025] | 0.078 | 0.810, -0.016 [-0.038, +0.009] | 0.036 | 0.713, -0.004 [-0.028, +0.020] | 0.027 |
+| emb-logistic (Presto) | 0.754, +0.001 [-0.019, +0.024] | 0.071 | 0.650, -0.175 [-0.197, -0.122] | 0.188 | 0.714, -0.003 [-0.044, +0.041] | 0.025 |
+| raw-gbm | 0.747, -0.007 [-0.024, +0.014] | 0.093 | 0.797, -0.029 [-0.054, -0.001] | 0.050 | 0.715, -0.002 [-0.050, +0.047] | 0.022 |
+| both-gbm | 0.798, +0.045 [+0.033, +0.058] | 0.063 | 0.815, -0.011 [-0.030, +0.013] | 0.047 | 0.733, +0.017 [-0.017, +0.049] | 0.023 |
+| physraw-gbm | 0.789, +0.035 [+0.023, +0.047] | 0.071 | 0.823, -0.003 [-0.026, +0.023] | 0.040 | 0.727, +0.010 [-0.025, +0.044] | 0.030 |
+
+With two countries to learn from, the richer models lose less out of
+country than with one (on France: phys-gbm loses 0.036 trained on
+Austria + the Netherlands, 0.101 trained on Austria alone), so their
+penalty shrinks to "no clear difference" from the logistic on France and
+the Netherlands, while the logistic still loses at most 0.015 everywhere.
+The Netherlands is hard for every model alike (ROC-AUC 0.71-0.73, and at
+the 0.5 cut-off every model calls about half of its grain silage, FPR
+0.49-0.57), a calibration problem rather than a ranking one, the same
+kind of failure as in Queen Anne's County. Presto again transfers worst
+(0.65 on France). So across three countries: the simple model never
+loses much and is never clearly beaten except on Austria, where the
+physical + Presto or physical + raw GBMs gain 0.035-0.045.
 
 **Caveat: country and imagery source are partly confounded.** France 2022
 and Austria 2022 come from Planetary Computer (Sentinel-2 L2A), Austria
