@@ -50,31 +50,28 @@ read low), and the label-free checks did not catch that failure.**
   four seen counties, Frederick judged against its scored-set range 11.2-19.9 %): `eu2_logistic_v1`
   worst error 7.4 points, the Europe-plus-Beltsville logistic 11.5, the Beltsville-only one 9.2.
   So the county and state figures use the Evaluation 2 model, not a locally calibrated one.
-- **Why Kent reads high: two readings, not settled.** Kent's clear-tier silage calls look like
-  silage in the imagery (green and moist right before the cut; labelled European fields in the same
-  place are 82 % silage), and 72 of 75 were cut by 2 September. (a) The calls are mostly right and the
-  county share is wrong because the clear tier is not a random part of the county: the acres flagged
-  inside the clear tier are close to the county's whole Census silage in Kent (about 1,900 against
-  2,264) and in Queen Anne's (about 770 against 715). (b) Early-planted grain cut while still green,
-  which the training labels never show as grain, is being called silage. Weighting the clear tier's
-  share by harvest window did not help (worst error 10.3 points against 7.4), and the plain lower
-  bound (clear-tier silage acres over all corn acres) fits Kent and Queen Anne's but reads low in
-  Carroll and Frederick, so neither reading explains all four counties yet.
+- **Why the Eastern Shore reads high.** Kent's clear-tier silage calls look like silage before the
+  cut (green and moist; labelled European fields in the same place are 82 % silage) and after it
+  (bare, then green again within 45-70 days), and 72 of 75 were cut by 2 September. Their crop
+  history, from boundaries alone, is grain-rotation ground: soybeans in 97 % of their acres, wheat
+  59 %, hay or alfalfa 6 % (Frederick's silage calls: hay or alfalfa 16-22 %). So the over-read is
+  grain cut early while still green on corn, wheat and soybean ground, followed by tillage and
+  wheat: a population no labelled set contains, and the imagery cannot separate it from silage
+  followed by a cover crop. Late-cut fields are called silage 0-2 % in all four counties, so the
+  problem is the fields cut before about 8 September. Carroll is compared with its scored-set range
+  4.8-7.5 % (885 acres of double-crop corn are outside the scored set), against which it reads
+  1.2 points low; the two dairy counties read about right or slightly low.
 - **Minimum evidence.** No county figure unless the clear tier has at least 100 fields and 15 % of
   the scored corn area; no state figure unless the drawn blocks hold 300 clear fields and 15 %.
   Otherwise the clear + wide counted share is shown as context and the figure is not reported.
-- **Headline from 18:54 on: harvest-window weighted share.** Every scored field goes into a
-  two-week window of its drop day, whatever its tier; each window's silage share comes from its own
-  clear-tier fields and is weighted by all the corn cut in that window. A window with fewer than ten
-  clear fields is blind and counts as no silage: we count silage only where the harvest was seen,
-  and report how much corn we could not see (the blind share) and an upper figure with blind windows
-  at the previous window's share. On the four seen counties it reads 2.0 / 5.1 / 15.1 / 6.2 % (Queen
-  Anne's / Carroll / Frederick / Kent; worst error 3.8 points against 7.4 for the counted clear
-  share). Found on those same counties after Kent failed, with the fill chosen among four there; only
-  Queen Anne's and Kent (57 % and 54 % of their corn cut in one cloudy fortnight, days 252-265) have
-  blind windows to test it. A county with more than 60 % of its corn in blind windows is not testable.
-  `fieldvision.model.windows`; for the state sample the windows are formed within three regions
-  (Eastern Shore, Western, Central and Southern).
+- **What the imagery could not see.** In Queen Anne's 57 % and in Kent 54 % of the corn area was cut
+  in a single cloudy fortnight (days 252-265) that holds no clear-tier field at all; in Frederick
+  and Carroll that blind share is under 1 %. Every county figure now shows this blind share, the
+  lower bound (clear-tier silage acres over all corn acres, a bound that moves with imagery
+  coverage) and a harvest-window weighted variant (each two-week window of the drop day takes its
+  own clear-tier share, blind windows count as zero). The variant read 2.0 / 5.1 / 15.1 / 6.2 % on the
+  four seen counties but 10.7 / 10.7 / 17.1 / 15.8 % when windows are set by the bracket midpoint
+  instead, so it is shown beside the headline, not used as it.
 - **Michigan 2022** (Gratiot 24.2 %, Branch 1.8 %) is the one clean test left of whether the counted
   clear share follows the silage share: pass only if Gratiot reads at least 10 points above Branch
   and neither is more than 10 points off (logged before opening).

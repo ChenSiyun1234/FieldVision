@@ -202,8 +202,7 @@ def main(argv=None):
     ap.add_argument("--class1-acres", type=float, required=True)
     ap.add_argument("--double-crop-acres", type=float, default=None,
                     help="state double-crop corn acres; default: none given (sample's own shown)")
-    ap.add_argument("--headline", default="window_zero", choices=ESTIMATES[:6])
-    ap.add_argument("--max-blind", type=float, default=0.60)
+    ap.add_argument("--headline", default="counted_clear", choices=ESTIMATES[:6])
     ap.add_argument("--guard", type=float, default=0.10,
                     help="reference counted clear share above which the headline is flagged")
     ap.add_argument("--secondary-model", default=None,
@@ -228,8 +227,7 @@ def main(argv=None):
     point, ranges, n_blocks = block_bootstrap(table, ref_mask, ref_share, tpr_clear, local_tpr,
                                               n_boot=a.n_boot)
     n_clear = int((table["tier"] == "clear").sum())
-    enough = (n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
-              and not (point.get("blind_share", 0) > a.max_blind))
+    enough = n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
     head = point[a.headline] if enough else float("nan")
     lo, hi = ranges[a.headline] if enough else (float("nan"), float("nan"))
     report = {

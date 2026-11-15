@@ -51,8 +51,7 @@ MODULE_V1_MODEL = "composite_v1"
 MODULE_V2_MODEL = "eu2_logistic_v1"
 CLEAR_BRACKET_DAYS = 12.0
 # module_v2's county step on the clear tier: "local_threshold", "reference", "europe" or "counted"
-MODULE_V2_COUNTY_STEP = "window_zero"  # harvest-window weighted, blind windows at 0 (logged 18:54)
-MAX_BLIND_SHARE = 0.60               # above this a county figure is not testable (logged 18:54)
+MODULE_V2_COUNTY_STEP = "counted"      # counted clear share (logged 18:25, restored 19:05)
 MIN_CLEAR_FIELDS = 100                # no headline below this clear tier (logged 18:37)
 MIN_CLEAR_AREA_SHARE = 0.15
 
@@ -482,9 +481,6 @@ class Toolbox:
                 "harvest-window weighted share, blind windows counted as no silage"
                 if MODULE_V2_COUNTY_STEP == "window_zero"
                 else f"module_v2 county step '{MODULE_V2_COUNTY_STEP}' on the clear tier")
-            if (out.get("blind_window_share_of_area") or 0) > MAX_BLIND_SHARE:
-                out["headline_method"] += (f"; NOT TESTABLE: {out['blind_window_share_of_area']:.0%} of "
-                                           "the corn area was cut in windows with no clear harvest seen")
         else:
             out["silage_share_headline"] = out["clear_silage_share_counted"]
             out["headline_method"] = "module_v2: counted share of the clear tier"
