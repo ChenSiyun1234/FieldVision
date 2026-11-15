@@ -556,7 +556,35 @@ def rates_from_run(run_dir, model, scheme_prefix=("spatial", "loyo:", "loco:"), 
     return out
 
 
-def write_rates(folder, model, runs, primary, max_bracket=None, primary_clear=None):
+def local_rates(run_dir, model, alpha=0.10, clear_max=12.0, wide_max=20.0):
+    """Matched recall for the local-threshold county step, per evidence tier.
+
+    From a run's spatial out-of-fold scores of non-abstained fields, measured inside each
+    source domain (country-year) and averaged by scored fields
+    (fieldvision.anomaly.local.matched_tpr). Tiers: clear (bracket <= clear_max), wide
+    (clear_max < bracket <= wide_max) and both together."""
+    import pandas as pd
+    from ..anomaly.local import matched_tpr
+    cv = pd.read_parquet(Path(run_dir) / "cv_predictions.parquet")
+    variant = json.loads((Path(run_dir) / "run.json").read_text(encoding="utf-8"))["variant"]
+    m = cv[(cv["variant"] == variant) & (cv["scheme"] == "spatial")
+           & (cv["model"] == model)].set_index("field_id")
+    br = pd.read_parquet(Path(run_dir) / "features.parquet", columns=["field_id", "q_harv_width_days"]
+                         ).set_index("field_id")["q_harv_width_days"].reindex(m.index).to_numpy(float)
+    ok = ~m["low_evidence"].to_numpy(bool)
+    groups = (m["country"].astype(str) + "-" + m["year"].astype(str)).to_numpy()
+    tiers = {"clear": ok & (br <= clear_max), "wide": ok & (br > clear_max) & (br <= wide_max),
+             "clear+wide": ok & (br <= wide_max)}
+    out = {"alpha": alpha, "source": "spatial out-of-fold, non-abstained, per country-year",
+           "domains": sorted(set(groups))}
+    for name, keep in tiers.items():
+        _, tpr = matched_tpr(m["p"].to_numpy()[keep], m["y"].to_numpy(int)[keep], alpha,
+                             groups[keep])
+        out[name] = {"matched_tpr": tpr, "n": int(keep.sum())}
+    return out
+
+
+def write_rates(folder, model, runs, primary, max_bracket=None, primary_clear=None, local_run=None):
     """rates.json beside a frozen model: European held-out rates, used by the toolbox to
     correct counted silage area. runs: {label: (run_dir, model name in that run)}."""
     sets = {}
@@ -574,6 +602,8 @@ def write_rates(folder, model, runs, primary, max_bracket=None, primary_clear=No
     if primary_clear:
         doc["primary_clear"] = primary_clear
         doc["clear_tier_max_bracket_days"] = max_bracket
+    if local_run is not None:          # (run_dir, model name in that run)
+        doc["local"] = local_rates(local_run[0], local_run[1], clear_max=max_bracket or 12.0)
     write_json(Path(folder) / "rates.json", portable(doc))
     return doc
 

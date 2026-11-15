@@ -413,10 +413,15 @@ class Toolbox:
         out["clear_silage_share_reference_calibrated"] = None
         out["clear_silage_share_local_threshold"] = None
         out["clear_reference"] = None
+        out["clear_silage_share_local_flagged"] = None
+        out["local_per_tier_share"] = None
+        out["local_per_tier_detail"] = None
+        local = (doc or {}).get("local") or {}
         # the reference must be from the same season: the local error rate moves with the year
         if ref and str(ref["fips"]) != str(fips) and int(ref["year"]) == int(year) and rates and ac:
-            r = self._tier_frame(ref["fips"], ref["year"])
-            r = r[(r["tier"] == "clear") & np.isfinite(r["a"])]
+            r_all = self._tier_frame(ref["fips"], ref["year"])
+            r_all = r_all[np.isfinite(r_all["a"])]
+            r = r_all[r_all["tier"] == "clear"]
             if len(r) >= 50:
                 s_ref = float(ref["census_share"])
                 ref_counted = float(np.sum(r["a"] * r["call"]) / np.sum(r["a"]))
@@ -425,9 +430,15 @@ class Toolbox:
                 t = float(np.quantile(r["p"], 0.90))
                 ref_flag = float(np.sum(r["a"] * (r["p"] >= t)) / np.sum(r["a"]))
                 flag = float(np.sum(a[clear] * (p[clear] >= t)) / ac)
-                mt = rates.get("matched_tpr_alpha_0.10")
+                # matched recall: per source domain when rates.json has it, else the pooled set
+                mt = (local.get("clear") or {}).get("matched_tpr", rates.get("matched_tpr_alpha_0.10"))
+                out["clear_silage_share_local_flagged"] = round(flag, 4)
                 if mt is not None:
                     out["clear_silage_share_local_threshold"] = adj(flag, mt, ref_flag)
+                # secondary figure: the local threshold per tier on clear + wide, combined by area
+                # (added after seeing Frederick and Queen Anne's; never the headline)
+                out["local_per_tier_share"], out["local_per_tier_detail"] = self._per_tier_local(
+                    r_all, tier, p, a, local, mt)
                 out["clear_reference"] = {"fips": ref["fips"], "year": ref["year"],
                                           "census_share": s_ref, "clear_fields": int(len(r)),
                                           "counted_share": round(ref_counted, 4),
@@ -448,6 +459,33 @@ class Toolbox:
         out["module_headline_share"] = out["silage_share_headline"]
         out["module_headline_method"] = out["headline_method"]
         return out
+
+    @staticmethod
+    def _per_tier_local(r_all, tier, p, a, local, clear_tpr, alpha=0.10, min_fields=50):
+        """Local threshold inside each tier (clear, wide): threshold and flagged share from that
+        tier of the reference county, matched recall for that tier, adjusted shares combined by
+        the target's tier areas. None when a tier is too small in the reference."""
+        from .anomaly.local import adjusted_share
+        detail, num, den = {}, 0.0, 0.0
+        for k in ("clear", "wide"):
+            rk = r_all[r_all["tier"] == k]
+            mk = (tier == k) & np.isfinite(a)
+            tpr = (local.get(k) or {}).get("matched_tpr", clear_tpr if k == "clear" else None)
+            if len(rk) < min_fields or not mk.any() or tpr is None:
+                return None, {"reason": f"tier {k}: {len(rk)} reference fields or no recall"}
+            t = float(np.quantile(rk["p"], 1 - alpha))
+            ref_flag = float(np.sum(rk["a"] * (rk["p"] >= t)) / np.sum(rk["a"]))
+            flag = float(np.sum(a[mk] * (p[mk] >= t)) / np.sum(a[mk]))
+            share = adjusted_share(flag, ref_flag, tpr)
+            if not np.isfinite(share):
+                return None, {"reason": f"tier {k}: recall not above the reference flagged share"}
+            area = float(np.sum(a[mk]))
+            detail[k] = {"threshold": round(t, 4), "flagged_share_reference": round(ref_flag, 4),
+                         "flagged_share_target": round(flag, 4), "matched_tpr": tpr,
+                         "share": round(share, 4), "target_acres": round(area, 1)}
+            num += share * area
+            den += area
+        return round(num / den, 4), detail
 
     def _reference_calibrated(self, fips, year, model_name, a, called, ok):
         """Layer 4: counted share corrected with the false-positive rate measured in a nearly
