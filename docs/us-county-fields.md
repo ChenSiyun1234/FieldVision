@@ -422,3 +422,15 @@ Not finished:
   (CDL2025 corn and small-grain/corn strata, EPSG:5070, 150 read blocks, seed 42, three parts of 50). Boundaries
   notebook `C:\t\fv\colab\state_frames_2025_mi_ny\` handed to the Colab session; the six extraction bundles
   `us_26_2025_s1..s3`, `us_36_2025_s1..s3` follow when the frames return. Untouched test places.
+- 02:40 PT: Michigan and New York 2025 frames back from Colab and unzipped to `C:\t\fv\data\labels\us_26_2025\`
+  and `us_36_2025\`; six extraction bundles built and handed to the Colab session (Michigan first). Michigan: 150
+  of 3,374 read blocks, 4,845 fields, 116,492 acres (4.4 % of the frame); 4 drawn blocks touch Branch and 6 touch
+  Gratiot (the 2022 development counties). New York: 150 of 2,806 read blocks, 3,743 fields, 65,265 acres (5.7 %);
+  the small-grain/corn double crop is 3.5 % of New York's frame.
+- 03:42 PT: Michigan 2025 sample complete: parts merged and finalised, verified, READY lines written (each with its
+  blocks touching Branch and Gratiot: 1/2, 2/1, 1/3); s2 partial from one permanent plausibility rejection. Merged
+  in `C:\t\fv\data\counties\26_2025_sample\`: 4,845 fields (corn 4,835, double crop 10) in 150 of 3,374 read blocks.
+- 04:18 PT: New York 2025 sample complete: parts merged and finalised, verified, READY lines written (s3 partial from
+  one permanent plausibility rejection; more fog/cloud-passed bright rows than elsewhere, mostly October-November).
+  Merged in `C:\t\fv\data\counties\36_2025_sample\`: 3,743 fields (corn 3,624, double crop 119) in 150 of 2,806 read
+  blocks. All five 2025 state samples (Maryland, Wisconsin, Pennsylvania, Michigan, New York) are on disk.
