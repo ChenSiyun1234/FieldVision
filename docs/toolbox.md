@@ -26,7 +26,7 @@ pip install --target /workspace/FieldVision/.deps pyarrow
 
 Without it `Toolbox()` stops with a one-line message naming this command. There is no
 `lightgbm` in the workspace either, so `eu_gbm_v1` and `ts_model_v1` cannot be loaded there;
-every other registry model (including `eu_logistic_v1`, which `standard` uses, and `composite_v1`) can.
+every other registry model (including `composite_v1`, which `standard` uses, and `eu_logistic_v1`, which `module_v2` uses) can.
 
 `Toolbox(data_root="data/counties", registry="registry", out_root="results")` are the defaults.
 Relative paths are taken from the repo root, so it does not matter where the agent is started.
@@ -63,9 +63,9 @@ data/counties/<fips>/<year>/timeseries.parquet  the extractor's long table: fiel
 
 ## The six methods, with real output (24033, 2022, 7 fields)
 
-The outputs below were recorded when `standard` still meant `composite_v1` (now the `module_v1`
-policy); under module_v2 the model name is `eu_logistic_v1`, the members list is gone and each
-field's evidence also carries `evidence_tier`. The keys are the same.
+The outputs below are from `standard` (composite_v1). Under `module_v2` the model name is
+`eu_logistic_v1`, the members list is gone, each field's evidence also carries `evidence_tier`, and
+`aggregate` adds the `clear_*` keys.
 
 `scout(fips, year)`: what data there is.
 
@@ -138,13 +138,13 @@ The stub's `run_critic` is not here; it belongs to the agent.
 
 ## Reading the county total
 
-**Under module_v2 (the `standard` policy now)** the headline is the local-threshold share of the
+**Under `module_v2`** the headline is the local-threshold share of the
 clear evidence tier, against a same-season reference county from `<data root>/references.json`;
 without one it is the counted share of the clear tier. `headline_method` says which. The
 `clear_*` keys hold the four clear-tier estimates side by side, with `clear_tier_share_of_area`,
 `wide_tier_acres` and `wide_tier_share_called_silage` beside them. Rules, validation and limits:
-`docs/module.md`. The rest of this section describes the rule that came before (still used by the
-other policies).
+`docs/module.md`. The rest of this section describes the rule used by `standard` and the other
+policies.
 
 **Headline rule (fixed at 16:12 on 14 Nov, before any full-county total existed, and logged in
 the evaluation access log):** the headline county estimate is the **counted share**,
@@ -204,8 +204,9 @@ numbers when the extraction finishes.
 
 | policy | model | abstains when |
 |---|---|---|
-| `standard` (= `module_v2`) | `eu_logistic_v1`, the six-feature logistic trained on Austrian registry labels. Each field gets an evidence tier in `evidence.evidence_tier`: `clear` (harvest bracket <= 12 days), `wide` (12-20 days) or `abstain`; the county headline uses the clear tier only (see `docs/module.md`) | low evidence (harvest bracket over 20 days, fewer than 6 usable dates, no or unconfirmed drop) |
-| `module_v1` | `composite_v1`: mean of the calibrated probabilities of the timing rule, the timing+moisture rule and the six-feature logistic; the standard policy before module_v2 | low evidence, or the three members split their votes and are at least 0.5 apart |
+| `standard` | `composite_v1`: mean of the calibrated probabilities of the timing rule, the timing+moisture rule and the six-feature logistic, all trained on Austrian registry labels; kept exactly as the team's wrapper uses it | low evidence (harvest bracket over 20 days, fewer than 6 usable dates, no or unconfirmed drop) or the three members split their votes and are at least 0.5 apart |
+| `module_v2` | `eu_logistic_v1`, the six-feature logistic trained on Austrian registry labels. Each field gets an evidence tier in `evidence.evidence_tier`: `clear` (harvest bracket <= 12 days), `wide` (12-20 days) or `abstain`; the county headline uses the clear tier only (see `docs/module.md`) | low evidence (harvest bracket over 20 days, fewer than 6 usable dates, no or unconfirmed drop) |
+| `module_v1` | `composite_v1` with the module_v1 second-opinion tiers and reference-county headline | low evidence, or the three members split their votes and are at least 0.5 apart |
 | `radar_first` | the same as `standard`. There is no radar model behind it; the policy exists so the agent's routing logic runs, and its note says so | as `standard` |
 | `regional_threshold` | `eu_timing_rule_v1` with its drop-date threshold moved by (this county's median drop day minus Austria's median drop day, 252.5) | low evidence |
 | `in_site` | `eu_barc_logistic_v1`, fitted on the Beltsville fields themselves plus Austria 2024 (equal weight). Only for FIPS 24033; elsewhere `route_options` lists it as not available and `classify` refuses it. On 24033 its calls are in-sample; its out-of-fold accuracy (43 of 44) is in its model card | low evidence |

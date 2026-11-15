@@ -92,7 +92,7 @@ class Toolbox:
     """Same interface as the team's StubToolbox; numbers from fieldvision code only."""
 
     def __init__(self, data_root="data/counties", registry="registry", out_root="results",
-                 standard_model=MODULE_V2_MODEL,
+                 standard_model=MODULE_V1_MODEL, module_model=MODULE_V2_MODEL,
                  rule_model="eu_timing_rule_v1", n_resample=2000, seed=0):
         """Relative paths are taken from the repo root, so Toolbox() works from anywhere."""
         _require_parquet_engine()
@@ -100,6 +100,7 @@ class Toolbox:
         self.registry = _from_repo(registry)
         self.out_root = _from_repo(out_root)
         self.standard_model = standard_model
+        self.module_model = module_model
         self.rule_model = rule_model
         self.n_resample = n_resample
         self.seed = seed
@@ -211,8 +212,15 @@ class Toolbox:
             name = IN_SITE_MODEL
             note = (f"every field to {IN_SITE_MODEL}, fitted on these same Beltsville fields: these "
                     "calls are in-sample; its out-of-fold accuracy is in its model card")
-        elif policy in ("standard", "radar_first", "module_v2"):
+        elif policy in ("standard", "radar_first"):
+            # unchanged for the team's wrapper: every field to composite_v1
+            model, mj, _ = load_model(self.registry, self.standard_model)
+            rows, _ = classify_rows(fields, ts, model, self.standard_model, cfg, mj["threshold"])
             name = self.standard_model
+            note = ("identical to 'standard': no radar model exists, so no field is routed to one"
+                    if policy == "radar_first" else f"every field to {name}")
+        elif policy == "module_v2":
+            name = self.module_model
             model, mj, _ = load_model(self.registry, name)
             rows, _ = classify_rows(fields, ts, model, name, cfg, mj["threshold"])
             for r in rows:
@@ -220,8 +228,6 @@ class Toolbox:
             note = (f"module_v2: evidence tiers (clear <= {CLEAR_BRACKET_DAYS:g} days, wide up to "
                     f"{cfg.low_evidence_max_interval_days:g}, else abstain), {name} as the field "
                     "classifier (no calendar-date rule in the vote), county total on the clear tier")
-            if policy == "radar_first":
-                note = "identical to 'standard': no radar model exists, so no field is routed to one"
         elif policy == "module_v1":
             model, mj, _ = load_model(self.registry, MODULE_V1_MODEL)
             rows, _ = classify_rows(fields, ts, model, MODULE_V1_MODEL, cfg, mj["threshold"])
@@ -360,11 +366,11 @@ class Toolbox:
                              f"(EM) re-estimate from the county's own probabilities: "
                              + (f"{ps['silage_share_prior_shift']:.1%}" if ps["prior_shift_converged"]
                                 else "did not converge") + ".")
-        if policy in ("standard", "radar_first", "module_v2"):
+        if policy == "module_v2":
             out.update(self._clear_tier(fips, year, df, a))
         return out
 
-    def _tier_frame(self, fips, year, policy="standard"):
+    def _tier_frame(self, fips, year, policy="module_v2"):
         """Per-field area, score, call and evidence tier for one county under module_v2."""
         rows, _, _ = self._policy_predictions(fips, year, policy)
         f, _, _, _ = self._data(fips, year)

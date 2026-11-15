@@ -1,8 +1,9 @@
 # The module: silage or grain, field by field and county by county
 
 What we deliver is a module of several small models, each doing one job, not a single model.
-The current version is **module_v2**, the toolbox's `standard` policy (also callable as
-`module_v2`; `fieldvision.toolbox.Toolbox`, see `docs/toolbox.md`). The earlier version stays
+The current version is **module_v2**, the toolbox policy `module_v2`
+(`fieldvision.toolbox.Toolbox`, see `docs/toolbox.md`). The `standard` policy stays as the team's
+wrapper knows it (every field to `composite_v1`), so its figures do not change under teammates. The earlier version stays
 available as the policy `module_v1` and is described at the end. Every model in the module is a
 frozen folder in `registry/`.
 
