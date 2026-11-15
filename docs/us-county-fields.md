@@ -8,6 +8,12 @@ compared with the 2022 Census of Agriculture. No labels: the county check is the
 |---|---|---:|---:|---:|---:|
 | `us_24021_2022` | Frederick (24021) | 2,233 | 39,030 | 31,752 / 7,748 | 19.6 % |
 | `us_24035_2022` | Queen Anne's (24035) | 1,449 | 51,533 | 53,815 / 715 | 1.3 % |
+| `us_24029_2022` | Kent (24029), test county | 1,363 | 44,034 | 38,642 / 2,264 | 5.5 % |
+| `us_24013_2022` | Carroll (24013), second test county | 2,198 | 32,854 | 25,065 / 2,460 | 8.9 % |
+
+Polygon acres over Census grain + silage: Frederick 0.988, Queen Anne's 0.945, Kent 1.076,
+Carroll 1.194. Carroll's polygons exceed the Census by a fifth; it also has 884 acres of
+double-crop corn not in the field set.
 
 Each folder has `fields.geojson` (EPSG:4326), `fields.parquet`, `summary.json` and
 `county_check.json`. Properties: the contract columns with `label` null, `field_id` =
