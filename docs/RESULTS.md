@@ -91,6 +91,37 @@ Branch worse at 7.9 %).
 `Toolbox.classify('26057', 2022, 'module_v2')` 46.7 s for Gratiot's 3,463 fields, about 14 ms per
 field; `aggregate` another 56.9 s, mostly re-classifying the reference county, which is now cached.
 
+## Satellite update of the last official share: the first clearly positive county result
+
+Start from the last official silage share published before the test year and let the satellite
+update it field by field where it sees the harvest (logged 00:11): seen fields take
+sigmoid(logit p + logit prior - logit 0.5), unseen fields keep the prior, county share = area mean.
+
+| county | test year | last official share (prior) | prior updated by the satellite | official | moved |
+|---|---|---|---|---|---|
+| Queen Anne's MD | 2022 | 2.2 (2017 Census) | 2.1 | 1.3 | towards |
+| Carroll MD | 2022 | 11.4 (2017 Census) | 5.3 | 8.9 (band 4.8-7.5) | into the band, away from the point |
+| Frederick MD | 2022 | 24.3 (2017 Census) | 16.6 | 19.6 | towards |
+| Kent MD | 2022 | 5.8 (2017 Census) | 5.5 (3.1 with Landsat) | 5.5 | towards (away with Landsat) |
+| Branch MI | 2022 | 3.6 (2017 Census) | 1.9 | 1.8 | towards |
+| Gratiot MI | 2022 | 19.8 (2017 Census) | 21.8 | 24.2 | towards |
+| Racine WI | 2023 | 4.2 (2022 survey) | 2.6 | 2.4 | towards |
+| Marathon WI | 2023 | 44.9 (2022 survey) | 39.4 (33.6 with Landsat) | 49.9 | away (both inside the band 32.1-49.9) |
+| Maryland 2025 | 2025 | 9.5 (2024 survey) | 6.8 | 8.9 | away |
+
+Mean absolute error on the eight counties: prior alone 2.7 points, updated 2.6 (0.4 against the
+official bands), satellite alone 9.7. Caveats: these counties were seen while tuning; the last
+official share is five years old for six of them and one year old for two; Marathon and Maryland
+2025 move away, both places where the satellite reads low. The same update with the land-use
+prior instead (state left out) helps where that prior is right and wrecks Gratiot (30.0 to 10.5),
+so it is shown beside, never as the headline.
+
+**Landsat** (development places): Marathon 4.3 % to 13.8 % (official 49.9), Kent 12.9 % to 7.3 %
+(Census 5.5); seen share 29 to 83 % and 9 to 94 %.
+
+**Sequence model on Beltsville** (fourth scoring, logged 23:03 / 23:37): 42 of 44, 11 of 12 silage,
+passes its mark; on the seen counties it reads no better than the logistic and not Marathon.
+
 ## Open leads, in the order we would try them
 
 1. **Harvest detector taking a later drop.** Example: Frederick field `csb-241825014024676`, cut on
