@@ -27,6 +27,7 @@ corrected before Beltsville was opened (18:01).
 | Branch MI 2022 | Census 1.8 % | 19:11 | no | counted clear 2.1 %: **pass** | window 3.6 % |
 | Gratiot MI 2022 | Census 24.2 % | 19:11 | no | counted clear 30.0 %: **pass** (gap 28 points) | window 29.8 % |
 | Maryland 2025, 150 random read blocks | NASS 2025 8.9 % (40,000 silage acres) | 19:14 | no | counted clear 4.75 % [3.4, 6.3] = 22,700 acres: **reads 4.2 points low** | window 3.8 %; with double-crop corn scored (after the fact, 19:23) 6.7 % [5.3, 8.2] = 33,100 acres |
+| Land-use prior, 2025 states (county work, logged 19:48, no refit) | NASS 2025, shown once | 19:48 | no | Maryland 10.6 % against 8.9 %; 41 states 3.7 points acre-weighted error (15 large corn states 2.6); national 7.2 % against 6.4 % | Pennsylvania 23.2 vs 32.8, Wisconsin 17.2 vs 21.6, Michigan 11.4 vs 14.7; large misses in irrigated western dairy states and New York (California 9.9 vs 83); `docs/landuse-prior.md` |
 
 The first county step (local threshold against a nearly all-grain reference county) failed on
 Kent and Carroll and is kept only as a record. Since 19:05 the headline is the counted clear share
