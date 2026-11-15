@@ -26,6 +26,7 @@ so it is not a clean test. Headline = what the log named as the headline when th
 | Wisconsin (150 random blocks), Sentinel-2 + Landsat | 2025 | 16.6 % [13.8, 19.5] all corn incl. double crops (single-crop 16.5 %); shift guard flagged; prior-updated 12.9 % (last official 19.8 %), 11.6 % (land-use) | NASS 21.6 % | no: **pass by 0.02 point** (4.98 low; first reported as a fail, corrected 01:53) | 01:43, 01:53 |
 | Pennsylvania (150 random blocks), Sentinel-2 + Landsat | 2025 | 15.2 % [12.9, 17.5] all corn incl. double crops (single-crop 9.5 %); guard clean; prior-updated 18.7 % (last official 31.4 %), 13.1 % (land-use) | NASS 32.8 % | no: **fail** (17.6 low), as predicted before opening | 01:53 |
 | Lancaster PA (70 of 113 blocks), Sentinel-2 + Landsat | 2023 | 26.6 % counted clear, seen 60 %, range 18.0-58.1 %; prior-updated 25.1 % (Census 27.4 %), 9.1 % (land-use) | Census 27.4 %; band 27.4-54.8 % | no: **pass** (0.8 low); teammates' independent run 35.2 % | 02:13 |
+| Michigan (150 random blocks), Sentinel-2 + Landsat | 2025 | 14.4 % [10.8, 18.0] all corn incl. double crops; seen 98 %; guard clean; prior-updated 9.9 % (last official 14.3 %), 8.7 % (land-use) | NASS 14.7 % | no: **pass** (0.3 low); the prediction that it would read low failed | 04:42 |
 
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
@@ -142,7 +143,13 @@ a smaller set of fields (1,057 clearly seen, 35.7 % of acres not judged), read 3
 2022 Census 27.4 %; it was seen by the coordinator at 01:50, before our own run, and is recorded in
 the log. Our run (02:11, procedure logged at 00:18, Landsat added) read 26.6 % on 6,404 clearly seen fields, 0.8 below the Census, and passes its mark; seen share 60 %, range 18.0-58.1 %.
 
-**Tally of the locked procedure, satellite alone:** Wisconsin 2025 passes by 0.02 point, Pennsylvania 2025 fails (17.6 low), Lancaster 2023 passes (0.8 low). The prior updates failed their marks in all three places.
+**Michigan 2025 (clean test, 04:40).** 14.4 % [10.8, 18.0] against NASS 14.7 %: a pass, 0.3 points
+low, with 98 % of the corn seen. The prediction logged before opening (below 11.7 %, meaning the year
+2025 is the difference) failed; by the reading written in advance, the place is the difference: the
+module reads Michigan right in 2022 (Branch, Gratiot) and in 2025, Lancaster right in 2023, and
+Wisconsin, Pennsylvania and Maryland low in 2025.
+
+**Tally of the locked procedure, satellite alone:** Wisconsin 2025 passes by 0.02 point, Pennsylvania 2025 fails (17.6 low), Lancaster 2023 passes (0.8 low), Michigan 2025 passes (0.3 low). The prior updates failed their marks in all three places.
 
 **Why does Lancaster read right in 2023 and Pennsylvania low in 2025? Not the timing feature.**
 Lancaster's own fields in the Pennsylvania 2025 sample read 15.7 % (block-resampling range 11.1-20.4 %,
