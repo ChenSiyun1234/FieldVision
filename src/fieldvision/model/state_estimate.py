@@ -39,19 +39,37 @@ from .artifacts import write_json
 
 ESTIMATES = ("window_zero", "counted_clear", "reference_calibrated", "local_threshold",
              "local_flagged", "local_per_tier", "window_upper", "blind_share", "lower_bound",
-             "wide_called", "raw_sum")
-# harvest-window regions for Maryland (logged 18:55, geography only)
-MD_REGIONS = {
-    "eastern_shore": ("24015", "24029", "24035", "24011", "24041", "24019", "24045", "24039", "24047"),
-    "western": ("24023", "24001", "24043", "24021"),
+             "seen_share", "lower_seen", "upper_seen", "wide_called", "raw_sum")
+# harvest-window regions, fixed from geography before each state's sample was opened
+# (Maryland logged 18:55; Pennsylvania and Wisconsin logged 22:5x). Counties not listed fall in
+# the state's last, default region.
+STATE_REGIONS = {
+    "24": ({"eastern_shore": ("015", "029", "035", "011", "041", "019", "045", "039", "047"),
+            "western": ("023", "001", "043", "021")}, "central_southern"),
+    "42": ({"southeast_southcentral": ("001", "011", "017", "029", "041", "043", "045", "055", "067",
+                                       "071", "075", "077", "087", "091", "095", "099", "101", "107",
+                                       "133"),
+            "western": ("003", "005", "007", "009", "013", "019", "021", "023", "031", "033", "039",
+                        "047", "049", "051", "053", "059", "063", "065", "073", "083", "085", "111",
+                        "121", "123", "125", "129")}, "central_northern"),
+    "55": ({"southern": ("025", "105", "045", "065", "043", "049", "127", "059", "101", "079", "133",
+                         "055", "027", "021", "111", "103", "023", "123", "089", "131", "047", "077",
+                         "039", "117"),
+            "eastern": ("071", "015", "139", "087", "009", "061", "029", "115", "135", "137", "083",
+                        "075", "078")}, "central_western_northern"),
 }
+MD_REGIONS = {k: tuple("24" + c for c in v) for k, v in STATE_REGIONS["24"][0].items()}
 
 
 def region_of(fips):
-    for name, members in MD_REGIONS.items():
-        if str(fips) in members:
+    fips = str(fips).zfill(5)
+    regions, default = STATE_REGIONS.get(fips[:2], ({}, "all"))
+    for name, members in regions.items():
+        if fips[2:] in members:
             return name
-    return "central_southern"
+    return default
+
+
 HA_TO_ACRE = 2.47105
 
 
@@ -86,6 +104,21 @@ def estimates(df, ref_mask, ref_share, tpr_clear, local_tpr, alpha=0.10, min_ref
                 blind += ww["blind_share"] * float(np.sum(a[m]))
         tot = float(np.sum(a))
         out["window_zero"], out["window_upper"], out["blind_share"] = z / tot, u / tot, blind / tot
+    if "mid_doy" in df:                  # seen / unseen corn (amendment logged 23:17), within regions
+        from .windows import seen_bounds
+        reg = df["region"].to_numpy() if "region" in df else np.full(len(df), "all")
+        mid = df["mid_doy"].to_numpy(float)
+        lo = up = seen = 0.0
+        for r in np.unique(reg):
+            m = reg == r
+            sb, _ = seen_bounds(mid[m], clear[m], call[m], a[m], min_clear_area=0.5)
+            w = float(np.sum(a[m]))
+            if np.isfinite(sb["lower"]):
+                lo += sb["lower"] * w
+                up += sb["upper"] * w
+                seen += sb["seen_share"] * w
+        tot = float(np.sum(a))
+        out["seen_share"], out["lower_seen"], out["upper_seen"] = seen / tot, lo / tot, up / tot
     rc = clear & ref_mask
     out["reference_counted_clear"] = _share(a[rc], call[rc])
     out["clear_share_of_area"] = _share(a, clear)
@@ -178,6 +211,50 @@ def combined_bootstrap(table, dc, class1_acres, class_acres, n_boot=2000, seed=0
             "range_5_95": [float(np.nanpercentile(sims, 5)), float(np.nanpercentile(sims, 95))]}
 
 
+def prior_updates(table, prior_landuse=None, prior_official=None, n_boot=2000, seed=0):
+    """Version A of the field-level prior update (fieldvision.model.windows), with the seen
+    fields found within regions; point and 5-95 % range over whole-block resamples."""
+    from .windows import prior_updated_share, seen_field_mask
+    priors = {}
+    if prior_landuse:
+        pt = pd.read_csv(prior_landuse, dtype={"fips": str})
+        pt["fips"] = pt["fips"].str.zfill(5)
+        col = "prior_share" if "prior_share" in pt else "prior_silage_share"
+        pm = pt.set_index("fips")[col].astype(float)
+        pr = table["county_fips"].astype(str).str.zfill(5).map(pm).to_numpy(float)
+        priors["landuse"] = np.where(np.isfinite(pr), pr, np.nanmedian(pr))
+    if prior_official is not None:
+        priors["official"] = np.full(len(table), float(prior_official))
+    if not priors:
+        return None
+    reg = table["region"].to_numpy() if "region" in table else np.full(len(table), "all")
+    clear = (table["tier"] == "clear").to_numpy()
+    a, mid, p = table["acres"].to_numpy(float), table["mid_doy"].to_numpy(float), table["p"].to_numpy(float)
+
+    def seen_of(idx):
+        s = np.zeros(len(idx), bool)
+        r = reg[idx]
+        for g in np.unique(r):
+            m = r == g
+            s[m] = seen_field_mask(mid[idx][m], clear[idx][m], a[idx][m])
+        return s
+    allidx = np.arange(len(table))
+    out = {}
+    seen = seen_of(allidx)
+    blocks = table["block_id"].to_numpy()
+    uniq = np.unique(blocks)
+    by = {b: np.flatnonzero(blocks == b) for b in uniq}
+    rng = np.random.default_rng(seed)
+    picks = [np.concatenate([by[b] for b in rng.choice(uniq, len(uniq), replace=True)]) for _ in range(n_boot)]
+    for name, pr in priors.items():
+        point = prior_updated_share(p, pr, seen, a)
+        sims = [prior_updated_share(p[i], pr[i], seen_of(i), a[i]) for i in picks]
+        out[name] = {"prior_mean": float(np.sum(a * pr) / np.sum(a)), "share": point,
+                     "range_5_95": [float(np.nanpercentile(sims, 5)), float(np.nanpercentile(sims, 95))]}
+    out["seen_fields_area_share"] = float(np.sum(a[seen]) / np.sum(a))
+    return out
+
+
 def to_acres(share, lo, hi, class1_acres, double_crop_acres=0.0):
     """Silage and grain acres of class-1 corn, and the range when the double-crop corn outside
     the scored set is counted as none or all silage."""
@@ -217,7 +294,7 @@ def double_crop_table(sample, registry, model_name):
                          "tier": [evidence_tier(x) for x in rows]})
 
 
-def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 237, 241)):
+def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 237, 241), landsat=False):
     """Per-field table for a sample folder: block, county, acres, score, call, evidence tier."""
     from ..features.loading import load_fields, load_timeseries
     from ..toolbox import evidence_tier
@@ -236,6 +313,12 @@ def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 
         dc = np.zeros(len(fields), bool)
     scored = fields[~np.asarray(dc)].reset_index(drop=True)
     ts, _ = load_timeseries(d / "timeseries.parquet", field_ids=scored["field_id"])
+    if landsat and (d / "timeseries_landsat.parquet").exists():
+        # union with Landsat, per-band line fitted on this sample's own same-field pairs (no labels)
+        from ..features.landsat import fit_adjustment, merge, pair_check
+        ls, _ = load_timeseries(d / "timeseries_landsat.parquet", field_ids=scored["field_id"])
+        _, prs = pair_check(ts, ls, max_days=2)
+        ts = merge(ts, ls, fit_adjustment(prs) if len(prs) >= 30 else None)
     model, mj, cfg = load_model(registry, model_name)
     rows, _ = classify_rows(scored, ts, model, model_name, cfg, mj["threshold"])
     r = pd.DataFrame(rows)
@@ -251,7 +334,10 @@ def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 
         "p": r["p_silage"].to_numpy(float), "call": (r["label"] == "silage").to_numpy(),
         "tier": [evidence_tier(x) for x in rows],
         "drop_doy": np.asarray(pd.to_datetime([x["evidence"].get("drop_date") for x in rows],
-                                              errors="coerce").dayofyear, dtype=float)})
+                                              errors="coerce").dayofyear, dtype=float),
+        "standing_doy": np.asarray(pd.to_datetime([x["evidence"].get("last_standing_date") for x in rows],
+                                                  errors="coerce").dayofyear, dtype=float)})
+    table["mid_doy"] = (table["drop_doy"] + table["standing_doy"]) / 2
     table["region"] = [region_of(f) for f in table["county_fips"]]
     dca = float(fields.loc[np.asarray(dc), "area_ha"].sum() * HA_TO_ACRE)
     return table, dca
@@ -271,6 +357,9 @@ def main(argv=None):
     ap.add_argument("--headline", default="counted_clear", choices=ESTIMATES[:6])
     ap.add_argument("--guard", type=float, default=0.10,
                     help="reference counted clear share above which the headline is flagged")
+    ap.add_argument("--guard-over-reference", type=float, default=None,
+                    help="flag when the reference's counted clear share exceeds its Census share by "
+                         "more than this (00:18 rule for Pennsylvania and Wisconsin)")
     ap.add_argument("--secondary-model", default=None,
                     help="also report this model's counted clear share (shown beside)")
     ap.add_argument("--min-clear-fields", type=int, default=300)
@@ -278,15 +367,20 @@ def main(argv=None):
     ap.add_argument("--double-crop-class-acres", default=None,
                     help="JSON {crop_code: acres} (state_acres.json by_class); scores the double-crop "
                          "stratum and adds its silage acres (rule logged 19:21)")
-    ap.add_argument("--blind-switch", type=float, default=0.20,
-                    help="above this blind share the window-weighted share is the headline (19:33)")
-    ap.add_argument("--max-blind", type=float, default=0.60)
+    ap.add_argument("--min-seen", type=float, default=0.50,
+                    help="below this seen share of corn area the headline is the range (23:17)")
+    ap.add_argument("--landsat", action="store_true",
+                    help="union with timeseries_landsat.parquet in the sample folder")
+    ap.add_argument("--prior-landuse", default=None,
+                    help="county prior table (fips, prior_share) for the prior-updated figure")
+    ap.add_argument("--prior-official", type=float, default=None,
+                    help="last official state share before the test year, for the second prior-updated figure")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    table, sample_dc_acres = field_table(a.sample, a.registry, a.model)
+    table, sample_dc_acres = field_table(a.sample, a.registry, a.model, landsat=a.landsat)
     table.to_parquet(out / "fields.parquet", index=False)
     rates = json.loads((Path(a.registry) / a.model / "rates.json").read_text(encoding="utf-8"))
     tpr_clear = rates["sets"][rates["primary_clear"]]["tpr"]
@@ -300,21 +394,23 @@ def main(argv=None):
                                               n_boot=a.n_boot)
     n_clear = int((table["tier"] == "clear").sum())
     enough = n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
+    guard_limit = (ref_share + a.guard_over_reference if a.guard_over_reference is not None
+                   else a.guard)
     blind = point.get("blind_share", 0.0)
     headline = a.headline
-    if a.blind_switch is not None and np.isfinite(blind) and blind > a.blind_switch:
-        headline = "window_zero"            # logged 19:33: the clear tier stands for visible weeks only
-    if np.isfinite(blind) and blind > a.max_blind:
-        enough = False
-    head = point[headline] if enough else float("nan")
-    lo, hi = ranges[headline] if enough else (float("nan"), float("nan"))
+    seen = point.get("seen_share", 1.0)
+    as_range = bool(np.isfinite(seen) and seen < a.min_seen)   # logged 23:17: headline is the range
+    head = point[headline] if enough and not as_range else float("nan")
+    lo, hi = ranges[headline] if enough and not as_range else (float("nan"), float("nan"))
     report = {
-        "headline_estimate": headline, "blind_share": blind, "headline_share": head, "headline_range_5_95": [lo, hi],
+        "headline_estimate": headline, "blind_share": blind, "seen_share": seen,
+        "headline_is_range": as_range,
+        "headline_range_seen": [point.get("lower_seen"), point.get("upper_seen")], "headline_share": head, "headline_range_5_95": [lo, hi],
         "clear_tier_fields": n_clear, "headline_reported": bool(enough),
         "minimum": {"clear_fields": a.min_clear_fields, "clear_share_of_area": a.min_clear_area},
         "shift_guard": {"reference_counted_clear": point["reference_counted_clear"],
-                        "limit": a.guard,
-                        "flagged": bool(point["reference_counted_clear"] > a.guard)},
+                        "limit": guard_limit,
+                        "flagged": bool(point["reference_counted_clear"] > guard_limit)},
         "estimates": point, "ranges_5_95": ranges, "n_blocks": n_blocks,
         "n_fields_scored": int(len(table)), "reference_fips": a.reference_fips,
         "reference_blocks": int(table.loc[ref_mask, "block_id"].nunique()),
@@ -339,6 +435,7 @@ def main(argv=None):
             ca = {k.split()[0]: v["acres"] for k, v in ca["by_class"].items() if not k.startswith("1 ")}
         dc = double_crop_table(a.sample, a.registry, a.model)
         report["with_double_crops"] = combined_bootstrap(table, dc, a.class1_acres, ca, n_boot=a.n_boot)
+    report["prior_updated"] = prior_updates(table, a.prior_landuse, a.prior_official, a.n_boot)
     write_json(out / "state_estimate.json", report)
     print(json.dumps(report, indent=1, default=float))
     return report

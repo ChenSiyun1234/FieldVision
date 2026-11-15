@@ -189,12 +189,145 @@ FREDERICK_CALLS_HAY = (16, 22)
 KENT_CALLS_CUT_EARLY = (72, 75)  # cut by 2 September
 
 # Slide "why simple won". Mean over the three held-out countries and mean loss:
-# docs/foundation-models.md, augmentation table. Sequence model: the stream experiment's note
-# (season read as a sequence of per-date band medians; ONE seed, settings fixed beforehand,
-# in-country loss not measured yet). Last column: the 44 labelled US field-years (log 18:02, 19:16).
+# docs/foundation-models.md, augmentation table. Sequence model: the stream experiment (season
+# read as a sequence of per-date band medians; see below). Last column: the 44 labelled US
+# field-years (log 18:02, 19:16).
 TRANSFER_SUMMARY = [
     ("Small model", "6 features, logistic regression", 0.765, 0.005, "42 of 44"),
     ("Big model", "135 features, boosted trees", 0.764, 0.047, "37 of 44"),
     ("Big model, dates dropped", "observation dates removed at random in training", 0.780, 0.035, "39 of 44"),
-    ("Sequence model", "the whole season as a sequence; one seed, still running", 0.797, None, "not scored"),
+    ("Sequence model", "the whole season as a sequence; three seeds", 0.817, 0.031, "42 of 44"),
+]
+# The sequence model on the 44 labelled US field-years: 42 right, 11 of 12 silage found, 1 grain
+# called silage; pass mark (40 of 44 and 10 of 12 silage) written first. Log 23:03 (model and
+# mark), 23:39 (result). This was the fourth scoring of that set. On the eight seen counties it is
+# no better than the small model (mean miss 5.7 points for both, Marathon the worst for both), so
+# the small model stays. Where it is steadier: fields whose harvest fell between two pictures far
+# apart ("partly seen"), share called silage, small model / sequence model (log 23:39).
+SEQUENCE_PARTLY_SEEN = [("Queen Anne's", 18.3, 1.7), ("Racine", 35.4, 9.7), ("Kent", 25.5, 12.8)]
+LABELLED_SCORINGS = 4
+# Sequence model, three seeds, each country held out in turn: mean 0.817 (Austria 0.845, France
+# 0.854, Netherlands 0.752), against 0.765 and 0.764 above; loss against in-country 0.042 / 0.024 /
+# 0.026, mean 0.031. From the stream experiment's note of 14 Nov, confirmed by the coordinator (it
+# replaces the one-seed 0.797). Not tested on the labelled US fields.
+
+# Tuning 1, the replay on labelled fields (modelling work, access log 19:48 and docs/RESULTS.md):
+# Beltsville with the small model, labelled grain called silage: 3.1 % on the full series, 27.5 %
+# and 39.4 % with 28 and 35 days of observations around the drop removed. Fields that stay
+# clearly seen after that (few): 0 % at Beltsville, 0-5 % in France 2022.
+REPLAY = {"full": 3, "hidden": (28, 39), "clear": (0, 5)}
+
+# Every place with a figure: docs/RESULTS.md on main, "County and state shares of corn area
+# harvested for silage", and the log rows it names (18:09-19:23). Per place: USDA share (Census
+# 2022 for counties, NASS 2025 for the state), the USDA range for the fields we score where
+# double-crop corn lies outside them, our plain count of the clearly seen fields, the same added
+# up by two-week harvest window, and the share of corn area in windows with no clear view
+# (log 19:05, 19:11, 19:14). "tuning": looked at while the method was built. "test": never looked
+# at before, run once under rules logged first.
+PLACES = [
+    ("tuning", "Queen Anne's", 1.3, None, 4.0, 2.0, 57.2),
+    ("tuning", "Kent", 5.5, None, 12.9, 6.2, 54.4),
+    ("tuning", "Carroll", 8.9, (4.8, 7.5), 3.6, 5.1, 0.1),
+    ("tuning", "Frederick", 19.6, (11.2, 19.9), 13.2, 15.1, 0.5),
+    ("test", "Branch, Michigan", 1.8, None, 2.1, 3.6, 0.8),
+    ("test", "Gratiot, Michigan", 24.2, None, 30.0, 29.8, 0.2),
+    ("test", "Racine, Wisconsin", 2.4, (2.4, 6.4), 6.4, 6.3, 0.6),
+    ("test", "Marathon, Wisconsin", 49.9, (32.1, 49.9), 4.3, 10.0, 0.4),
+    ("test", "Maryland 2025 (state)", 8.9, None, 4.75, 3.8, 0.6),
+]
+# Wisconsin 2023 (log 22:52 and 22:55 for the rule, 22:58 for the result; each county run once).
+# USDA figure: the 2023 survey; band: the official figures across sources and years (Census 2022
+# to survey 2023). Racine reads inside its band. Marathon (a seeded draw of a third of its corn)
+# reads 27.8 points below its band; 48 % of its fields could not be judged and the clearly seen
+# fields are 32 % of the area. As a pair the test FAILED.
+PLACE_MISSES = {"Marathon, Wisconsin": 27.8}
+MARATHON_NOT_JUDGED = 48
+# Which of the two is read as "ours": the plain count, except where more than 20 % of the corn
+# area lies in windows with no clear view, where it is the count by harvest window (log 19:33; on
+# everything seen so far that means Queen Anne's and Kent).
+NOT_SEEN_SWITCH = 20
+# Not opened: kept as the clean test of the next change to the module (log 23:00).
+PLACES_HELD = ["Pennsylvania, Wisconsin 2025"]
+
+# The judges' rubric asks for precision, recall, false positive rate and response time. On the 44
+# labelled field-years the small model's calls were (log 18:02): 11 silage found, 1 silage missed,
+# 1 grain called silage, 31 grain right. So recall 11 of 12, precision 11 of 12, false positive
+# rate 1 of 32.
+CONFUSION = {"silage_found": 11, "silage_missed": 1, "grain_called_silage": 1, "grain_right": 31}
+# Response time, measured by the coordinator on the laptop with other jobs running (message of 14
+# Nov, about 23:40): Gratiot County, 3,463 fields, from stored time series to a silage or grain
+# call for every field in 47 seconds (Toolbox.classify, policy module_v2), about 14 ms per field;
+# adding the county up took another 57 seconds.
+RESPONSE_TIME = {"county": "Gratiot", "fields": 3_463, "seconds": 47, "ms_per_field": 14, "adding_up_seconds": 57}
+
+# Why Marathon read low. Source: log 23:33 ("Marathon diagnosis and safety net"), which also
+# holds the coordinator's monthly counts of clear looks per corn field (a look counted when at
+# least 60 % of the field is clear), the radar check and the Landsat scenes.
+# One cloudy spell, 20 September to 15 October 2023, lay over the silage harvest: 39 % of
+# Marathon's fields were cut inside that 25-day gap and could not be judged; the fields seen
+# clearly on both sides of the cut are the late harvest, which is grain. The "not seen" measure
+# missed it because it placed fields by the first picture after the cut.
+MARATHON_GAP = {
+    "days": 25, "start": "20 September", "end": "15 October", "fields_cut_inside": 39,
+    "landsat_clear": "1 October",
+    "months": ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"],
+    "marathon": [2.1, 5.4, 6.6, 3.8, 3.8, 1.1, 2.6, 5.9],
+    "racine": [1.2, 6.0, 6.2, 6.0, 5.2, 4.0, 4.6, 3.0],
+}
+# A safety net, not a test (same message): mean miss on the eight counties already seen, against
+# the year-matched official figure. The land-use figure was fitted on the 2022 Census, which
+# includes these counties.
+# What sees into the gap (the county work's check, relayed by the coordinator, 14 Nov about 23:40):
+# Sentinel-1 radar has no scene over Marathon between 18 September and 12 October 2023, so radar
+# cannot date a harvest there; Landsat 9 passed on 1 October 2023 with 6 % cloud and Landsat 8 on
+# 9 October with 24 % (Planetary Computer, landsat-c2-l2). The Landsat extraction was being built
+# when this was written: no result yet.
+SAFETY_NET = {"counties": 8, "satellite": 8.6, "land_use": 8.2, "both": 6.8}
+
+# Landsat 8 and 9 added to the Sentinel-2 pictures in Marathon 2023: a development check, not a
+# test (log 23:52 for what was run; 23:59 and 00:18 for the figures). Corn area seen 29 % -> 83 %
+# (log 23:17 and 00:18); silage figure 4.3 % -> 13.8 %; USDA 49.9 %, band 32.1-49.9 %.
+LANDSAT_MARATHON = {"seen_before": 29, "seen_after": 83, "silage_before": 4.3, "silage_after": 13.8, "usda": 49.9}
+
+# Starting from USDA's last figure and letting the pictures update it (log 00:11): the last
+# official silage share known before the test year (2017 Census for the 2022 counties, 2022 survey
+# for the two Wisconsin counties), then each clearly seen field's call shifted by that figure and
+# unseen fields keeping it. Counties seen while tuning: a development result, not a test.
+# (county, last official %, updated %, true %, USDA band or None)
+HISTORY_UPDATE = [
+    ("Queen Anne's", 2.2, 2.1, 1.3, None),
+    ("Branch, Michigan", 3.6, 1.9, 1.8, None),
+    ("Racine, Wisconsin", 4.2, 2.6, 2.4, None),
+    ("Kent", 5.8, 5.5, 5.5, None),
+    ("Carroll", 11.4, 5.3, 8.9, (4.8, 7.5)),
+    ("Frederick", 24.3, 16.6, 19.6, None),
+    ("Gratiot, Michigan", 19.8, 21.8, 24.2, None),
+    ("Marathon, Wisconsin", 44.9, 39.4, 49.9, (32.1, 49.9)),
+]
+# Mean miss in points, same row: last figure alone, updated, the satellite alone.
+HISTORY_UPDATE_MISS = {"last": 2.7, "updated": 2.6, "last_no_marathon": 2.3, "updated_no_marathon": 1.4, "satellite": 9.7}
+HISTORY_UPDATE_STATE = {"name": "Maryland 2025", "last": 9.5, "updated": 6.8, "true": 8.9}  # moved away
+
+# The three places opened last, once each, with the procedure, the pass marks and our own
+# prediction (the satellite alone will read low in dairy states) written first: log 00:18.
+# (name, USDA %, USDA band or None, ours % or None until logged)
+PLACES_TO_OPEN = [
+    ("Wisconsin 2025", 21.6, None, None),
+    ("Pennsylvania 2025", 32.8, None, None),
+    ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
+]
+
+# Sentinel-2 alone and with Landsat 8 and 9 added, in the three counties where clouds hid the
+# harvest and in one county that was already well seen (the control). Development checks on
+# places already seen, not tests. Kent 2022: log 00:23. Queen Anne's 2022 and Racine 2023: log
+# 00:33. Marathon 2023: log 23:59 and 00:18. "usda" is one figure, or the band of official figures.
+LANDSAT_PAIR = [
+    {"name": "Kent", "when": "Maryland 2022: a cloudy\nfortnight in September", "seen": (9, 94), "figure": (12.9, 7.3),
+     "usda": 5.5, "control": False},
+    {"name": "Queen Anne's", "when": "Maryland 2022: the same\ncloudy fortnight", "seen": (14, 70), "figure": (4.0, 2.4),
+     "usda": 1.3, "control": False},
+    {"name": "Marathon", "when": "Wisconsin 2023: 25 cloudy days\nover the silage harvest", "seen": (29, 83), "figure": (4.3, 13.8),
+     "usda": 49.9, "control": False},
+    {"name": "Racine", "when": "Wisconsin 2023: not hit by\ncloud, already well seen", "seen": (80, 90), "figure": (6.4, 7.4),
+     "usda": (2.4, 6.4), "control": True},
 ]

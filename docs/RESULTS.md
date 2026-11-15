@@ -4,6 +4,26 @@ Every number below is from a run logged in the evaluation access log before it w
 is the log row. "Seen before" says whether the place had already been looked at when the figure was
 produced. Method and reasoning: `docs/module.md`; commands and models: `docs/model.md`.
 
+## For the deck: every county and state figure
+
+"Used in tuning" = the place's result was seen before the method that produced the figure was fixed,
+so it is not a clean test. Headline = what the log named as the headline when the place was opened.
+
+| place | year | headline | comparison | used in tuning | logged |
+|---|---|---|---|---|---|
+| Queen Anne's MD | 2022 | 22.4 % (module_v1 counted share) | Census 1.3 % | no (first check: failed) | 16:40 |
+| Queen Anne's MD | 2022 | 4.0 % counted clear / 2.0 % window | Census 1.3 % | yes | 18:07, 18:54 |
+| Frederick MD | 2022 | 13.2 % counted clear / 15.1 % window | Census 19.6 %; scored set 11.2-19.9 % | yes | 18:09 |
+| Kent MD | 2022 | 21.0 % local threshold (failed) | Census 5.5 % | no for the local threshold; yes for counted clear 12.9 % and window 6.2 % | 18:11 |
+| Carroll MD | 2022 | 0 % local threshold (weak) | Census 8.9 %; scored set 4.8-7.5 % | no for the local threshold; yes for counted clear 3.6 % and window 5.1 % | 18:16 |
+| Branch MI | 2022 | 2.1 % counted clear (window 3.6 %) | Census 1.8 % | no: pass | 19:11 |
+| Gratiot MI | 2022 | 30.0 % counted clear (window 29.8 %) | Census 24.2 % | no: pass | 19:11 |
+| Maryland (150 random blocks) | 2025 | 4.75 % [3.4, 6.3] counted clear (window 3.8 %) | NASS 8.9 % | no: reads low | 19:14 |
+| Maryland, double crops added | 2025 | 6.7 % [5.3, 8.2] | NASS 8.9 % | after the fact | 19:23 |
+| Land-use prior, Maryland | 2025 | 10.6 % | NASS 8.9 % | no (county work) | 19:48 |
+| Racine WI | 2023 | 6.4 % counted clear (window 6.3 %) | survey 2023 2.4 %; band 2.4-6.4 % | no: inside the band | 22:58 |
+| Marathon WI (drawn blocks) | 2023 | 4.3 % counted clear (window 10.0 %) | survey 2023 49.9 %; band 32.1-49.9 % | no: **fail**, 28 points low; 48 % of fields abstained (harvest bracket over 20 days) | 22:58 |
+
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
 | what | compared with | logged | seen before | result |
@@ -27,6 +47,7 @@ corrected before Beltsville was opened (18:01).
 | Branch MI 2022 | Census 1.8 % | 19:11 | no | counted clear 2.1 %: **pass** | window 3.6 % |
 | Gratiot MI 2022 | Census 24.2 % | 19:11 | no | counted clear 30.0 %: **pass** (gap 28 points) | window 29.8 % |
 | Maryland 2025, 150 random read blocks | NASS 2025 8.9 % (40,000 silage acres) | 19:14 | no | counted clear 4.75 % [3.4, 6.3] = 22,700 acres: **reads 4.2 points low** | window 3.8 %; with double-crop corn scored (after the fact, 19:23) 6.7 % [5.3, 8.2] = 33,100 acres |
+| Land-use prior, 2025 states (county work, logged 19:48, no refit) | NASS 2025, shown once | 19:48 | no | Maryland 10.6 % against 8.9 %; 41 states 3.7 points acre-weighted error (15 large corn states 2.6); national 7.2 % against 6.4 % | Pennsylvania 23.2 vs 32.8, Wisconsin 17.2 vs 21.6, Michigan 11.4 vs 14.7; large misses in irrigated western dairy states and New York (California 9.9 vs 83); `docs/landuse-prior.md` |
 
 The first county step (local threshold against a nearly all-grain reference county) failed on
 Kent and Carroll and is kept only as a record. Since 19:05 the headline is the counted clear share
@@ -39,6 +60,67 @@ alfalfa on 6 %), in a year when more than half of the corn there was cut in one 
 imagery cannot tell it from silage. **Why Maryland 2025 reads low:** not diagnosed. The partly seen
 fields are called silage far more often (38 % against 4.75 %), and corn after a small grain is
 outside the scored set; scoring it lifts the figure to 6.7 %.
+
+## After 22:50 (work resumed at the user's request)
+
+**Wisconsin 2023.** Racine read 6.4 % (band 2.4-6.4 %, inside); Marathon read 4.3 % against the 2023
+survey's 49.9 % (band 32.1-49.9 %): fail. Why: 39 % of Marathon's fields have a harvest bracket over
+20 days (last standing look at median 20 September, next clear look 15 October); clear looks per field
+were 1.1 in September against 4.0 in Racine. The silage harvest fell in one cloudy spell; the clear
+tier is mostly the late grain harvest, which the classifier calls grain. No Sentinel-1 scene covers
+Marathon between 18 September and 12 October 2023, so radar cannot fill the gap; Landsat has scenes on
+1 and 9 October and is being extracted.
+
+**Seen and unseen corn (logged 23:17).** A two-week window of the harvest-bracket midpoint counts as
+seen when clear-tier fields hold half of its corn area. Seen share / lower / upper bound: Queen
+Anne's 14 % / 1.2 / 87.0, Kent 9 % / 0.0 / 91.3, Marathon 29 % / 0.8 / 72.0, Carroll 83 % / 2.3 / 19.7,
+Frederick 71 % / 8.2 / 37.7, Branch 90 % / 1.4 / 11.7, Gratiot 74 % / 25.1 / 51.7, Racine 80 % / 2.8 /
+22.6, Maryland 2025 67 % / 3.8 / 37.0. Where less than half is seen the headline is the range.
+
+**Safety net beside the headline.** Mean absolute error on the eight seen counties, satellite /
+land-use prior / mean of the two: 8.6 / 8.2 / 6.8 points against the official figure, 4.6 / 5.6 / 3.9
+against the official band. The prior's fit includes these counties, so its numbers here are
+in-sample. Maryland 2025: 4.75 and 10.6 average 7.7 against NASS 8.9.
+
+**Two-ended check (report only).** Wide and abstained fields scored with the harvest at either end
+of their bracket, accepted where both agree: mean absolute error against the bands 3.9 points
+against 5.7 for the counted clear share (Marathon 17.1 %, Carroll and Frederick inside their bands,
+Branch worse at 7.9 %).
+
+**Response time** (measured by the coordinator at 23:30 on the laptop with other jobs running):
+`Toolbox.classify('26057', 2022, 'module_v2')` 46.7 s for Gratiot's 3,463 fields, about 14 ms per
+field; `aggregate` another 56.9 s, mostly re-classifying the reference county, which is now cached.
+
+## Satellite update of the last official share: the first clearly positive county result
+
+Start from the last official silage share published before the test year and let the satellite
+update it field by field where it sees the harvest (logged 00:11): seen fields take
+sigmoid(logit p + logit prior - logit 0.5), unseen fields keep the prior, county share = area mean.
+
+| county | test year | last official share (prior) | prior updated by the satellite | official | moved |
+|---|---|---|---|---|---|
+| Queen Anne's MD | 2022 | 2.2 (2017 Census) | 2.1 | 1.3 | towards |
+| Carroll MD | 2022 | 11.4 (2017 Census) | 5.3 | 8.9 (band 4.8-7.5) | into the band, away from the point |
+| Frederick MD | 2022 | 24.3 (2017 Census) | 16.6 | 19.6 | towards |
+| Kent MD | 2022 | 5.8 (2017 Census) | 5.5 (3.1 with Landsat) | 5.5 | towards (away with Landsat) |
+| Branch MI | 2022 | 3.6 (2017 Census) | 1.9 | 1.8 | towards |
+| Gratiot MI | 2022 | 19.8 (2017 Census) | 21.8 | 24.2 | towards |
+| Racine WI | 2023 | 4.2 (2022 survey) | 2.6 | 2.4 | towards |
+| Marathon WI | 2023 | 44.9 (2022 survey) | 39.4 (33.6 with Landsat) | 49.9 | away (both inside the band 32.1-49.9) |
+| Maryland 2025 | 2025 | 9.5 (2024 survey) | 6.8 | 8.9 | away |
+
+Mean absolute error on the eight counties: prior alone 2.7 points, updated 2.6 (0.4 against the
+official bands), satellite alone 9.7. Caveats: these counties were seen while tuning; the last
+official share is five years old for six of them and one year old for two; Marathon and Maryland
+2025 move away, both places where the satellite reads low. The same update with the land-use
+prior instead (state left out) helps where that prior is right and wrecks Gratiot (30.0 to 10.5),
+so it is shown beside, never as the headline.
+
+**Landsat** (development places): Marathon 4.3 % to 13.8 % (official 49.9), Kent 12.9 % to 7.3 %
+(Census 5.5); seen share 29 to 83 % and 9 to 94 %.
+
+**Sequence model on Beltsville** (fourth scoring, logged 23:03 / 23:37): 42 of 44, 11 of 12 silage,
+passes its mark; on the seen counties it reads no better than the logistic and not Marathon.
 
 ## Open leads, in the order we would try them
 

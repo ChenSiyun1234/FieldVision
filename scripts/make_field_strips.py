@@ -111,6 +111,9 @@ def read_chip(item, geometry_ll, collection):
     return np.moveaxis(rgb, 0, -1), outline
 
 
+DPI, SIZE_LIMIT = 100, 400_000
+
+
 def draw(pick, run_dir, labels_path, out_path):
     field_id, year = pick["field_id"], 2022
     feats = json.loads(Path(labels_path).read_text())["features"]
@@ -123,8 +126,16 @@ def draw(pick, run_dir, labels_path, out_path):
                             left=0.05, right=0.98, top=0.82, bottom=0.1)
     for i, (day, role, row) in enumerate(chips):
         ax = fig.add_subplot(grid[0, i])
-        item = fetch_item(row.scene_id, row.collection)
-        rgb, outline = read_chip(item, geometry, row.collection)
+        for attempt in range(4):              # slow or flaky links: retry a chip
+            try:
+                rgb, outline = read_chip(fetch_item(row.scene_id, row.collection), geometry, row.collection)
+                break
+            except Exception as exc:
+                if attempt == 3:
+                    raise
+                print(f"  retry {row.scene_id}: {type(exc).__name__}", flush=True)
+                import time
+                time.sleep(5 * (attempt + 1))
         ax.imshow(rgb, interpolation="nearest")
         for poly in getattr(outline, "geoms", [outline]):
             xs, ys = poly.exterior.xy
@@ -165,9 +176,9 @@ def draw(pick, run_dir, labels_path, out_path):
     fig.text(0.05, 0.885, f"Field {field_id}, {pick['area_ha']:.1f} ha{gap}. Sentinel-2 true colour, 10 m.",
              fontsize=9, color=MUTED)
     buffer = io.BytesIO()
-    fig.savefig(buffer, dpi=100, facecolor=BG)
+    fig.savefig(buffer, dpi=DPI, facecolor=BG)
     plt.close(fig)
-    save_small(Image.open(buffer), out_path)
+    save_small(Image.open(buffer), out_path, SIZE_LIMIT)
     return out_path
 
 
@@ -188,7 +199,11 @@ def main():
     parser.add_argument("--picks", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--only", nargs="*", default=[])
+    parser.add_argument("--dpi", type=int, default=100, help="160 gives 1920 px wide strips for slides")
+    parser.add_argument("--size-limit", type=int, default=400_000)
     args = parser.parse_args()
+    global DPI, SIZE_LIMIT
+    DPI, SIZE_LIMIT = args.dpi, args.size_limit
     args.out.mkdir(parents=True, exist_ok=True)
     picks = json.loads(args.picks.read_text())
     made = []
