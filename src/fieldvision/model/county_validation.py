@@ -79,7 +79,7 @@ def em_share(p, a, train_prior=0.5, tol=1e-6, max_iter=500):
     return pi
 
 
-def local_threshold_share(c, ref, source, alpha=0.10):
+def local_threshold_share(c, ref, source, alpha=0.10, tpr_offset=0.0):
     """The local-threshold county layer (fieldvision.anomaly.local), area-weighted here.
 
     Threshold = the reference county's (1 - alpha) quantile of scores (labels not read);
@@ -93,15 +93,17 @@ def local_threshold_share(c, ref, source, alpha=0.10):
     ref_flag = float(np.sum(ra * (rp >= t)) / np.sum(ra))
     sp, sy = source
     t_s = float(np.quantile(sp[sy == 0], 1 - alpha))
-    tpr = float((sp[sy == 1] >= t_s).mean())
+    tpr = float((sp[sy == 1] >= t_s).mean()) + (tpr_offset or 0.0)
     ok = ~c["abstain"].to_numpy()
     p, a = c["p"].to_numpy()[ok], c["area"].to_numpy()[ok]
     flag = float(np.sum(a * (p >= t)) / np.sum(a))
+    if tpr_offset is None:          # the plain locally flagged share, no adjustment
+        return flag
     den = tpr - ref_flag
     return float(np.clip((flag - ref_flag) / den, 0, 1)) if den > 1e-9 else np.nan
 
 
-def estimates(c, tpr, fpr, ref_counted=None, ref_share=None, ref=None, source=None):
+def estimates(c, tpr, fpr, ref_counted=None, ref_share=None, ref=None, source=None, tpr_offset=0.0):
     ok = ~c["abstain"].to_numpy()
     a, p = c["area"].to_numpy()[ok], c["p"].to_numpy()[ok]
     called = p >= 0.5
@@ -119,7 +121,8 @@ def estimates(c, tpr, fpr, ref_counted=None, ref_share=None, ref=None, source=No
         out["ref"] = adj(fpr_ref)
         out["fpr_ref"] = fpr_ref
     if ref is not None and source is not None:
-        out["local"] = local_threshold_share(c, ref, source)
+        out["local"] = local_threshold_share(c, ref, source, tpr_offset=tpr_offset)
+        out["local_flagged"] = local_threshold_share(c, ref, source, tpr_offset=None)
     return out
 
 
@@ -140,12 +143,13 @@ def simulate(pool, tpr, fpr, n_fields=250, n_ref=250, ref_share=0.01, reps=200, 
         for share in SHARES:
             c = draw_county(pool, share, n_fields, rng, exclude=ref.index)
             for off in tpr_offsets:
-                e = estimates(c, tpr + off, fpr, ref_counted, true_ref, ref=ref, source=source)
+                e = estimates(c, tpr + off, fpr, ref_counted, true_ref, ref=ref, source=source,
+                              tpr_offset=off)
                 rows.append({"rep": rep, "target_share": share, "tpr_offset": off, **e})
     return pd.DataFrame(rows)
 
 
-ESTIMATORS = ("raw", "counted", "adj_eu", "ref", "local", "em")
+ESTIMATORS = ("raw", "counted", "adj_eu", "ref", "local", "local_flagged", "em")
 
 
 def summarise(sim, setting):
