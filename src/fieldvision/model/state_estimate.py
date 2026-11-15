@@ -357,6 +357,9 @@ def main(argv=None):
     ap.add_argument("--headline", default="counted_clear", choices=ESTIMATES[:6])
     ap.add_argument("--guard", type=float, default=0.10,
                     help="reference counted clear share above which the headline is flagged")
+    ap.add_argument("--guard-over-reference", type=float, default=None,
+                    help="flag when the reference's counted clear share exceeds its Census share by "
+                         "more than this (00:18 rule for Pennsylvania and Wisconsin)")
     ap.add_argument("--secondary-model", default=None,
                     help="also report this model's counted clear share (shown beside)")
     ap.add_argument("--min-clear-fields", type=int, default=300)
@@ -391,6 +394,8 @@ def main(argv=None):
                                               n_boot=a.n_boot)
     n_clear = int((table["tier"] == "clear").sum())
     enough = n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
+    guard_limit = (ref_share + a.guard_over_reference if a.guard_over_reference is not None
+                   else a.guard)
     blind = point.get("blind_share", 0.0)
     headline = a.headline
     seen = point.get("seen_share", 1.0)
@@ -404,8 +409,8 @@ def main(argv=None):
         "clear_tier_fields": n_clear, "headline_reported": bool(enough),
         "minimum": {"clear_fields": a.min_clear_fields, "clear_share_of_area": a.min_clear_area},
         "shift_guard": {"reference_counted_clear": point["reference_counted_clear"],
-                        "limit": a.guard,
-                        "flagged": bool(point["reference_counted_clear"] > a.guard)},
+                        "limit": guard_limit,
+                        "flagged": bool(point["reference_counted_clear"] > guard_limit)},
         "estimates": point, "ranges_5_95": ranges, "n_blocks": n_blocks,
         "n_fields_scored": int(len(table)), "reference_fips": a.reference_fips,
         "reference_blocks": int(table.loc[ref_mask, "block_id"].nunique()),
