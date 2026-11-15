@@ -35,6 +35,10 @@ PRODUCTS = {
     "s1": {"module": "fieldvision.s1.extract", "globs": ["s1/*.py", "s2/core.py", "s2/geometry.py", "s2/catalog.py"],
            "key": ["field_id", "absolute_orbit"], "imports": "from fieldvision.s1.extract import process_block",
            "exact": repr(S1_COLUMNS)},
+    "ls": {"module": "fieldvision.ls.extract", "globs": ["ls/*.py", "s2/core.py", "s2/geometry.py", "s2/catalog.py"],
+           "key": ["field_id", "date"],
+           "imports": "from fieldvision.s2.core import BANDS\nfrom fieldvision.ls.extract import process_block",
+           "exact": '["scene_id", "collection", "n_pixels", "n_clear", "clear_fraction", *BANDS]'},
 }
 
 

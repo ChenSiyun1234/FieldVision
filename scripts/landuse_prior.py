@@ -205,9 +205,25 @@ def predict_states(a):
     print(out.round(4).to_string(index=False))
 
 
+def prior_table(a):
+    """Per-county prior for every county with CDL statistics (written for the toolbox's aggregate output)."""
+    lu = pd.read_csv(a.landuse, dtype={'fips': str})
+    c0, c1 = json.loads((Path(a.out_dir) / 'coefficients.json').read_text())['forage_share_mean1923|linear']
+    cen = pd.read_csv(Path(a.out_dir) / 'census2022_with_landuse.csv', dtype={'fips': str})
+    t = lu.groupby('fips').forage_share_mean1923.first().reset_index().dropna()
+    t['prior_silage_share'] = np.clip(c0 + c1 * t.forage_share_mean1923, 0, 1)
+    t = t.merge(cen[['fips', 'state_name', 'county_name', 'silage_share']]
+                .rename(columns={'silage_share': 'census2022_silage_share'}), on='fips', how='left')
+    t['in_census2022_fit'] = t.census2022_silage_share.notna()
+    t['model'] = f'prior = {c0:.4f} + {c1:.4f} x forage_share_mean1923, clipped to [0,1]'
+    t.to_csv(Path(a.out_dir) / 'county_prior.csv', index=False)
+    t.to_parquet(Path(a.out_dir) / 'county_prior.parquet', index=False)
+    print(len(t), 'counties,', int(t.in_census2022_fit.sum()), 'in the fit')
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('stage', choices=['table', 'holdout', 'predict'])
+    ap.add_argument('stage', choices=['table', 'holdout', 'predict', 'prior-table'])
     ap.add_argument('--cdl-dir', type=Path)
     ap.add_argument('--landuse', type=Path)
     ap.add_argument('--census', type=Path)
@@ -227,6 +243,8 @@ def main(argv=None):
     elif a.stage == 'holdout':
         a.out_dir.mkdir(parents=True, exist_ok=True)
         holdout(a)
+    elif a.stage == 'prior-table':
+        prior_table(a)
     else:
         predict_states(a)
 

@@ -31,6 +31,8 @@ def strip_item(item):
     """Drop assets and links the extractor never reads; properties and footprint stay as they are."""
     if item["collection"] == "sentinel-1-rtc":
         keys = ("vv", "vh")
+    elif item["collection"] == "landsat-c2-l2":
+        keys = ("blue", "green", "red", "nir08", "swir16", "swir22", "qa_pixel")
     else:
         keys = BAND_KEYS_PC if item["collection"].startswith("planetary:") else BAND_KEYS_ES
     slim = {k: v for k, v in item.items() if k not in ("assets", "links")}

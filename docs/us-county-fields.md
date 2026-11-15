@@ -337,3 +337,66 @@ layout the toolbox reads). During a run it takes only blocks listed as complete 
 Fields under 0.3 ha: none in either county (CSB merges polygons under 1 ha into neighbours);
 under 1 ha: 9 (Frederick), 3 (Queen Anne's). Median field 4.7 ha (Frederick), 8.0 ha (Queen
 Anne's). Source polygons that were invalid and repaired with `make_valid`: 118 and 70.
+
+## State at hand-over (14 Nov, about 19:50 PT)
+
+Finished, verified and in `<data>\timeseries\READY.txt`, with toolbox folders under
+`<data>\counties\`: Frederick 24021, Queen Anne's 24035, Kent 24029, Carroll 24013 (2022; each with
+fields.geojson, timeseries.parquet, fields_coverage.csv, unscored_corn.json, landscape.parquet), Branch 26023 and
+Gratiot 26057 (2022; no landscape.parquet, their state CSB is not on this laptop), the Maryland 2025 sample
+(`24_2025_sample`: fields, corn and double-crop series, draw.json, state_acres.json, sample_info.json,
+landscape.parquet). Beltsville stays as 24033 (made by the modelling session).
+
+Not finished:
+- Racine `us_55101_2023` and Marathon `us_55073_2023`: results are in `<work>\colab_results\<run>\` (field zip +
+  block parts, checksums OK) but not unpacked or merged. Next: unzip the fields zip as is to
+  `<data>\labels\<run>\`, create the run folder with `build_colab_run.start_fresh_run` and template
+  `<work>\colab\_templates\9cd0447b_2023` (README step 2 in `<work>\colab\<run>\`), then
+  `scripts/merge_colab_blocks.py` and the finalise command. Marathon is a capped draw (sample.json in its zip).
+  Lancaster `us_42071_2023` was still running on Colab. All three are untouched test counties.
+- Pennsylvania and Wisconsin 2025 frames and draws: unzipped to `<data>\labels\us_42_2025\` and
+  `us_55_2025\` (s1-s3 field files, draw.json, state_acres.json); no extraction bundles built. Next, per part:
+  `python scripts/build_colab_run.py --run-dir <data>/timeseries/us_<fips>_2025_s<k> --fields <data>/labels/us_<fips>_2025/s<k>/fields.geojson --code <frozen 9cd0447b> --template-run <work>/colab/_templates/9cd0447b_2025 --check-external <as for Maryland> --dest <work>/colab/us_<fips>_2025_s<k>` (script on main).
+- Landscape files for Michigan, Pennsylvania and Wisconsin: need their state CSB on Colab
+  (`scripts/forage_landscape.py`).
+- Six-state proposal (above): not started.
+- County CDL statistics (CropScape) 2019-2025: `<data>\us\cropscape\county\`, about 2,885 counties per year,
+  complete; county table and land-use prior results in `<data>\us\landuse\` (docs/landuse-prior.md).
+
+### Update, tuning resumed (14 Nov, about 20:15 PT)
+
+- Racine `us_55101_2023` (whole county, 1,946 fields, 39,472 acres) and Marathon `us_55073_2023` (seeded draw:
+  70 of 187 read blocks, 20 of 53 10-km blocks, 3,448 of 9,910 fields, 56,316 of 165,998 acres = 33.9 % of the
+  county's CSB corn; `sample.json` beside the field file): field files unpacked to `<data>\labels\<run>\`,
+  run folders created (stub signatures equal Colab's: f48235f505b6 and 99805e7b508e); merge by the extraction
+  session pending. Corn-area check: the 2023 survey and the 2022 Census agree for both counties and the boundaries
+  read high (Marathon polygons 165,998 acres against survey grain + silage 122,300 and Census 123,690; CDL 2023 corn
+  pixels 152,862. Racine 39,472 against 33,700 and 33,481; pixels 38,288). Silage share: survey 2023 Racine 2.4 %,
+  Marathon 49.9 %; Census 2022 6.4 % and 32.1 %.
+- Pennsylvania and Wisconsin 2025: six extraction bundles built in `<work>\colab\us_42_2025_s1..s3\` and
+  `us_55_2025_s1..s3\` (50 read blocks each, `--year 2025`, upload the 5 files on README line 1, run cells 1-7),
+  laptop run folders with stub manifests in `<data>\timeseries\`. Draws: Pennsylvania 150 of 3,106 read
+  blocks (5.1 % of frame acres), Wisconsin 150 of 4,433 (3.4 %).
+- 22:55 PT: Racine and Marathon merged by the extraction session, verified (42 and 70 blocks complete, 1,946 and
+  3,448 fields usable, Collection 1, no failures), READY lines written (Marathon marked as a seeded draw), toolbox
+  folders `<data>\counties\55101\2023\` and `55073\2023\` (fields, series, coverage, unscored_corn.json,
+  county_check.json, sample.json). `references.json`: 55073 -> 55101, year 2023, share 0.0237 from the 2023
+  county survey (no Census in 2023; recorded in the entry's share_source). Untouched until the modelling session
+  runs them once under its 19:33 rule.
+- 23:20 PT: Sentinel-1 bundle for Marathon 2023 built and dry-checked, `<work>\colab\s1_55073_2023\` (the Kent
+  pilot's notebook, code 3fc72639, the 3,448 drawn fields, 70 blocks, April-November; same-result check on the
+  pilot's two Kent blocks passed on the laptop). Radar coverage there is thin: Planetary Computer `sentinel-1-rtc`
+  has 12 scenes in April-November 2023, one relative orbit (92 ascending), none from May to 12 August, and a 24-day
+  gap from 18 September to 12 October (the 30 September pass is missing), nearly the same window as the optical
+  cloud gap (20 September-15 October). Not run, by the coordinator's decision (23:25): radar cannot date the
+  harvests inside the gap; a Landsat 9 scene of 1 October 2023 (6 % cloud) is used instead (extraction session).
+- Per-county land-use prior table: `python scripts/landuse_prior.py prior-table ...` writes
+  `<data>\us\landuse\county_prior.csv` / `.parquet` (2,890 counties).
+- 00:10 PT (15 Nov): Wisconsin 2025 sample complete. Parts `us_55_2025_s1`-`s3` merged and finalised by the
+  extraction session, verified, READY lines written (with the Collection 1 note); s1 is partial from one permanent
+  plausibility rejection (2025-04-17, one block). Merged in `<data>\counties\55_2025_sample\`: 8,246 fields
+  (corn 8,199, double crop 47) in the 150 drawn read blocks of 4,433, corn and double-crop series in separate files,
+  draw.json, state_acres.json, sample_info.json. Landsat rows from the extraction session go into the same folder.
+- Land-use prior with each county's own state left out (for the modelling session's per-field check): files
+  `<data>\us\landuse\prior_state_left_out_counties.csv` and `prior_state_left_out_states_2025.csv`;
+  leaving a state out moves every county prior by at most one point.
