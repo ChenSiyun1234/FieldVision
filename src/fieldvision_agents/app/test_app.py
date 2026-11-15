@@ -54,6 +54,26 @@ def test_service_lists_and_opens_runs():
         assert d["evidence"]["estimate"]["silage_acres"] and [s["tool"] for s in d["steps"]][0] == "scout"
 
 
+def test_recommender_reads_the_final_module_predictions():
+    """The agent's "standard" route saves predictions under the final module's name; the recommender must look there."""
+    tb = service._with_recommender(type("Inner", (), {"final_policy": "module_v2"})())
+    import silage_match
+    seen = {}
+    real = silage_match.recommend, silage_match.save
+    silage_match.recommend = lambda fips, year, as_of, P, policy: seen.setdefault("policy", policy) and {
+        "as_of": as_of, "overall": "pass", "funnel": {}, "county_silage_share_pct": None,
+        "standing_price_usd_per_ton": None, "checks": [], "summary": "", "dairies": []}
+    silage_match.save = lambda r: None
+    try:
+        tb.recommend_sources("24021", 2022, policy="standard")
+        assert seen["policy"] == "module_v2"
+        seen.clear()
+        tb.recommend_sources("24021", 2022, policy="regional_threshold")
+        assert seen["policy"] == "regional_threshold"
+    finally:
+        silage_match.recommend, silage_match.save = real
+
+
 def test_web_api_serves_the_page_and_status():
     try:
         from fastapi.testclient import TestClient

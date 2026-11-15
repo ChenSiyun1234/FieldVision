@@ -61,17 +61,33 @@ def status():
     }
 
 
+def _with_recommender(tb):
+    """Add recommend_sources (recommender/silage_match.py) to the toolbox.
+
+    The agent's "standard" route runs the bridge's final module, so classify saves its predictions under
+    that policy's name (results/MD_2022_24021_module_v2.parquet); the recommender is told that name.
+    """
+    import sys
+    if str(RECOMMENDER) not in sys.path:
+        sys.path.insert(0, str(RECOMMENDER))
+    from silage_match import SilageMatchToolbox
+
+    class Recommending(SilageMatchToolbox):
+        def recommend_sources(self, fips, year, as_of=None, shortfall_frac=None, policy="standard"):
+            if policy == "standard":
+                policy = getattr(self._tb, "final_policy", policy)
+            return super().recommend_sources(fips, year, as_of=as_of, shortfall_frac=shortfall_frac, policy=policy)
+
+    return Recommending(tb)
+
+
 @lru_cache(maxsize=4)
-def toolbox(offline=False, recommend=False):
-    """The real tools: final model module, RAG critic (Nemotron explains only when online), report search."""
+def toolbox(offline=False, recommend=True):
+    """The real tools: final model module, RAG critic (Nemotron explains only when online), report search,
+    and recommend_sources, which the agent may call once after a critic result that is not a fail."""
     from ..fieldvision_bridge import FieldVisionToolbox, make_rag_critic, make_report_search
     tb = FieldVisionToolbox(critic=make_rag_critic(use_llm=not offline), reports=make_report_search())
-    if recommend:
-        import sys
-        sys.path.insert(0, str(RECOMMENDER))
-        from silage_match import SilageMatchToolbox
-        tb = SilageMatchToolbox(tb)
-    return tb
+    return _with_recommender(tb) if recommend else tb
 
 
 def agent(offline=False):
@@ -82,7 +98,7 @@ def agent(offline=False):
     return NemotronClient()
 
 
-def run(fips, year, offline=False, recommend=False, log_dir=LOGS):
+def run(fips, year, offline=False, recommend=True, log_dir=LOGS):
     t0 = time.perf_counter()
     result = run_county(str(fips), int(year), toolbox(offline, recommend), agent(offline), log_dir=log_dir)
     result["seconds"] = round(time.perf_counter() - t0, 1)
