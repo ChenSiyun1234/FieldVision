@@ -146,7 +146,14 @@ def _latest_md(folder):
 
 def agent_quality():
     return {"evaluation_md": _latest_md(EVALUATION), "benchmark_md": _latest_md(BENCHMARK),
-            "limitations_md": (Path(BENCHMARK) / "limitations.md").read_text() if (Path(BENCHMARK) / "limitations.md").is_file() else None}
+            "limitations_md": (Path(BENCHMARK) / "limitations.md").read_text() if (Path(BENCHMARK) / "limitations.md").is_file() else None,
+            "gaps_md": _gaps_md()}
+
+
+def _gaps_md():
+    """The seven known gaps, checked against results on disk (fieldvision_agents.validation.gap_checks)."""
+    path = REPO / "handoff" / "results" / "agents" / "gap_checks.md"
+    return path.read_text().split("\n", 2)[2] if path.is_file() else None
 
 
 def build():

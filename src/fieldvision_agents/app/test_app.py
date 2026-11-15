@@ -15,15 +15,15 @@ from . import service
 from .offline import RuleAgent, evidence_answer, template_report
 
 
-def _run(critic, tmp):
-    return run_county("24021", 2022, StubToolbox(critic), RuleAgent(), log_dir=tmp)
+def _run(critic, tmp, faults=()):
+    return run_county("24021", 2022, StubToolbox(critic, faults), RuleAgent(), log_dir=tmp)
 
 
 def test_rule_agent_meets_every_evaluation_scenario():
     """The same five scenarios the Nemotron agent is scored on, same allowed outcomes."""
     with tempfile.TemporaryDirectory() as tmp:
         for sc in SCENARIOS:
-            result = _run(sc["critic"], tmp)
+            result = _run(sc["critic"], tmp, sc.get("faults", ()))
             assert result["status"] in sc["allowed"], (sc["name"], result)
             assert len(result["policies"]) <= 2 and len(set(result["policies"])) == len(result["policies"])
 
