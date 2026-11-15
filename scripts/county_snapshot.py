@@ -94,6 +94,10 @@ def main(argv=None):
         'blocks': done_blocks,
     }
     if a.final:
+        coverage = pd.read_csv(a.run / 'fields_coverage.csv')
+        assert set(coverage.field_id) == set(fields.field_id), 'coverage does not list every field'
+        coverage.to_csv(out / 'fields_coverage.csv.tmp', index=False)
+        replace(out / 'fields_coverage.csv.tmp', out / 'fields_coverage.csv')
         (out / 'PARTIAL.json').unlink(missing_ok=True)
         info.pop('blocks')
         info['run_status'] = manifest['status']

@@ -77,6 +77,18 @@ the Census by 10-20 %.
 * Census acres are harvested acres reported by farms by farm headquarters county, not by field
   location; CSB is located by field.
 
+## Time series and the toolbox copy
+
+`C:\t\fv\data\timeseries\us_<fips>_2022`, extractor defaults (`--year 2022`, April 1 to
+November 30, Collection 1 with the Planetary Computer fallback). Extraction cost is per read
+block, not per field: Frederick's 2,233 fields make 70 blocks and a random 800 would still
+make 63, so the whole county is extracted. Western Frederick blocks see about 120 scenes
+(two MGRS tiles and the UTM 17/18 overlap).
+
+`scripts/county_snapshot.py` copies fields and time series to `<root>/<fips>/<year>/` (the
+layout the toolbox reads). During a run it takes only blocks listed as complete in
+`manifest.json` and writes `PARTIAL.json` with the counts; `--final` copies the finished run.
+
 Fields under 0.3 ha: none in either county (CSB merges polygons under 1 ha into neighbours);
 under 1 ha: 9 (Frederick), 3 (Queen Anne's). Median field 4.7 ha (Frederick), 8.0 ha (Queen
 Anne's). Source polygons that were invalid and repaired with `make_valid`: 118 and 70.
