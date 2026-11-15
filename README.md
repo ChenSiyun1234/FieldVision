@@ -4,7 +4,7 @@ Hack the Harvest 2026, USDA NASS challenge: tell silage corn from grain corn fie
 
 ![Fields called grain or silage from Sentinel-2 pictures and greenness curves](handoff/figures/deck/strips_sheet.png)
 
-The team won the Grand Prize. I built the classification model. It reads each corn field's Sentinel-2 time series (and Landsat 8 and 9 where clouds leave gaps) and calls the field silage, grain, or "not seen clearly". The calls add up to county and state silage acreage.
+The team won the Grand Prize, 1st place and the only top award ($5,000). I built the classification model. It reads each corn field's Sentinel-2 time series (and Landsat 8 and 9 where clouds leave gaps) and calls the field silage, grain, or "not seen clearly". The calls add up to county and state silage acreage.
 
 - **Training.** Only 44 labelled US field-years exist, so I trained on 8,000 labelled fields from Austria, France and the Netherlands and kept the US labels for testing.
 - **Model.** Logistic regression on six crop-timing features: greenness and moisture before the cut, how fast the field dries, days from peak to cut, and what the stubble looks like afterwards. I compared boosted trees and sequence models and chose the simplest one by holding out a whole country.
