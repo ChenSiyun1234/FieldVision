@@ -144,6 +144,17 @@ the log. Our run (02:11, procedure logged at 00:18, Landsat added) read 26.6 % o
 
 **Tally of the locked procedure, satellite alone:** Wisconsin 2025 passes by 0.02 point, Pennsylvania 2025 fails (17.6 low), Lancaster 2023 passes (0.8 low). The prior updates failed their marks in all three places.
 
+**Why does Lancaster read right in 2023 and Pennsylvania low in 2025? Not the timing feature.**
+Lancaster's own fields in the Pennsylvania 2025 sample read 15.7 % (block-resampling range 11.1-20.4 %,
+11 blocks) against 26.6 % in 2023, so the gap is more than a small sample; Frederick's fields in the
+Maryland 2025 sample read 6.1 % (1.3-13.0 %, 8 blocks) against 13.2 % in 2022, which a small sample
+could explain. The pictures show no level shift between the two Lancaster years (NDVI before the cut
+0.562 and 0.561); the 2025 green peak came 16 days earlier. Three logistics without the
+peak-anchored timing were tested under a rule logged before fitting (02:18): all equal V0 in Europe
+(0.765-0.766 held out by country), none closes the year-to-year gap by a third (18.4 points for V0,
+15.1-15.2 for the others; 12.3 needed). By the rule the module stays as it is, and the earlier peak is
+not the cause.
+
 ## Open leads, in the order we would try them
 
 1. **Harvest detector taking a later drop.** Example: Frederick field `csb-241825014024676`, cut on
