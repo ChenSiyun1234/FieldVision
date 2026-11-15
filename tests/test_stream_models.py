@@ -175,6 +175,24 @@ def test_models_learn_a_late_season_difference(kind):
     assert roc_auc_score(y[test], p) > 0.9
 
 
+def test_apply_scores_unseen_fields_without_their_labels():
+    pytest.importorskip("torch")
+    from sklearn.metrics import roc_auc_score
+    from fieldvision.stream.apply import fit_and_score
+    from fieldvision.stream.train import Settings
+    data, y = _toy()
+    ids = data.seq["field_id"]
+    rows = [(f, d, 0.0, 1.0) for f, d in zip(data.chips["field_id"], data.chips["date"])]
+    ts = _table(rows)
+    ts["B08"] = data.chips["bands"][:, series.NIR, 1, 1] / 10000.0
+    labelled = pd.DataFrame({"field_id": ids[:64], "y": y[:64]})
+    scores = fit_and_score(ts, labelled, ids[64:], "seq", "calendar", cfg=Settings(epochs=20, batch=16, seeds=2))
+    assert scores["field_id"].tolist() == ids[64:].tolist() and {"p_seed0", "p_seed1", "p"} <= set(scores.columns)
+    assert roc_auc_score(y[64:], scores["p"]) > 0.9
+    with pytest.raises(ValueError):
+        fit_and_score(ts, labelled, ids[60:70], "seq", "calendar")
+
+
 def test_train_cli_and_hold_out_table(tmp_path):
     pytest.importorskip("torch")
     from fieldvision.stream import report, train
