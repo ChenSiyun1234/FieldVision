@@ -21,13 +21,15 @@ import pitch_numbers as N  # noqa: E402
 HERE = Path(__file__).resolve().parent
 BG, INK, INK2, BLUE, GREY, GRID = "#fcfcfb", "#0b0b0b", "#52514e", "#2a78d6", "#b4b2a9", "#e4e2dc"
 LEFT = 0.035
+DECK = False  # set by deck_figs.py: the slide carries the title, so the figure leaves it out
 
 plt.rcParams.update({"font.family": "DejaVu Sans"})
 
 
 def new_fig(title, subtitle=""):
     fig = plt.figure(figsize=(12.8, 7.2), dpi=150, facecolor=BG)
-    fig.text(LEFT, 0.928, title, fontsize=22, fontweight="bold", color=INK, ha="left", va="center")
+    if not DECK:
+        fig.text(LEFT, 0.928, title, fontsize=22, fontweight="bold", color=INK, ha="left", va="center")
     if subtitle:
         fig.text(LEFT, 0.878, subtitle, fontsize=13.5, color=INK2, ha="left", va="top", linespacing=1.45)
     return fig
@@ -56,9 +58,14 @@ def to_come(ax, x0, x1, y, text, half=0.27, size=12.5):
 
 
 def save(fig, name):
-    out = HERE / f"{name}.png"
+    out = (HERE / "deck" if DECK else HERE) / f"{name}.png"
+    out.parent.mkdir(exist_ok=True)
     fig.savefig(out, facecolor=BG)
     plt.close(fig)
+    if DECK:  # cut the empty title band off the top
+        from PIL import Image
+        im = Image.open(out)
+        im.crop((0, int(im.height * 0.1), im.width, im.height)).save(out)
     print(f"{out.name}: {out.stat().st_size // 1024} KB")
 
 
@@ -406,9 +413,11 @@ def state_2025():
         ("Double-crop corn, outside the figure above", md["double_crop_acres_not_scored"], lambda v: f"{v:,} acres"),
         ("With double-crop corn scored too (added after the result was seen)", with_dc,
          lambda v: f"{v[0]:,} acres, {v[1]:g}%  (range {v[2][0]:g} to {v[2][1]:g}%)"),
+        ("Upper bound: every double-crop acre counted as silage", md.get("upper_bound_silage_acres"),
+         lambda v: f"{v:,} acres, {md['share_if_all_double_crop_is_silage']:g}%"),
     ]
     for i, (label, value, fmt) in enumerate(beside):
-        y = 2.88 - i * 0.48
+        y = 2.92 - i * 0.43
         ax.text(0.6, y, label, fontsize=13.5, color=INK2, va="center")
         if value is None:
             to_come(ax, 9.15, 11.15, y, "to come", half=0.19, size=12)

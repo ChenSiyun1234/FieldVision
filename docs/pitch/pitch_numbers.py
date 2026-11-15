@@ -131,7 +131,70 @@ STATE_2025 = {
         # double-crop field exists, so these calls are untested.
         "with_double_crop_silage_acres": 33_135, "with_double_crop_share": 6.7,
         "with_double_crop_range": (5.3, 8.2), "all_corn_acres": 494_947,
+        # Upper bound: every double-crop acre counted as silage, 22,700 + 17,056 (8.0 %, log 19:14).
+        "upper_bound_silage_acres": 39_756,
     },
     "Pennsylvania": {"our_silage_share": None, "source": "to come"},
     "Wisconsin": {"our_silage_share": None, "source": "to come"},
 }
+
+# =================================================================================================
+# Numbers used only by the slide deck (deck_figs.py, build_deck.py)
+# =================================================================================================
+
+# Fields behind the work. Labelled: log 17:40 (8,000 European field-years). Unlabelled US corn
+# fields: four Maryland counties 2022, log 18:21 (7,243); Branch and Gratiot, log 19:11 (3,390 and
+# 3,463); Maryland 2025 sample drawn, docs/us-county-fields.md (3,929, of which 3,611 corn fields
+# were scored and 318 are double crop, log 19:11).
+FIELDS_LABELLED_EUROPE = 8_000
+FIELDS_US_MARYLAND_2022 = 7_243
+FIELDS_US_MICHIGAN_2022 = 3_390 + 3_463
+FIELDS_US_MARYLAND_2025 = 3_929
+FIELDS_US_TOTAL = FIELDS_US_MARYLAND_2022 + FIELDS_US_MICHIGAN_2022 + FIELDS_US_MARYLAND_2025  # 18,025
+
+# The first county total: Queen Anne's County 2022, check declared before it was opened
+# (log 16:12), result log 16:40: 22.4 % of the counted corn area called silage, Census 1.3 %.
+FIRST_COUNTY_TOTAL = {"county": "Queen Anne's", "ours": 22.4, "census": 1.3}
+
+# Tuning 1. docs/module.md, "The layers": in Queen Anne's the share of fields called silage rose
+# with the gap between the two images around the cut. Same doc, "What was validated where": the
+# check on the labelled fields by evidence group (predictions already scored, nothing new run).
+GAP_EVIDENCE = [("gap of 5 to 10 days", 6.6), ("gap of 15 to 20 days", 60.0)]
+LABELLED_BY_EVIDENCE = {"clearly_seen": (24, 0), "partly_seen": (12, 1)}  # (field-years, wrong)
+
+# Tuning 2. Limits written at 17:30 (log), before Kent or Carroll was opened; results log 18:11, 18:16.
+MARYLAND_TEST = [
+    # county, Census %, read %, verdict, pass band, weak bands
+    ("Kent", 5.5, 21.0, "FAIL", (0.0, 12.5), [(12.5, 20.5)]),
+    ("Carroll", 8.9, 0.0, "weak, low side", (1.9, 15.9), [(0.0, 1.9), (15.9, 23.9)]),
+]
+
+# Tuning 3. Adding up by two-week harvest window, windows with no clearly seen field counted as
+# zero: log 18:54 (county, Census %, plain count %, by window %). Corn cut in the one cloudy
+# fortnight (days 252-265): log 19:05. The same idea with the harvest date taken as the middle of
+# the gap: docs/module.md on main, "What the imagery could not see".
+WINDOW_FIX = [
+    ("Queen Anne's", 1.3, 4.0, 2.0, 57),
+    ("Kent", 5.5, 12.9, 6.2, 54),
+    ("Carroll", 8.9, 3.6, 5.1, 0),
+    ("Frederick", 19.6, 13.2, 15.1, 0),
+]
+WINDOW_FIX_WORST = (7.4, 3.8)
+WINDOW_FIX_OTHER_DATE = (10.7, 10.7, 17.1, 15.8)
+
+# Tuning 4. docs/module.md on main, "Why the Eastern Shore reads high": crop history of Kent's
+# clearly seen silage calls, from field boundaries (share of their acres that grew each crop).
+KENT_CALLS_HISTORY = [("Soybeans", 97), ("Wheat", 59), ("Hay or alfalfa", 6)]
+FREDERICK_CALLS_HAY = (16, 22)
+KENT_CALLS_CUT_EARLY = (72, 75)  # cut by 2 September
+
+# Slide "why simple won". Mean over the three held-out countries and mean loss:
+# docs/foundation-models.md, augmentation table. Sequence model: the stream experiment's note
+# (season read as a sequence of per-date band medians; ONE seed, settings fixed beforehand,
+# in-country loss not measured yet). Last column: the 44 labelled US field-years (log 18:02, 19:16).
+TRANSFER_SUMMARY = [
+    ("Small model", "6 features, logistic regression", 0.765, 0.005, "42 of 44"),
+    ("Big model", "135 features, boosted trees", 0.764, 0.047, "37 of 44"),
+    ("Big model, dates dropped", "observation dates removed at random in training", 0.780, 0.035, "39 of 44"),
+    ("Sequence model", "the whole season as a sequence; one seed, still running", 0.797, None, "not scored"),
+]
