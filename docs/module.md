@@ -72,6 +72,25 @@ read low), and the label-free checks did not catch that failure.**
   own clear-tier share, blind windows count as zero). The variant read 2.0 / 5.1 / 15.1 / 6.2 % on the
   four seen counties but 10.7 / 10.7 / 17.1 / 15.8 % when windows are set by the bracket midpoint
   instead, so it is shown beside the headline, not used as it.
+- **Michigan and Maryland 2025, side by side.** Michigan shows the counted clear share tracking the
+  silage share across a 22-point contrast in a state with no early-green grain. Maryland 2025 shows
+  what remains wrong there: the figure reads low (4.75 % against NASS 8.9 %), and the cancelling we
+  hoped for did not happen.
+- **The window-weighted variant, read with care.** In Kent and Queen Anne's the window weighting
+  works because it stops the early windows, small in area, from standing in for the cloudy spell
+  that holds more than half the corn; but the calls inside those early windows are probably
+  early-cut grain, so the closeness to the Census there is partly luck, and the figure should be
+  read with the blind share beside it. It and the counted clear share were computed in the same
+  runs for Michigan and Maryland 2025 (Michigan 3.6 / 29.8 %, Maryland 2025 3.8 %); which one is
+  called the headline was settled by messages that crossed the runs, as the access log records.
+- **Double-crop corn.** Corn sown after a small grain is not in the scored field set (CDL class 1)
+  and is the dairy system's corn: Frederick has 3,364 acres of it (43 % of its Census silage). In
+  the Maryland 2025 sample the classifier calls 61 % of it silage (triticale then corn 69 %, wheat
+  then corn 42 %), and its features look like single-crop corn's (no late-sowing artefact); no
+  labelled double-crop field exists, so those calls are untested. From now on it is scored and
+  counted like any other corn, by class (logged before Pennsylvania, Wisconsin or any 2023 county is
+  opened). Maryland 2025 with it, after the fact: 6.7 % [5.3, 8.2], 33,100 of NASS's 40,000 silage
+  acres; the reported figure stays 4.75 %.
 - **Michigan 2022, the clean tracking test: passed.** Run once each under criteria logged before
   opening (Gratiot at least 10 points above Branch, neither more than 10 off its Census share):
   Branch 2.1 % (Census 1.8 %), Gratiot 30.0 % (24.2 %), gap 28 points. Both clear tiers were large

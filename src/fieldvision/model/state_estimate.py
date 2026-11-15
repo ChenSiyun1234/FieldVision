@@ -137,6 +137,47 @@ def block_bootstrap(df, ref_mask, ref_share, tpr_clear, local_tpr, n_boot=2000, 
     return point, rng_out, len(uniq)
 
 
+def double_crop_silage_acres(dc, class_acres, min_clear=30):
+    """Silage acres in double-crop corn: each class's counted clear share (pooled share when the
+    class has fewer than `min_clear` clear fields) times that class's acres from boundaries."""
+    clear = (dc["tier"] == "clear").to_numpy()
+    a, call = dc["acres"].to_numpy(float), dc["call"].to_numpy(bool)
+    pooled = _share(a[clear], call[clear])
+    total, per = 0.0, {}
+    for cls, acres in class_acres.items():
+        m = clear & (dc["crop_code"].astype(str).to_numpy() == str(cls))
+        share = _share(a[m], call[m]) if m.sum() >= min_clear else pooled
+        share = 0.0 if not np.isfinite(share) else share
+        per[str(cls)] = share
+        total += share * float(acres)
+    return total, per
+
+
+def combined_bootstrap(table, dc, class1_acres, class_acres, n_boot=2000, seed=0):
+    """State share over single-crop plus double-crop corn (headline: counted clear in both), with
+    5-95 % ranges from resampling whole blocks across both strata."""
+    def one(t, d):
+        c = (t["tier"] == "clear").to_numpy()
+        single = _share(t["acres"].to_numpy(float)[c], t["call"].to_numpy(bool)[c])
+        dca, per = double_crop_silage_acres(d, class_acres)
+        tot = class1_acres + sum(float(v) for v in class_acres.values())
+        return (single * class1_acres + dca) / tot, single * class1_acres + dca, per
+    share, acres, per = one(table, dc)
+    blocks = np.union1d(table["block_id"].unique(), dc["block_id"].unique())
+    it = {b: np.flatnonzero(table["block_id"].to_numpy() == b) for b in blocks}
+    id_ = {b: np.flatnonzero(dc["block_id"].to_numpy() == b) for b in blocks}
+    rng = np.random.default_rng(seed)
+    sims = []
+    for _ in range(n_boot):
+        pick = rng.choice(blocks, size=len(blocks), replace=True)
+        t = table.iloc[np.concatenate([it[b] for b in pick])]
+        d = dc.iloc[np.concatenate([id_[b] for b in pick])]
+        sims.append(one(t, d)[0])
+    sims = np.array(sims)
+    return {"share_all_corn": share, "silage_acres": acres, "double_crop_share_by_class": per,
+            "range_5_95": [float(np.nanpercentile(sims, 5)), float(np.nanpercentile(sims, 95))]}
+
+
 def to_acres(share, lo, hi, class1_acres, double_crop_acres=0.0):
     """Silage and grain acres of class-1 corn, and the range when the double-crop corn outside
     the scored set is counted as none or all silage."""
@@ -149,6 +190,31 @@ def to_acres(share, lo, hi, class1_acres, double_crop_acres=0.0):
         out["share_all_corn_if_double_crop_grain"] = sil / tot
         out["share_all_corn_if_double_crop_silage"] = (sil + double_crop_acres) / tot
     return out
+
+
+def double_crop_table(sample, registry, model_name):
+    """Per-field table of the double-crop stratum (timeseries_dblcrop.parquet), with crop_code."""
+    import geopandas as gpd
+    from ..features.loading import load_fields, load_timeseries
+    from ..toolbox import evidence_tier
+    from .classify import results as classify_rows
+    from .registry import load as load_model
+    d = Path(sample)
+    raw = gpd.read_file(d / "fields.geojson", ignore_geometry=True).set_index("field_id")
+    ids = raw.index[raw["stratum"].astype(str) != "corn"]
+    fields = load_fields(d / "fields.geojson")
+    fields = fields[fields["field_id"].isin(ids)].drop(columns=["label", "y"], errors="ignore")
+    fields = fields.reset_index(drop=True)
+    ts, _ = load_timeseries(d / "timeseries_dblcrop.parquet", field_ids=fields["field_id"])
+    model, mj, cfg = load_model(registry, model_name)
+    rows, _ = classify_rows(fields, ts, model, model_name, cfg, mj["threshold"])
+    r = pd.DataFrame(rows)
+    fid = r["source_field_id"]
+    return pd.DataFrame({"field_id": fid, "block_id": fid.map(raw["block_id"]).to_numpy(),
+                         "crop_code": fid.map(raw["crop_code"]).astype(str).to_numpy(),
+                         "acres": fid.map(raw["area_ha"]).to_numpy(float) * HA_TO_ACRE,
+                         "call": (r["label"] == "silage").to_numpy(),
+                         "tier": [evidence_tier(x) for x in rows]})
 
 
 def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 237, 241)):
@@ -209,6 +275,9 @@ def main(argv=None):
                     help="also report this model's counted clear share (shown beside)")
     ap.add_argument("--min-clear-fields", type=int, default=300)
     ap.add_argument("--min-clear-area", type=float, default=0.15)
+    ap.add_argument("--double-crop-class-acres", default=None,
+                    help="JSON {crop_code: acres} (state_acres.json by_class); scores the double-crop "
+                         "stratum and adds its silage acres (rule logged 19:21)")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
@@ -255,6 +324,12 @@ def main(argv=None):
         report["secondary_model"] = {"model": a.secondary_model, "counted_clear": p2["counted_clear"],
                                      "range_5_95": g2["counted_clear"],
                                      "reference_counted_clear": p2["reference_counted_clear"]}
+    if a.double_crop_class_acres:
+        ca = json.loads(Path(a.double_crop_class_acres).read_text(encoding="utf-8"))
+        if "by_class" in ca:           # state_acres.json layout: {"225 Dbl Crop ...": {"acres": x}}
+            ca = {k.split()[0]: v["acres"] for k, v in ca["by_class"].items() if not k.startswith("1 ")}
+        dc = double_crop_table(a.sample, a.registry, a.model)
+        report["with_double_crops"] = combined_bootstrap(table, dc, a.class1_acres, ca, n_boot=a.n_boot)
     write_json(out / "state_estimate.json", report)
     print(json.dumps(report, indent=1, default=float))
     return report
