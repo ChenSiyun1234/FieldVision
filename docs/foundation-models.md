@@ -338,7 +338,7 @@ ahead of the logistic (phys-gbm +0.002 [-0.036, +0.040], both-gbm +0.023
 
 **Three countries, each left out in turn** (the Netherlands 2025 added,
 1,600 fields, Earth Search Collection 1; run
-`C:\t\fv\data\foundation\runs\at_fr_nl`, 8,000 fields, none dropped).
+`<data>\foundation\runs\at_fr_nl`, 8,000 fields, none dropped).
 Trained on the other two countries; ROC-AUC, paired difference to the
 6-feature logistic [95 % CI], and the loss against in-country spatial CV:
 
