@@ -1,0 +1,124 @@
+{
+  "headline_estimate": "counted_clear",
+  "headline_share": 0.04749989266385573,
+  "headline_range_5_95": [
+    0.033837615262853796,
+    0.06253912686342845
+  ],
+  "clear_tier_fields": 2464,
+  "headline_reported": true,
+  "minimum": {
+    "clear_fields": 300,
+    "clear_share_of_area": 0.15
+  },
+  "shift_guard": {
+    "reference_counted_clear": 0.0541280585284732,
+    "limit": 0.1,
+    "flagged": false
+  },
+  "estimates": {
+    "window_zero": 0.03756362259387243,
+    "counted_clear": 0.04749989266385573,
+    "reference_calibrated": 0.004881155403334181,
+    "local_threshold": 0.0,
+    "local_flagged": 0.0733319470182052,
+    "local_per_tier": 0.0,
+    "window_upper": 0.03757503152828442,
+    "blind_share": 0.006302621721361988,
+    "lower_bound": 0.02932118790221585,
+    "wide_called": 0.37943370364837903,
+    "raw_sum": 0.2942139963181464,
+    "reference_counted_clear": 0.0541280585284732,
+    "clear_share_of_area": 0.6172895612567842
+  },
+  "ranges_5_95": {
+    "window_zero": [
+      0.025517809201137043,
+      0.049334626062168985
+    ],
+    "counted_clear": [
+      0.033837615262853796,
+      0.06253912686342845
+    ],
+    "reference_calibrated": [
+      0.0,
+      0.05854958405712209
+    ],
+    "local_threshold": [
+      0.0,
+      0.21604057136594762
+    ],
+    "local_flagged": [
+      0.05385123393739804,
+      0.1832515315801335
+    ],
+    "local_per_tier": [
+      0.0,
+      0.16610644660734167
+    ],
+    "window_upper": [
+      0.025694689368262698,
+      0.049420861574317757
+    ],
+    "blind_share": [
+      0.004691258006104943,
+      0.014268513424721387
+    ],
+    "lower_bound": [
+      0.020712438796582338,
+      0.03912827830565556
+    ],
+    "wide_called": [
+      0.31396956920002694,
+      0.4416972069982363
+    ],
+    "raw_sum": [
+      0.28124373684462295,
+      0.30790599961647613
+    ],
+    "reference_counted_clear": [
+      0.009610523590454932,
+      0.10615130576609212
+    ],
+    "clear_share_of_area": [
+      0.5610628848849076,
+      0.6756285036538779
+    ]
+  },
+  "n_blocks": 149,
+  "n_fields_scored": 3611,
+  "reference_fips": [
+    "24003",
+    "24037",
+    "24035",
+    "24005"
+  ],
+  "reference_blocks": 25,
+  "reference_share_from_2022_census": 0.014839192757347679,
+  "tpr_clear": 0.7098606091894683,
+  "local_tpr": {
+    "clear": 0.5084140893617428,
+    "wide": 0.45180900703556365
+  },
+  "sample_double_crop_acres": 4564.852103511382,
+  "acres": {
+    "silage_acres": 22699.766455033412,
+    "grain_acres": 455191.13354496664,
+    "silage_acres_low": 16170.688411818937,
+    "silage_acres_high": 29886.879621978,
+    "class1_corn_acres": 477890.9,
+    "double_crop_corn_acres": 17055.8,
+    "share_all_corn_if_double_crop_grain": 0.04586305243581463,
+    "share_all_corn_if_double_crop_silage": 0.08032292457962324
+  },
+  "model": "eu2_logistic_v1",
+  "secondary_model": {
+    "model": "eu_barc_logistic_v1",
+    "counted_clear": 0.06773650470274414,
+    "range_5_95": [
+      0.04980863011703649,
+      0.08764099003912099
+    ],
+    "reference_counted_clear": 0.08956926775954534
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "run": "s1_24029_2022",
+  "product": "s1",
+  "module": "fieldvision.s1.extract",
+  "fingerprint_globs": [
+    "s1/*.py",
+    "s2/core.py",
+    "s2/geometry.py",
+    "s2/catalog.py"
+  ],
+  "code_zip": "code_3fc72639.zip",
+  "code_sha256": "3fc72639c79e763e70964d0cbe06a07769ed5127ab6e21a88b5ae2fb94f82d3c",
+  "fields": "fields_s1_24029_2022.geojson",
+  "cli": [
+    "--year",
+    "2022"
+  ],
+  "block_count": 43,
+  "catalog_parts": [],
+  "block_parts": [],
+  "laptop_blocks_at_build": {},
+  "catalog_files": 0,
+  "check_blocks": [
+    "32618_US-E380N4330_0",
+    "32618_US-E400N4320_0"
+  ],
+  "pins": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "pyarrow": "26.0.1",
+    "rasterio": "1.5.2",
+    "shapely": "2.2.0",
+    "pyproj": "3.8.0",
+    "requests": "2.34.2",
+    "urllib3": "2.8.0",
+    "affine": "3.0.1"
+  },
+  "laptop": {
+    "python": "3.12.8",
+    "GDAL": "3.12.2",
+    "PROJ": "9.8.1"
+  },
+  "result_part_mb": 50
+}

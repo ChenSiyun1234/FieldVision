@@ -1,0 +1,25 @@
+{
+  "code_zip": "code_stream_982010a5.zip",
+  "code_sha256": "982010a5ad6dd92785a5dd35ef21ec2ca6650b80ccfb71933e25fbcb0015abd2",
+  "runs": [
+    "at_2022",
+    "at_2023",
+    "at_2024",
+    "fr_2022",
+    "nl_2025"
+  ],
+  "all_runs": [
+    "at_2022",
+    "at_2023",
+    "at_2024",
+    "fr_2022",
+    "nl_2025"
+  ],
+  "fields_full": 8000,
+  "fields_subset": 4282,
+  "subset_per_country": {
+    "AT": 1829,
+    "NL": 1241,
+    "FR": 1212
+  }
+}
