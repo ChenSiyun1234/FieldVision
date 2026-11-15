@@ -52,8 +52,8 @@ MODULE_V2_MODEL = "eu2_logistic_v1"
 CLEAR_BRACKET_DAYS = 12.0
 # module_v2's county step on the clear tier: "local_threshold", "reference", "europe" or "counted"
 MODULE_V2_COUNTY_STEP = "counted"      # counted clear share; window share above 20 % blind (logged 19:33)
-BLIND_SWITCH = 0.20
-MAX_BLIND_SHARE = 0.60
+MIN_SEEN_SHARE = 0.50     # below this seen share the headline is the range (logged 23:17)
+SEEN_WINDOW_CLEAR_AREA = 0.50
 MIN_CLEAR_FIELDS = 100                # no headline below this clear tier (logged 18:37)
 MIN_CLEAR_AREA_SHARE = 0.15
 
@@ -460,6 +460,15 @@ class Toolbox:
         out["blind_window_share_of_area"] = round(ww["blind_share"], 4) if np.isfinite(ww["blind_share"]) else None
         out["clear_tier_lower_bound"] = (round(float(np.sum(a[clear] * call[clear]) / total), 4)
                                          if total else None)
+        # seen / unseen corn by window of the harvest-bracket midpoint (amendment logged 23:17)
+        from .model.windows import seen_bounds
+        stand = pd.to_datetime([e.get("last_standing_date") for e in df["evidence"]], errors="coerce")
+        mid_doy = (np.asarray(stand.dayofyear, dtype=float) + drop_doy) / 2
+        sb, _ = seen_bounds(np.where(fin, mid_doy, np.nan), clear, call, np.where(fin, a, 0.0),
+                            min_clear_area=SEEN_WINDOW_CLEAR_AREA)
+        out["seen_share_of_area"] = round(sb["seen_share"], 4) if np.isfinite(sb["seen_share"]) else None
+        out["silage_share_lower"] = round(sb["lower"], 4) if np.isfinite(sb["lower"]) else None
+        out["silage_share_upper"] = round(sb["upper"], 4) if np.isfinite(sb["upper"]) else None
         key = {"window_zero": "window_weighted_share",
                "local_threshold": "clear_silage_share_local_threshold",
                "reference": "clear_silage_share_reference_calibrated",
@@ -477,14 +486,11 @@ class Toolbox:
                                       f"{(ac / total if total else 0):.0%} of area, below the minimum of "
                                       f"{MIN_CLEAR_FIELDS} fields and {MIN_CLEAR_AREA_SHARE:.0%}; the clear + wide "
                                       "counted share is context only")
-        elif (out.get("blind_window_share_of_area") or 0) > MAX_BLIND_SHARE:
+        elif (out.get("seen_share_of_area") or 0) < MIN_SEEN_SHARE:
             out["silage_share_headline"] = None
-            out["headline_method"] = (f"NOT TESTABLE: {out['blind_window_share_of_area']:.0%} of the corn "
-                                      "area was cut in windows with no clear harvest seen")
-        elif (out.get("blind_window_share_of_area") or 0) > BLIND_SWITCH:
-            out["silage_share_headline"] = out["window_weighted_share"]
-            out["headline_method"] = (f"harvest-window weighted share, blind windows at zero "
-                                      f"({out['blind_window_share_of_area']:.0%} of the area blind)")
+            out["headline_method"] = (f"RANGE {out['silage_share_lower']:.1%} to {out['silage_share_upper']:.1%}: "
+                                      f"only {out['seen_share_of_area']:.0%} of the corn area was cut in "
+                                      "weeks with enough clear looks")
         elif key and out.get(key) is not None:
             out["silage_share_headline"] = out[key]
             out["headline_method"] = (
@@ -496,7 +502,28 @@ class Toolbox:
             out["headline_method"] = "module_v2: counted share of the clear tier"
         out["module_headline_share"] = out["silage_share_headline"]
         out["module_headline_method"] = out["headline_method"]
+        out["silage_share_range"] = ([out["silage_share_lower"], out["silage_share_upper"]]
+                                     if out["silage_share_headline"] is None and enough else None)
         out.update(self._unscored(fips, year, out["silage_share_headline"], total))
+        out.update(self._landuse_prior(fips, out["silage_share_headline"]))
+        return out
+
+    def _landuse_prior(self, fips, headline):
+        """Land-use prior (registry/landuse_prior) and its mean with the satellite figure: shown
+        beside, labelled, never the headline; its fit includes the 2022 Census counties."""
+        out = {"landuse_prior_share": None, "prior_satellite_mean": None,
+               "landuse_prior_note": "proxy from hay and alfalfa in the county's cropland, 2019-2023; "
+                                     "fitted on 2022 Census county shares including this county"}
+        f = self.registry / "landuse_prior" / "county_prior.csv"
+        if not f.exists():
+            return out
+        t = pd.read_csv(f, dtype={"fips": str}).set_index("fips")
+        k = str(fips).zfill(5)
+        if k in t.index:
+            pr = float(t.loc[k, "prior_share"])
+            out["landuse_prior_share"] = round(pr, 4)
+            if headline is not None:
+                out["prior_satellite_mean"] = round((pr + headline) / 2, 4)
         return out
 
     def _unscored(self, fips, year, share, scored_acres):

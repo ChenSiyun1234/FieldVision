@@ -422,7 +422,9 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
                   "unscored_corn_acres", "county_share_with_unscored_low",
                   "county_share_with_unscored_high", "clear_tier_fields",
                   "clear_wide_share_called_silage", "window_weighted_share",
-                  "window_weighted_upper", "blind_window_share_of_area", "clear_tier_lower_bound"}
+                  "window_weighted_upper", "blind_window_share_of_area", "clear_tier_lower_bound",
+                  "seen_share_of_area", "silage_share_lower", "silage_share_upper", "silage_share_range",
+                  "landuse_prior_share", "prior_satellite_mean", "landuse_prior_note"}
     assert set(am) == STUB_KEYS["aggregate"] | extra | clear_keys
     rows = [json.loads(l) for l in open(c2["results_path"].replace(".parquet", ".jsonl"))]
     assert {r["model"] for r in rows} == {"eu2_logistic_v1"}

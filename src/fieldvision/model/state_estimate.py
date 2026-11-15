@@ -39,7 +39,7 @@ from .artifacts import write_json
 
 ESTIMATES = ("window_zero", "counted_clear", "reference_calibrated", "local_threshold",
              "local_flagged", "local_per_tier", "window_upper", "blind_share", "lower_bound",
-             "wide_called", "raw_sum")
+             "seen_share", "lower_seen", "upper_seen", "wide_called", "raw_sum")
 # harvest-window regions, fixed from geography before each state's sample was opened
 # (Maryland logged 18:55; Pennsylvania and Wisconsin logged 22:5x). Counties not listed fall in
 # the state's last, default region.
@@ -104,6 +104,21 @@ def estimates(df, ref_mask, ref_share, tpr_clear, local_tpr, alpha=0.10, min_ref
                 blind += ww["blind_share"] * float(np.sum(a[m]))
         tot = float(np.sum(a))
         out["window_zero"], out["window_upper"], out["blind_share"] = z / tot, u / tot, blind / tot
+    if "mid_doy" in df:                  # seen / unseen corn (amendment logged 23:17), within regions
+        from .windows import seen_bounds
+        reg = df["region"].to_numpy() if "region" in df else np.full(len(df), "all")
+        mid = df["mid_doy"].to_numpy(float)
+        lo = up = seen = 0.0
+        for r in np.unique(reg):
+            m = reg == r
+            sb, _ = seen_bounds(mid[m], clear[m], call[m], a[m], min_clear_area=0.5)
+            w = float(np.sum(a[m]))
+            if np.isfinite(sb["lower"]):
+                lo += sb["lower"] * w
+                up += sb["upper"] * w
+                seen += sb["seen_share"] * w
+        tot = float(np.sum(a))
+        out["seen_share"], out["lower_seen"], out["upper_seen"] = seen / tot, lo / tot, up / tot
     rc = clear & ref_mask
     out["reference_counted_clear"] = _share(a[rc], call[rc])
     out["clear_share_of_area"] = _share(a, clear)
@@ -269,7 +284,10 @@ def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 
         "p": r["p_silage"].to_numpy(float), "call": (r["label"] == "silage").to_numpy(),
         "tier": [evidence_tier(x) for x in rows],
         "drop_doy": np.asarray(pd.to_datetime([x["evidence"].get("drop_date") for x in rows],
-                                              errors="coerce").dayofyear, dtype=float)})
+                                              errors="coerce").dayofyear, dtype=float),
+        "standing_doy": np.asarray(pd.to_datetime([x["evidence"].get("last_standing_date") for x in rows],
+                                                  errors="coerce").dayofyear, dtype=float)})
+    table["mid_doy"] = (table["drop_doy"] + table["standing_doy"]) / 2
     table["region"] = [region_of(f) for f in table["county_fips"]]
     dca = float(fields.loc[np.asarray(dc), "area_ha"].sum() * HA_TO_ACRE)
     return table, dca
@@ -296,9 +314,8 @@ def main(argv=None):
     ap.add_argument("--double-crop-class-acres", default=None,
                     help="JSON {crop_code: acres} (state_acres.json by_class); scores the double-crop "
                          "stratum and adds its silage acres (rule logged 19:21)")
-    ap.add_argument("--blind-switch", type=float, default=0.20,
-                    help="above this blind share the window-weighted share is the headline (19:33)")
-    ap.add_argument("--max-blind", type=float, default=0.60)
+    ap.add_argument("--min-seen", type=float, default=0.50,
+                    help="below this seen share of corn area the headline is the range (23:17)")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
@@ -320,14 +337,14 @@ def main(argv=None):
     enough = n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
     blind = point.get("blind_share", 0.0)
     headline = a.headline
-    if a.blind_switch is not None and np.isfinite(blind) and blind > a.blind_switch:
-        headline = "window_zero"            # logged 19:33: the clear tier stands for visible weeks only
-    if np.isfinite(blind) and blind > a.max_blind:
-        enough = False
-    head = point[headline] if enough else float("nan")
-    lo, hi = ranges[headline] if enough else (float("nan"), float("nan"))
+    seen = point.get("seen_share", 1.0)
+    as_range = bool(np.isfinite(seen) and seen < a.min_seen)   # logged 23:17: headline is the range
+    head = point[headline] if enough and not as_range else float("nan")
+    lo, hi = ranges[headline] if enough and not as_range else (float("nan"), float("nan"))
     report = {
-        "headline_estimate": headline, "blind_share": blind, "headline_share": head, "headline_range_5_95": [lo, hi],
+        "headline_estimate": headline, "blind_share": blind, "seen_share": seen,
+        "headline_is_range": as_range,
+        "headline_range_seen": [point.get("lower_seen"), point.get("upper_seen")], "headline_share": head, "headline_range_5_95": [lo, hi],
         "clear_tier_fields": n_clear, "headline_reported": bool(enough),
         "minimum": {"clear_fields": a.min_clear_fields, "clear_share_of_area": a.min_clear_area},
         "shift_guard": {"reference_counted_clear": point["reference_counted_clear"],
