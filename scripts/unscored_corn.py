@@ -46,15 +46,33 @@ def summarise(check):
     }
 
 
+def cdl_pixels(csv_path):
+    """CropScape county statistics (GetCDLStat CSV: Value, Category, Count, Acreage): corn-containing classes."""
+    out = {}
+    for line in Path(csv_path).read_text(encoding='utf-8').splitlines()[1:]:
+        parts = [p.strip() for p in line.split(',')]
+        if len(parts) >= 4 and parts[0].isdigit():
+            code = int(parts[0])
+            if code == 1 or code in SMALL_GRAIN_THEN_CORN or code in OTHER_CORN:
+                out[code] = {'name': parts[1], 'pixels': int(parts[2]), 'acres': float(parts[3])}
+    small = round(sum(v['acres'] for k, v in out.items() if k in SMALL_GRAIN_THEN_CORN), 1)
+    return {'source': 'CropScape GetCDLStat county statistics, 30 m CDL pixels', 'file': Path(csv_path).name,
+            'corn_class1_acres': out.get(1, {}).get('acres'), 'small_grain_then_corn_acres': small,
+            'by_class': {str(k): v for k, v in sorted(out.items())}}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--check', type=Path, required=True)
+    ap.add_argument('--cropscape', type=Path, help='CropScape county statistics CSV for the same year (optional)')
     ap.add_argument('--out', type=Path, required=True)
     a = ap.parse_args(argv)
     check = json.loads(a.check.read_text(encoding='utf-8'))
     if 'csb_other_corn_classes' not in check:
         raise SystemExit('county check was run without --csb; rerun scripts/county_corn_check.py with --csb')
     res = summarise(check)
+    if a.cropscape:
+        res['cdl_pixel_acres'] = cdl_pixels(a.cropscape)
     a.out.parent.mkdir(parents=True, exist_ok=True)
     a.out.write_text(json.dumps(res, indent=2), encoding='utf-8')
     print(json.dumps({k: res[k] for k in ('fips', 'year', 'scored_class1', 'small_grain_then_corn_acres',

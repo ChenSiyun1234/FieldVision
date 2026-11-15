@@ -269,6 +269,24 @@ crop. What would answer that: the 2022 CDL corn pixel acres for each county (Cro
 statistics, a small table) set beside the class-1 and double-crop polygon acres. Queen Anne's has
 225 acres of such double crops, too few to matter.
 
+The CropScape table answers it (2022 CDL pixel acres per county, `C:\t\fv\data\us\cropscape\`):
+
+| County | CSB class-1 polygons | CDL corn pixels | CSB small-grain/corn polygons | CDL small-grain/corn pixels | Census grain + silage |
+|---|---:|---:|---:|---:|---:|
+| Frederick | 39,030 | 36,426 | 3,364 | 2,807 | 39,500 |
+| Queen Anne's | 51,533 | 50,705 | 226 | 218 | 54,530 |
+| Kent | 44,034 | 43,045 | 0 | 40 | 40,906 |
+| Carroll | 32,854 | 29,818 | 885 | 723 | 27,525 |
+
+Corn pixels anywhere in the county are fewer than the class-1 polygon area in all four counties
+(by 2-9 %), so the majority rule adds more non-corn area to the scored polygons than it leaves
+corn outside them: there is no large stock of corn hidden in polygons of another majority crop.
+In Frederick, corn pixels plus small-grain/corn pixels (39,233 acres) match the Census total
+(39,500), which supports reading the double-crop area as corn that the Census counts. Per county,
+`unscored_corn.json` (toolbox folder; Carroll's in its labels folder until it is finalised) holds
+these numbers; `us_<fips>_2022_dblcrop\fields.geojson` in the labels folder holds the double-crop
+polygons as field files (Frederick 181, Queen Anne's 10, Carroll 51; Kent none), ready to extract.
+
 **Caution.** What worked in Maryland may not carry over. Harvest calendars differ: Texas Panhandle
 silage is cut in July-August and southern Texas grain is harvested from July, so the April-November
 window and the model's peak window (DOY 160-280, `--peak-window`) need checking there. Irrigated
