@@ -384,7 +384,7 @@ logistic's 0.765 when each country is held out in turn; does training it
 on deliberately perturbed copies of the training fields, or regularising
 it, make it lose less out of country? Code:
 `src/fieldvision/foundation/augment.py`, `augment_eval.py`, tests
-`tests/test_augment.py`; run `C:\t\fv\data\foundation\augment\three_country`.
+`tests/test_augment.py`; run `<data>\foundation\augment\three_country`.
 
 Augmentation acts on the time series of training fields only, before the
 features are computed; each training field gets 3 copies, test fields are
