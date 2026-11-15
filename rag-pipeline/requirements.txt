@@ -1,0 +1,5 @@
+numpy
+pandas
+pymupdf              # PDF text extraction
+sentence-transformers # local embeddings (EMBED_BACKEND=local, default)
+openai               # Nemotron + NVIDIA embeddings via integrate.api.nvidia.com

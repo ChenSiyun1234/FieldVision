@@ -1,0 +1,3 @@
+# raw MDE download keeps operator names and addresses; only dairies_md.csv (ids, no names) is shared
+data/mde_afo_raw.json
+__pycache__/
