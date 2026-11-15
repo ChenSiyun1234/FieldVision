@@ -126,8 +126,16 @@ def draw(pick, run_dir, labels_path, out_path):
                             left=0.05, right=0.98, top=0.82, bottom=0.1)
     for i, (day, role, row) in enumerate(chips):
         ax = fig.add_subplot(grid[0, i])
-        item = fetch_item(row.scene_id, row.collection)
-        rgb, outline = read_chip(item, geometry, row.collection)
+        for attempt in range(4):              # slow or flaky links: retry a chip
+            try:
+                rgb, outline = read_chip(fetch_item(row.scene_id, row.collection), geometry, row.collection)
+                break
+            except Exception as exc:
+                if attempt == 3:
+                    raise
+                print(f"  retry {row.scene_id}: {type(exc).__name__}", flush=True)
+                import time
+                time.sleep(5 * (attempt + 1))
         ax.imshow(rgb, interpolation="nearest")
         for poly in getattr(outline, "geoms", [outline]):
             xs, ys = poly.exterior.xy
