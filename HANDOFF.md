@@ -9,9 +9,9 @@ Written on the evening of 14 November for the teammates who continue from here. 
 - **Field level works.** On the organisers' 44 labelled Beltsville field-years, scored once: 42 right (11 of 12 silage found, 1 false silage).
 - **County and state totals are not solved.** Two Michigan counties we had never looked at came out right (2.1% for 1.8%, 30.0% for 24.2%). Maryland 2025, the kind of figure the organisers score, reads low (4.75% for 8.9%). Of two Wisconsin counties, the grain county came out right (Racine 6.4%, official 2.4 to 6.4%) and the heaviest dairy county was missed badly (Marathon 4.3% for 49.9%).
 - **A second satellite fills cloud gaps.** Adding Landsat 8 and 9 to the Sentinel-2 pictures brought the corn area seen in Marathon from 29% to 83% and in Kent (Maryland) from 9% to 94%, and both readings moved towards USDA's: Marathon 4.3% to 13.8% (official 49.9%), Kent 12.9% to 7.3% (official 5.5%). Run it with `Toolbox(landsat=True)`; the extractor is `fieldvision.ls`.
-- **In dairy states the satellite reads low, and this is now measured.** Two states never looked at, each run once on a random sample with both satellites and the rule written first: Wisconsin 2025 16.6% for USDA's 21.6% (5.0 points low, right on our pass mark, and flagged unreliable by our own warning check); Pennsylvania 2025 15.2% for 32.8% (17.6 low, a clear miss, with 98% of the corn seen). A model taught on European fields under-calls American dairy silage; the cure is American labelled fields, or training against USDA's county totals.
+- **In dairy states the satellite reads low, and this is now measured.** Two states never looked at, each run once on a random sample with both satellites and the rule written first: Wisconsin 2025 16.6% for USDA's 21.6% (5.0 points low, right on our pass mark, and flagged unreliable by our own warning check); Pennsylvania 2025 15.2% for 32.8% (17.6 low, a clear miss, with 98% of the corn seen). But not everywhere: Lancaster 2023, Pennsylvania's largest dairy county, also never looked at, read 26.6% for the Census 27.4%. We do not yet know what separates the two; the next step is American labelled fields, or training against USDA's county totals.
 - **For state totals, do not shift the probabilities by a prior.** Starting from USDA's last figure and updating it field by field helped on the eight counties we tuned on (2.6 points off against 2.7 for the last figure alone) but made all three state checks worse (Maryland 9.5 to 6.8 for 8.9, Wisconsin 19.8 to 12.9 for 21.6, Pennsylvania 31.4 to 18.7 for 32.8). USDA's last figure alone is within 2 points in all three. What the model adds today is the call for each field with its evidence, and totals where silage is rare.
-- **Last update 02:10 on 15 November.** One clean test (Lancaster 2023) is still to run. The open leads are listed below.
+- **Last update 02:45 on 15 November.** Michigan and New York 2025 are being extracted as two more clean tests of the same module. The open leads are listed below.
 
 ## Where everything is
 
@@ -69,6 +69,7 @@ Policies: `standard` is the one the agent already uses (unchanged); `module_v2` 
 | Gratiot, Michigan 2022 | Census 24.2% | 30.0% | no |
 | Racine, Wisconsin 2023 | survey 2.4% (official figures 2.4 to 6.4%) | 6.4% | no |
 | Marathon, Wisconsin 2023, a third of the county's corn | survey 49.9% (official figures 32.1 to 49.9%) | 4.3%; half the fields could not be judged | no |
+| Lancaster, Pennsylvania 2023, 10,533 fields (64% of the county's corn), two satellites | Census 2022 27.4% (the 2023 survey, 44.5%, counts half the corn acres) | 26.6% | no |
 | Wisconsin 2025, random sample of 8,199 fields, two satellites | NASS 21.6% | 16.6%, range 13.8 to 19.5; flagged unreliable by our warning check | no |
 | Pennsylvania 2025, random sample of 3,931 fields, two satellites | NASS 32.8% | 15.2%, range 12.9 to 17.5 (9.5% without double-crop corn) | no |
 | Maryland 2025, random sample of 3,611 fields | NASS 8.9% (40,000 acres) | 4.75%, range 3.4 to 6.3 (22,700 acres); with double-crop corn scored afterwards 6.7% (33,135 acres) | no |
@@ -84,6 +85,7 @@ Policies: `standard` is the one the agent already uses (unchanged); `module_v2` 
 6. **A northern dairy county was missed.** In Marathon (Wisconsin, 2023) September had about one clear look per field (August had four), and the silage was cut inside that gap. The fields seen clearly on both sides of the cut are the late harvest, which is grain, so counting them reads 4% where the county has 50%. The crop had also yellowed before it was cut, so "silage is cut green" shows less in the north. The cause is still being worked on; do not use the satellite figure alone for a heavy dairy county.
 7. **A second satellite brought the hidden fields back.** Landsat had clear pictures inside both cloudy spells (1 October 2023 over Marathon, 13, 21 and 29 September 2022 over Kent). With them the share of corn seen rose to 83% and 94%, and both readings moved towards USDA's. In Marathon the rest of the gap is the classifier: silage in the north is cut after the crop has yellowed, and a model trained in Europe reads that as grain. That needs labelled northern fields; no index we tried (greenness before the cut, bare soil after it) separates Marathon from Racine.
 8. **The pictures improve on USDA's last figure.** See the second-to-last point of the summary at the top; the table is in `docs/RESULTS.md`. A land-use prior in place of the last official figure is worse, because it misses dairy counties that grow little hay (Gratiot).
+9. **A timing feature that does not move with the season did not help.** Lancaster's own fields read 15.3% inside the Pennsylvania 2025 sample (488 fields) against 26.6% in the 2023 county run, and the 2025 green peak came 16 days earlier. We tried three replacements for the days-from-peak feature, with the rule for choosing written first: all equal in Europe, none closed the year-to-year gap by a third. The module was left as it is.
 
 ## Open leads, in the order we would try them
 
@@ -95,7 +97,7 @@ Policies: `standard` is the one the agent already uses (unchanged); `module_v2` 
 
 ## What not to claim
 
-- That county or state totals are validated. Of the clean tests, Michigan and Racine came out right, Wisconsin 2025 sat on the pass mark, Maryland 2025 read low, and Marathon and Pennsylvania 2025 were missed.
+- That county or state totals are validated. Of the clean tests, Michigan, Racine and Lancaster came out right, Wisconsin 2025 sat on the pass mark, Maryland 2025 read low, and Marathon and Pennsylvania 2025 were missed.
 - That the harvest-window figures for Maryland 2022 are a test. They were found on those counties.
 - That radar or image models are part of the result. Radar is a pilot and was not run (over Marathon it has the same hole as the optical pictures); the pixel models were built and not run to a result. The sequence model ties the logistic at Beltsville (42 of 44) and calls far less false silage where pictures are missing, but it reads the counties no better overall, so the logistic stays the classifier.
 - More than four scorings of the Beltsville labels (logistic, boosted trees, boosted trees with dates dropped, sequence model). Each is in the log with its pass mark written first.
