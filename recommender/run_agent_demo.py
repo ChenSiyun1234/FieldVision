@@ -1,7 +1,7 @@
 """Full agent run with the critic and the recommender: python recommender/run_agent_demo.py 24021 2022
 
 Needs `pip install -e ".[agents]"` from the repository root and NVIDIA_API_KEY in .env.
-The same run is `fieldvision run 24021 2022 --recommend` from the app's command line.
+The same run is `fieldvision run 24021 2022` from the app's command line (recommend_sources is on by default).
 """
 import json
 import sys

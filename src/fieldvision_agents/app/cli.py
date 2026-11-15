@@ -38,7 +38,7 @@ def main(argv=None):
     p.add_argument("fips")
     p.add_argument("year", type=int)
     p.add_argument("--offline", action="store_true", help="rule-based agent, no language model")
-    p.add_argument("--recommend", action="store_true", help="let the agent call recommend_sources (online only)")
+    p.add_argument("--no-recommend", action="store_true", help="leave out the recommend_sources tool")
     p.add_argument("--report", action="store_true", help="also write the county report")
     sub.add_parser("runs", help="past runs, newest first")
     p = sub.add_parser("report", help="write the county report for a run")
@@ -65,7 +65,7 @@ def main(argv=None):
         return 0
     if args.cmd == "run":
         offline = _offline(args)
-        result = service.run(args.fips, args.year, offline=offline, recommend=args.recommend and not offline)
+        result = service.run(args.fips, args.year, offline=offline, recommend=not args.no_recommend)
         print(json.dumps(result, indent=1, default=str))
         if args.report:
             print(service.report(result["run_id"], offline)["report_md"])
