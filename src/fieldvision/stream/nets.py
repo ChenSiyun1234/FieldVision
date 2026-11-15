@@ -8,7 +8,7 @@ All four share the temporal part and differ only in what they see at one date:
   Conv3dNet    the chips stacked on an even time grid and read by 3D convolutions,
                space and time in the same filters (the "video" form)
 
-Sizes are deliberately small (tens of thousands of weights): the training
+Sizes are deliberately small (81,000 to 435,000 weights): the training
 sets are a few thousand fields.
 """
 from __future__ import annotations
