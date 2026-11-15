@@ -391,17 +391,17 @@ Not finished:
   cloud gap (20 September-15 October). Not run, by the coordinator's decision (23:25): radar cannot date the
   harvests inside the gap; a Landsat 9 scene of 1 October 2023 (6 % cloud) is used instead (extraction session).
 - Per-county land-use prior table: `python scripts/landuse_prior.py prior-table ...` writes
-  `C:\t\fv\data\us\landuse\county_prior.csv` / `.parquet` (2,890 counties).
+  `<data>\us\landuse\county_prior.csv` / `.parquet` (2,890 counties).
 - 00:10 PT (15 Nov): Wisconsin 2025 sample complete. Parts `us_55_2025_s1`-`s3` merged and finalised by the
   extraction session, verified, READY lines written (with the Collection 1 note); s1 is partial from one permanent
-  plausibility rejection (2025-04-17, one block). Merged in `C:\t\fv\data\counties\55_2025_sample\`: 8,246 fields
+  plausibility rejection (2025-04-17, one block). Merged in `<data>\counties\55_2025_sample\`: 8,246 fields
   (corn 8,199, double crop 47) in the 150 drawn read blocks of 4,433, corn and double-crop series in separate files,
   draw.json, state_acres.json, sample_info.json. Landsat rows from the extraction session go into the same folder.
 - Land-use prior with each county's own state left out (for the modelling session's per-field check): files
-  `C:\t\fv\data\us\landuse\prior_state_left_out_counties.csv` and `prior_state_left_out_states_2025.csv`;
+  `<data>\us\landuse\prior_state_left_out_counties.csv` and `prior_state_left_out_states_2025.csv`;
   leaving a state out moves every county prior by at most one point.
 - 01:17 PT: Pennsylvania 2025 sample complete. Parts `us_42_2025_s1`-`s3` merged and finalised, verified, READY
-  lines written, no scene errors. Merged in `C:\t\fv\data\counties\42_2025_sample\`: 4,527 fields (corn 3,931,
+  lines written, no scene errors. Merged in `<data>\counties\42_2025_sample\`: 4,527 fields (corn 3,931,
   small-grain/corn double crop 596) in the 150 drawn read blocks of 3,106. The double crop is 13 % of the frame's
   corn-containing area in Pennsylvania (142,288 of 1,095,462 acres). Median usable dates 25 (s1, s2) and 39 (s3).
   All three 2025 state samples (Maryland, Wisconsin, Pennsylvania) are now on disk.
@@ -417,16 +417,16 @@ Not finished:
 - 01:30 PT: Lancaster merged and finalised by the extraction session, verified (70 blocks complete, 10,533 fields
   usable, Collection 1, no failures; 94 % of fields have at least 8 usable dates in July-November), READY line
   written (untouched test county, seeded draw, Census total supported), toolbox folder
-  `C:\t\fv\data\counties\42071\2023\` (fields, series, coverage, unscored_corn.json, county_check.json, sample.json).
+  `<data>\counties\42071\2023\` (fields, series, coverage, unscored_corn.json, county_check.json, sample.json).
 - 02:20 PT: Michigan (26) and New York (36) 2025 samples started, same design as Wisconsin and Pennsylvania
   (CDL2025 corn and small-grain/corn strata, EPSG:5070, 150 read blocks, seed 42, three parts of 50). Boundaries
-  notebook `C:\t\fv\colab\state_frames_2025_mi_ny\` handed to the Colab session; the six extraction bundles
+  notebook `<work>\colab\state_frames_2025_mi_ny\` handed to the Colab session; the six extraction bundles
   `us_26_2025_s1..s3`, `us_36_2025_s1..s3` follow when the frames return. Untouched test places.
-- 02:40 PT: Michigan and New York 2025 frames back from Colab and unzipped to `C:\t\fv\data\labels\us_26_2025\`
+- 02:40 PT: Michigan and New York 2025 frames back from Colab and unzipped to `<data>\labels\us_26_2025\`
   and `us_36_2025\`; six extraction bundles built and handed to the Colab session (Michigan first). Michigan: 150
   of 3,374 read blocks, 4,845 fields, 116,492 acres (4.4 % of the frame); 4 drawn blocks touch Branch and 6 touch
   Gratiot (the 2022 development counties). New York: 150 of 2,806 read blocks, 3,743 fields, 65,265 acres (5.7 %);
   the small-grain/corn double crop is 3.5 % of New York's frame.
 - 03:42 PT: Michigan 2025 sample complete: parts merged and finalised, verified, READY lines written (each with its
   blocks touching Branch and Gratiot: 1/2, 2/1, 1/3); s2 partial from one permanent plausibility rejection. Merged
-  in `C:\t\fv\data\counties\26_2025_sample\`: 4,845 fields (corn 4,835, double crop 10) in 150 of 3,374 read blocks.
+  in `<data>\counties\26_2025_sample\`: 4,845 fields (corn 4,835, double crop 10) in 150 of 3,374 read blocks.
