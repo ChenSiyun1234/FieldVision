@@ -377,3 +377,18 @@ Not finished:
   `us_55_2025_s1..s3\` (50 read blocks each, `--year 2025`, upload the 5 files on README line 1, run cells 1-7),
   laptop run folders with stub manifests in `C:\t\fv\data\timeseries\`. Draws: Pennsylvania 150 of 3,106 read
   blocks (5.1 % of frame acres), Wisconsin 150 of 4,433 (3.4 %).
+- 22:55 PT: Racine and Marathon merged by the extraction session, verified (42 and 70 blocks complete, 1,946 and
+  3,448 fields usable, Collection 1, no failures), READY lines written (Marathon marked as a seeded draw), toolbox
+  folders `C:\t\fv\data\counties\55101\2023\` and `55073\2023\` (fields, series, coverage, unscored_corn.json,
+  county_check.json, sample.json). `references.json`: 55073 -> 55101, year 2023, share 0.0237 from the 2023
+  county survey (no Census in 2023; recorded in the entry's share_source). Untouched until the modelling session
+  runs them once under its 19:33 rule.
+- 23:20 PT: Sentinel-1 bundle for Marathon 2023 built and dry-checked, `C:\t\fv\colab\s1_55073_2023\` (the Kent
+  pilot's notebook, code 3fc72639, the 3,448 drawn fields, 70 blocks, April-November; same-result check on the
+  pilot's two Kent blocks passed on the laptop). Radar coverage there is thin: Planetary Computer `sentinel-1-rtc`
+  has 12 scenes in April-November 2023, one relative orbit (92 ascending), none from May to 12 August, and a 24-day
+  gap from 18 September to 12 October (the 30 September pass is missing), nearly the same window as the optical
+  cloud gap (20 September-15 October). Not run, by the coordinator's decision (23:25): radar cannot date the
+  harvests inside the gap; a Landsat 9 scene of 1 October 2023 (6 % cloud) is used instead (extraction session).
+- Per-county land-use prior table: `python scripts/landuse_prior.py prior-table ...` writes
+  `C:\t\fv\data\us\landuse\county_prior.csv` / `.parquet` (2,890 counties).
