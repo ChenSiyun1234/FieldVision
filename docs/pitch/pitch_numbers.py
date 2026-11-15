@@ -32,7 +32,11 @@ TRANSFER = [
     ("Monthly band values", "boosted trees, no hand-made features", [(0.747, 0.093), (0.797, 0.050), (0.715, 0.022)]),
     ("Pretrained satellite model", "Presto embedding", [(0.754, 0.071), (0.650, 0.188), (0.714, 0.025)]),
     ("Big model + pretrained", "both inputs, boosted trees", [(0.798, 0.063), (0.815, 0.047), (0.733, 0.023)]),
+    ("Big model + band values", "both inputs, boosted trees", [(0.789, 0.071), (0.823, 0.040), (0.727, 0.030)]),
 ]
+# The two rows of that table left out of the figure are the two hand-written rules (simpler than
+# the small model). Paired differences to the small model with Austria held out, same table:
+# big model +0.016, big + band values +0.035, big + pretrained +0.045 (intervals clear of zero).
 
 # --- 3. The organisers' 44 labelled field-years (Beltsville, 2021-2023) --------------------------
 # log 18:02, "EVALUATION 2 RESULT": models trained on every European field-year, scored once.

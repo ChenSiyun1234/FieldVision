@@ -147,12 +147,12 @@ def signal():
 # --- 2. a country the model never saw ----------------------------------------------------------------
 def new_country():
     fig = new_fig("In a new country the small model loses least",
-                  "It loses at most 0.015 of ROC-AUC; the bigger models lose 0.02 to 0.19. Two of the bigger models are still\n"
+                  "It loses at most 0.015 of ROC-AUC; the bigger models lose 0.02 to 0.19. Three of the bigger models are still\n"
                   "ahead when Austria is the new country; in France and the Netherlands none of them is.")
     n = len(N.TRANSFER)
     lo, hi = 0.62, 0.90
     for p, country in enumerate(N.TRANSFER_COUNTRIES):
-        ax = fig.add_axes([0.335 + p * 0.215, 0.265, 0.195, 0.455])
+        ax = fig.add_axes([0.335 + p * 0.215, 0.235, 0.195, 0.495])
         clean(ax)
         for i, (name, sub, cells) in enumerate(N.TRANSFER):
             out, loss = cells[p]
@@ -172,16 +172,16 @@ def new_country():
         ax.set_yticks([])
         ax.set_xticks([0.65, 0.75, 0.85])
         ax.set_title(country, fontsize=14.5, color=INK, loc="left", pad=10, fontweight="bold")
-    fig.text(0.323, 0.747, "New country:", fontsize=12.5, color=INK2, ha="right", va="center")
+    fig.text(0.323, 0.757, "New country:", fontsize=12.5, color=INK2, ha="right", va="center")
     handles = [
         plt.Line2D([], [], marker="o", ls="", markersize=10, markerfacecolor=BLUE, markeredgecolor=BG,
                    label="tested in the new country (number shown)"),
         plt.Line2D([], [], marker="o", ls="", markersize=10, markerfacecolor=BG, markeredgecolor=GREY,
                    markeredgewidth=2.2, label="same model tested in a country it trained on (change in brackets)"),
     ]
-    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.325, 0.085), ncol=1, frameon=False, fontsize=12,
+    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.325, 0.07), ncol=1, frameon=False, fontsize=12,
                labelcolor=INK2, handletextpad=0.3)
-    fig.text(0.335 + 0.215 + 0.0975, 0.2, "ROC-AUC  (0.5 = guessing, 1.0 = perfect)", fontsize=12.5, color=INK2,
+    fig.text(0.335 + 0.215 + 0.0975, 0.175, "ROC-AUC  (0.5 = guessing, 1.0 = perfect)", fontsize=12.5, color=INK2,
              ha="center", va="center")
     foot(fig, "8,000 labelled maize fields: Austria 2022-2024, France 2022, Netherlands 2025. Each country left out of training in turn.")
     save(fig, "fig2_new_country")
