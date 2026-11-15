@@ -56,14 +56,31 @@ the rule asked for, so the module is unchanged (log 02:20). A look inside the Pe
 sample (log 02:16) found Lancaster County's own fields reading 15.7 % there (488 fields) against
 26.6 % in the 2023 run, so within that county the two years do differ.
 
-**What the four last tests say together.** Satellite alone, each run once: Michigan 2025 right
-(14.4 for 14.7), Lancaster 2023 right (26.6 for 27.4), Wisconsin 2025 on its pass mark (16.6 for
-21.6, and marked unreliable by the warning check), Pennsylvania 2025 missed (15.2 for 32.8).
-Before them: Branch, Gratiot and Racine right, Marathon missed, Maryland 2025 low. So the results
-are mixed by place, and we can say where. By the reading written before Michigan was opened, a
-Michigan that reads right says the place, not the year, makes the difference; the Lancaster look
-above shows the year is not nothing either. Clouds are not the reason (96 to 99 % of the corn
-seen in the four states). What separates the places is still open.
+**And before New York 2025 (log 04:55), which passed.** The fifth clean test, logged with
+Michigan's at 02:22 and run once: 3,624 corn fields in 150 blocks, Sentinel-2 plus Landsat, 88 %
+of the corn area seen. 48.7 % (43.3 to 54.2) where USDA has 53.2 %: 4.5 points low, inside the
+pass mark of 5. The warning check is clean (3.1 % in two low-silage counties). Our own prediction
+was wrong again: we had written "below 40 %, a fail". Updating from USDA's last figure (45.0 %,
+itself 8.2 off) gave 46.5 %, 6.7 off: closer than the last figure, the only state where it was,
+but not within the 3 points its own mark asks for. The land-use update gave 36.5 %.
+
+**A teammate's lead, tried and not taken up (log 04:46, 04:52).** Counting a field that could not
+be judged as silage when it is green again in November was tried on the thirteen places opened by
+then, with the rule fixed before computing. It helped Carroll, Frederick, Marathon and the 2025
+states a little (Pennsylvania 9.5 to 11.3 % of 32.8), moved five counties slightly away, and
+pushed Lancaster from 26.6 to 40.1 % (Census 27.4). It is not in the module, and New York was run
+without it.
+
+**What the five last tests say together.** Satellite alone, each run once with the rule written
+first: Michigan 2025 14.4 for 14.7; New York 2025 48.7 for 53.2; Lancaster 2023 26.6 for 27.4;
+Wisconsin 2025 16.6 for 21.6 (5.0 low, on its pass mark, and marked unreliable by the warning
+check); Pennsylvania 2025 15.2 for 32.8 (missed). Four of five within 5 points. Before them:
+Branch, Gratiot and Racine right, Marathon missed, Maryland 2025 low. Two of our own written
+predictions were wrong (Michigan and New York would read low). By the reading written before
+Michigan was opened, a Michigan that reads right says the place, not the year, makes the
+difference; the Lancaster look above shows the year is not nothing either. Clouds are not the
+reason for Pennsylvania (98 % of the corn seen). Why Pennsylvania as a whole reads less than half
+is still open.
 
 "Log HH:MM" is a row of the evaluation access log (`<data>/eval/ACCESS_LOG.md`), named by its time
 on 14 Nov 2026 (Pacific). Everything else is a file in this repository.

@@ -65,7 +65,7 @@ def places():
     def pct(v):
         return f"{v:.2f}%" if round(v * 100) % 10 else f"{v:.1f}%"
 
-    wi, pa, la, mi = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023, N.MICHIGAN_2025
+    wi, pa, la, mi, ny = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023, N.MICHIGAN_2025, N.NEW_YORK_2025
     fig = body()
     ax = fig.add_axes([0.2, 0.262, 0.79, 0.638])
     D.clean(ax, grid=None)
@@ -112,6 +112,9 @@ def places():
                         color=INK, fontweight="bold", va="center")
             if name == "Michigan 2025":
                 ax.text(beside_x, y, f"{mi['points_low']} low: passed; we had predicted low", fontsize=12.5,
+                        color=INK, va="center")
+            if name == "New York 2025":
+                ax.text(beside_x, y, f"{ny['points_low']} low: passed; we had predicted a fail", fontsize=12.5,
                         color=INK, va="center")
             if name.startswith("Lancaster"):
                 ax.text(beside_x, y, f"{la['points_low']} low: passed (within 10 of USDA's range)", fontsize=12.5,
@@ -167,10 +170,10 @@ def places():
              f"Ours = the plain count of the clearly seen fields; where cloud hid more than {N.NOT_SEEN_SWITCH}% of the corn "
              "(Queen Anne's, Kent), the count by harvest window.\n"
              f"Wisconsin 2025: {wi['fields']:,} fields, {wi['seen']}% seen, a warning check went off (two grain counties: {wi['guard']['ours']}% "
-             f"for USDA's {wi['guard']['census']}%). Pennsylvania 2025: {pa['fields']:,} fields, {pa['seen']}% seen, no warning.\n"
-             f"Michigan 2025: {mi['fields']:,} fields, {mi['seen']}% seen, no warning. Lancaster 2023: {la['fields']:,} fields, {la['seen']}% seen; "
-             f"USDA = Census 2022, as the 2023 survey ({la['survey_2023']}%) counts half the acres.\n"
-             "These four used two satellites; the three states include double-crop corn. Maryland 2025 with two satellites, after the fact: "
+             f"for USDA's {wi['guard']['census']}%). No warning in the other three states:\n"
+             f"Pennsylvania {pa['fields']:,} fields, {pa['seen']}% seen; Michigan {mi['fields']:,}, {mi['seen']}%; New York {ny['fields']:,}, {ny['seen']}%. "
+             f"Lancaster 2023: {la['fields']:,} fields, {la['seen']}% seen; USDA = Census 2022, as the 2023 survey ({la['survey_2023']}%)\n"
+             "counts half the acres. All five: two satellites; the states include double-crop corn. Maryland 2025 with two, after the fact: "
              f"{md['two_satellites_seen']}% seen, {md['two_satellites_after_the_fact'][0]}% with double crops, still low.",
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s05_places")
@@ -183,12 +186,13 @@ def scoreboard():
 
     # (state, what its rows show, in ink when the state holds a low reading)
     groups = [("Michigan", "passed in 2022\nand in 2025", False),
+              ("New York", "passed", False),
               ("Pennsylvania", "one hit, one miss", True),
               ("Wisconsin", "one right, one low,\none missed", True),
               ("Maryland", "counties tuned here;\nthe state 4 low", True)]
     opened = [("test", name, usda, band, ours, ours, 0.0) for name, usda, band, ours in N.PLACES_TO_OPEN if ours is not None]
     rows = N.PLACES + opened
-    wi, pa, la, mi = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023, N.MICHIGAN_2025
+    wi, pa, la, mi, ny = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023, N.MICHIGAN_2025, N.NEW_YORK_2025
     fig = body()
     ax = fig.add_axes([0.36, 0.235, 0.63, 0.695])
     D.clean(ax, grid=None)
@@ -202,8 +206,8 @@ def scoreboard():
             placed.append((y, r))
             y -= 1.0
         spans.append((state, verdict, ink, first, y + 1.0))
-        y -= 0.45
-    bottom = y + 0.45
+        y -= 0.6
+    bottom = y + 0.6
     ax.set_ylim(bottom - 0.7, 0.8)
     for yy, (group, name, usda, band, plain, window, unseen) in placed:
         state, label = N.SCOREBOARD_PLACE[name]
@@ -215,9 +219,9 @@ def scoreboard():
         ax.plot([min(usda, ours), max(usda, ours)], [yy, yy], color=GREY, lw=2.4, zorder=2)
         ax.scatter([ours], [yy], s=150, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
         ax.scatter([usda], [yy], s=125, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
-        ax.text(57, yy, f"USDA {pct(usda)}", fontsize=13, color=INK2, va="center")
-        ax.text(74.5, yy, f"we say {pct(ours)}", fontsize=13.5, fontweight="bold", color=INK if missed else BLUE, va="center")
-        ax.text(94.5, yy, "tuned here" if group == "tuning" else "test", fontsize=12, color=INK2, va="center",
+        ax.text(59.5, yy, f"USDA {pct(usda)}", fontsize=13, color=INK2, va="center")
+        ax.text(76.5, yy, f"we say {pct(ours)}", fontsize=13.5, fontweight="bold", color=INK if missed else BLUE, va="center")
+        ax.text(96, yy, "tuned here" if group == "tuning" else "test", fontsize=12, color=INK2, va="center",
                 style="italic" if group == "tuning" else "normal")
     for x in (0, 10, 20, 30, 40, 50):
         ax.plot([x, x], [bottom - 0.6, 0.6], color=GRID, lw=1, zorder=0)
@@ -228,6 +232,11 @@ def scoreboard():
     to_fig = lambda yy: fig.transFigure.inverted().transform(ax.transData.transform((0, yy)))[1]  # noqa: E731
     for state, verdict, ink, y_top, y_low in spans:
         mid = (to_fig(y_top) + to_fig(y_low)) / 2 + 0.014 * verdict.count("\n")
+        if abs(y_top - y_low) < 1e-6:  # a single row: the name and what it shows side by side
+            fig.text(0.02, mid, state, fontsize=16, fontweight="bold", color=INK, va="center")
+            fig.text(0.03 + 0.0095 * len(state), mid - 0.002, verdict, fontsize=12.5, color=INK if ink else BLUE, fontweight="bold",
+                     va="center")
+            continue
         fig.text(0.02, mid + 0.004, state, fontsize=16, fontweight="bold", color=INK, va="bottom")
         fig.text(0.02, mid - 0.006, verdict, fontsize=12.5, color=INK if ink else BLUE, fontweight="bold", va="top", linespacing=1.15)
         fig.add_artist(plt.Line2D([0.198, 0.198], [to_fig(y_low) - 0.025, to_fig(y_top) + 0.025], color=GREY, lw=2,
@@ -243,10 +252,10 @@ def scoreboard():
     tests = {5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}[sum(1 for r in rows if r[0] == "test")]
     fig.text(0.02, 0.02, "Share of the corn area that is silage. The four Maryland counties (2022) were used to tune the method; "
              f"the other {tests} places were tests, each run once.\n"
-             f"Michigan 2025: {mi['seen']}% of the corn seen, {mi['points_low']} points low. We had predicted in writing that it would read low "
-             f"(below {mi['predicted_below']}%), and were wrong; by the reading we wrote down\n"
-             f"with it, that says the place, not the year, makes the difference. Pennsylvania 2025: {pa['seen']}% seen, no warning, "
-             f"{pa['points_low']} points low. What separates the places is still open.\n"
+             f"Michigan 2025: {mi['seen']}% of the corn seen, {mi['points_low']} points low. New York 2025: {ny['seen']}% seen, {ny['points_low']} low. "
+             "No warning in either. We had predicted in writing that both would read low\n"
+             f"(below {mi['predicted_below']}% and below {ny['predicted_below']}%): wrong twice. A right Michigan, we had written, means the place, "
+             f"not the year, is the difference. Pennsylvania 2025: {pa['seen']}% seen, {pa['points_low']} low.\n"
              f"Wisconsin 2025: {wi['points_low']:.1f} points low, right on our pass mark of {wi['pass_mark']}; we had expected a low reading. "
              f"A warning check went off there (two grain counties: {wi['guard']['ours']}% for USDA's {wi['guard']['census']}%).\n"
              "By the rule we wrote down first, that marks this figure as unreliable. Lancaster 2023: USDA is the 2022 Census; its 2023 survey "
@@ -378,17 +387,16 @@ def history_update():
     ]
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.19, 1.0), ncol=2, frameon=False, fontsize=13,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
-    m, wi, pa, la, mi = N.HISTORY_UPDATE_MISS, N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023, N.MICHIGAN_2025
-    fig.text(0.02, 0.02, "The eight counties had already been seen while tuning, so they are not a test. One satellite (Sentinel-2), "
-             "as for Maryland 2025; the other three states were read with two.\n"
+    m, la, ny = N.HISTORY_UPDATE_MISS, N.LANCASTER_2023, N.NEW_YORK_2025
+    fig.text(0.02, 0.02, "The eight counties had already been seen while tuning, so they are not a test; one satellite (Sentinel-2), "
+             "as for Maryland 2025. The other four states were read with two.\n"
              "USDA's last figure: the 2017 Census for the 2022 counties, the 2022 survey for the Wisconsin counties, "
-             "the 2024 survey for the four states.\n"
+             "the 2024 survey for the five states.\n"
              f"Mean miss on the eight counties: last figure alone {m['last']} points, updated {m['updated']}; without Marathon "
-             f"{m['last_no_marathon']} and {m['updated_no_marathon']}. The satellite on its own: {m['satellite']}.\n"
-             "Wisconsin, Pennsylvania and Michigan 2025 were tests, rule written first (end closer than the last figure alone): "
-             f"{wi['updated_off']}, {pa['updated_off']} and {mi['updated_off']} points off against {wi['last_official_off']}, "
-             f"{pa['last_official_off']} and {mi['last_official_off']}.\n"
-             f"Lancaster 2023, also a test: the last figure there is the reference itself ({la['census_2022']}%, the 2022 Census); "
+             f"{m['last_no_marathon']} and {m['updated_no_marathon']}. The four states after Maryland were tests, rule written first:\n"
+             "end closer than the last figure alone, and within 3 points. All four failed: Wisconsin, Pennsylvania and Michigan ended "
+             f"further away; New York closer ({ny['updated_off']} off against {ny['last_official_off']}),\n"
+             f"but not within 3. Lancaster 2023, also a test: the last figure there is the reference itself ({la['census_2022']}%, the 2022 Census); "
              f"the update gave {la['updated']}%, so no gain.",
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s_update")

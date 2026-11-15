@@ -4,11 +4,11 @@ Everything needed to put the model part into the 5-minute talk. Each figure is a
 with its own title, so it can go on a slide as it is.
 
 **Status.** Every planned test is in: Michigan, Maryland 2025, the last test on the labelled
-fields, Wisconsin 2023, Wisconsin 2025, Pennsylvania 2025, Lancaster County 2023 and Michigan
-2025.
+fields, Wisconsin 2023, Wisconsin 2025, Pennsylvania 2025, Lancaster County 2023, Michigan 2025
+and New York 2025.
 
 **Newer than the rest of this page:** the Wisconsin 2023 test failed (Marathon County read 4.3 %
-where USDA has 32.1 to 49.9 %). Four places never looked at before were then run once each.
+where USDA has 32.1 to 49.9 %). Five places never looked at before were then run once each.
 Wisconsin 2025 read 16.6 % where USDA has 21.6 %: 5.0 points low, right on the pass mark of 5
 (16.62 % and 4.98 points; the 16.5 % logged first left out double-crop corn by mistake and was
 corrected). We had written that it would read below 16.6 %, which misses by the same hair. A
@@ -21,9 +21,11 @@ counts half the county's corn acres; the Census was fixed as the reference befor
 Michigan 2025, a state sample, read 14.4 % where USDA has 14.7 %: 0.3 points low, a pass, with
 98 % of the corn seen and no warning. We had predicted in writing that it would read low; that
 was wrong, and by the reading written with the prediction the low readings go with the place, not
-the year. So the results are mixed by place, and we can say where: right in Michigan and in
-Lancaster, low in Wisconsin, Pennsylvania and Maryland. What separates the places is still open.
-The slide deck is up to date; the figures, `script.md` and `limits.md` of the
+the year. New York 2025, where more than half the corn is silage, read 48.7 % where USDA has
+53.2 %: 4.5 points low, a pass, with 88 % of the corn seen and no warning; we had predicted a
+fail, and were wrong again. So four of the five clean tests are within 5 points of USDA
+(Michigan, New York, Lancaster, and Wisconsin on its mark and flagged); Pennsylvania as a whole
+reads less than half, and we do not yet know why. The slide deck is up to date; the figures, `script.md` and `limits.md` of the
 first pack were written before all of these.
 
 ## The three sentences the model part stands on
@@ -117,25 +119,26 @@ feasibility 20 % ("potential to be developed further").
 US labels, so learn from European farm registries (the new data source). 3 The signal, in real
 pictures: silage is cut green and wet (the harvest signal). 4 How it works in three plain steps,
 and the rule that a hidden harvest is not guessed. 5 The test on USDA's 44 labelled fields, with
-the rubric's four measures. 6 The scoreboard: thirteen places against USDA, grouped by
-state: right in Michigan (the whole state in 2025, 14.4 % for USDA's 14.7 %) and in Lancaster
-County (26.6 % for 27.4 %), low in Wisconsin (16.6 % for 21.6 %, on its pass mark), Pennsylvania
-(15.2 % for 32.8 %, missed) and Maryland. 7 A second satellite, Landsat, in the three counties where clouds hid
+the rubric's four measures. 6 The scoreboard: fourteen places against USDA, grouped by
+state: within 5 points in Michigan (the whole state in 2025, 14.4 % for USDA's 14.7 %), New York
+(48.7 % for 53.2 %) and Wisconsin (16.6 % for 21.6 %, on its pass mark and flagged); right in
+Lancaster County (26.6 % for 27.4 %); Pennsylvania as a whole missed (15.2 % for 32.8 %);
+Maryland, where the method was tuned, 4 low as a state. 7 A second satellite, Landsat, in the three counties where clouds hid
 the harvest: all three figures move towards USDA's; in a fourth county that was already well seen
 the figure changes little and slips one point past USDA's range (the second new data source).
 8 What went wrong on the way and what it taught us (the process); the last lesson is the measured
-limit: mixed by place, and we can say where; not the year, not clouds; why is still open. 9 Where the model sits in the
+limit: four of five clean tests within 5 points; Pennsylvania as a whole reads less than half. 9 Where the model sits in the
 team's system. 10 What USDA gets today (field calls, county totals where silage is rare, a plain
 warning elsewhere), what comes next (American labelled fields), and the closing line. After a divider
 come the slides that go deeper; every slide stands on its own, so any of them can be lifted into
 another deck. One of them was a story slide until Wisconsin 2025 came in: starting from USDA's
 last figure and updating it with the pictures moved six of the eight counties seen while tuning
-closer to the truth, but made all four state figures worse. The notes of slide 1 end with a
+closer to the truth, but made four of the five state figures worse. The notes of slide 1 end with a
 one-minute spoken version of the whole story.
 
 ## Still to come
 
 | Result | Where it will appear |
 |---|---|
-| What separates the places that read right from those that read low; New York 2025, if it is run | The scoreboard and lesson 4 of the deck, `limits.md` |
+| Why Pennsylvania as a whole reads low when the other clean tests are within 5 points | The scoreboard and lesson 4 of the deck, `limits.md` |
 | A model that also reads the pixels around the field | A line in `limits.md`, if it is logged in time |

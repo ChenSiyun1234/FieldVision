@@ -427,11 +427,11 @@ def state_2025():
         else:
             ax.text(9.15, y, fmt(value), fontsize=13.5, color=INK, va="center", fontweight="bold")
 
-    ax.add_patch(FancyBboxPatch((12.1, 3.3), 3.35, 4.05, boxstyle="round,pad=0,rounding_size=0.16", fc=BG, ec=INK2,
+    ax.add_patch(FancyBboxPatch((12.1, 2.95), 3.35, 4.4, boxstyle="round,pad=0,rounding_size=0.16", fc=BG, ec=INK2,
                                 lw=1.4, ls=(0, (4, 3))))
     ax.text(12.4, 7.0, "Other states, 2025", fontsize=14.5, color=INK, fontweight="bold", va="center")
-    for i, state in enumerate(("Michigan", "Wisconsin", "Pennsylvania")):
-        y = 6.2 - i * 1.0
+    for i, state in enumerate(("Michigan", "New York", "Wisconsin", "Pennsylvania")):
+        y = 6.25 - i * 0.87
         s = N.STATE_2025[state]["our_silage_share"]
         ax.text(12.4, y, state, fontsize=14, color=INK, va="center")
         usda = N.STATE_2025[state].get("nass_silage_share")

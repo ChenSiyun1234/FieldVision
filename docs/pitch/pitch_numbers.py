@@ -138,6 +138,7 @@ STATE_2025 = {
         "two_satellites_after_the_fact": (6.2, (4.7, 7.7)), "two_satellites_seen": 99,
     },
     "Michigan": {"our_silage_share": 14.4, "nass_silage_share": 14.7, "source": "log 04:42"},
+    "New York": {"our_silage_share": 48.7, "nass_silage_share": 53.2, "source": "log 04:55"},
     "Pennsylvania": {"our_silage_share": 15.2, "nass_silage_share": 32.8, "source": "log 01:53"},
     "Wisconsin": {"our_silage_share": 16.6, "nass_silage_share": 21.6, "source": "log 01:43, corrected 01:53"},
 }
@@ -318,6 +319,7 @@ HISTORY_UPDATE_STATES = [
     ("Wisconsin 2025", 19.8, 12.9, 21.6, None),
     ("Pennsylvania 2025", 31.4, 18.7, 32.8, None),
     ("Michigan 2025", 14.3, 9.9, 14.7, None),  # log 04:42; rule written at 02:22; failed
+    ("New York 2025", 45.0, 46.5, 53.2, None),  # log 04:55; closer than the last figure, but not within 3: failed
 ]
 
 # The three places opened last, once each, with the procedure, the pass marks and our own
@@ -328,6 +330,7 @@ PLACES_TO_OPEN = [
     ("Pennsylvania 2025", 32.8, None, 15.2),
     ("Lancaster, Pa. 2023", 27.4, (27.4, 54.8), 26.6),
     ("Michigan 2025", 14.7, None, 14.4),  # a fourth, added at log 02:22 and run at 04:40
+    ("New York 2025", 53.2, None, 48.7),  # a fifth, logged with Michigan at 02:22 and run at 04:53
 ]
 
 # Sentinel-2 alone and with Landsat 8 and 9 added, in the three counties where clouds hid the
@@ -435,8 +438,33 @@ SCOREBOARD_PLACE = {
     "Carroll": ("Maryland", "Carroll 2022"), "Frederick": ("Maryland", "Frederick 2022"),
     "Maryland 2025 (state)": ("Maryland", "Maryland 2025"),
     "Branch, Michigan": ("Michigan", "Branch 2022"), "Gratiot, Michigan": ("Michigan", "Gratiot 2022"),
-    "Michigan 2025": ("Michigan", "Michigan 2025"),
+    "Michigan 2025": ("Michigan", "Michigan 2025"), "New York 2025": ("New York", "New York 2025"),
     "Racine, Wisconsin": ("Wisconsin", "Racine 2023"), "Marathon, Wisconsin": ("Wisconsin", "Marathon 2023"),
     "Wisconsin 2025": ("Wisconsin", "Wisconsin 2025"),
     "Lancaster, Pa. 2023": ("Pennsylvania", "Lancaster 2023"), "Pennsylvania 2025": ("Pennsylvania", "Pennsylvania 2025"),
 }
+
+# New York 2025, the fifth clean test: procedure, pass marks and prediction logged with
+# Michigan's at 02:22, run once (log 04:53 for the command, 04:55 for the result). 3,624 corn
+# fields in 150 blocks, Sentinel-2 plus Landsat, 88 % of the corn area seen. Headline with
+# double-crop corn 48.7 % [43.3, 54.2] for NASS 53.2 %: 4.5 points low, a PASS (mark: within 5).
+# The warning check is clean (Orleans and Chemung read 3.1 %, limit 13.1 %). OUR OWN PREDICTION
+# WAS WRONG AGAIN: we had written "below 40 %, a fail". Beside it, both failing: the update from
+# the last official share (45.0 %, itself 8.2 off) gives 46.5 %, 6.7 off: closer than the last
+# figure for once, but not within the 3 points its mark asks for; the update from the land-use
+# figure gives 36.5 %, 16.7 off.
+NEW_YORK_2025 = {
+    "blocks": 150, "fields": 3_624, "seen": 88, "clear_tier_area": 87,
+    "ours": 48.7, "ours_range": (43.3, 54.2), "single_crop": 47.8,
+    "usda": 53.2, "points_low": 4.5, "pass_mark": 5, "predicted_below": 40,
+    "last_official": 45.0, "last_official_off": 8.2, "updated": 46.5, "updated_off": 6.7,
+    "land_use_updated": 36.5, "land_use_off": 16.7,
+    "guard": {"counties": "Orleans and Chemung", "ours": 3.1, "limit": 13.1, "flagged": False},
+}
+
+# A teammate's lead, tried on the thirteen places opened by then, report only (rule fixed before
+# computing: log 04:46; result 04:52): a field that could not be judged and is green again in
+# November counts as silage. It helped Carroll, Frederick, Marathon and the 2025 states a little
+# (Pennsylvania 9.5 -> 11.3 of 32.8), moved five counties slightly away, and pushed Lancaster
+# from 26.6 % to 40.1 % (Census 27.4 %). Not in the module; New York was run without it.
+NOVEMBER_GREEN = {"places": 13, "lancaster": (26.6, 40.1), "pennsylvania_single_crop": (9.5, 11.3)}
