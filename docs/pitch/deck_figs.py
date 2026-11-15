@@ -304,3 +304,10 @@ if __name__ == "__main__":
         for fips, name in (("24029", "map_kent"), ("24021", "map_frederick")):
             if (Path(args.maps) / f"map_{fips}_2022.png").exists():
                 county_map(args.maps, f"map_{fips}_2022.png", name)
+        sheet = Path(args.maps) / "before_after_24021_2022.png"
+        if sheet.exists():  # twelve fields just before and just after the cut: keep the chips, drop the sheet's own labels
+            im = Image.open(sheet)
+            w, h = im.size
+            crop = im.crop((int(0.135 * w), int(0.137 * h), int(0.975 * w), int(0.968 * h))).convert("RGB")
+            crop.save(OUT / "pic_before_after.jpg", quality=90)  # a photograph: JPEG keeps it small
+            print("pic_before_after.jpg: from", sheet.name)

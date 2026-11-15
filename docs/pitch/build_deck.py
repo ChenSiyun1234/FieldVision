@@ -180,24 +180,82 @@ def build(out):
           "每块地只取边界以内的像素。")
 
     # 4 ------------------------------------------------------------------------------------------
-    s = new_slide(prs, "Silage is cut green, within days. Grain is left to dry first")
-    bw = 11.2
-    bx = (W - bw) / 2
-    text(s, bx, 1.42, bw, 0.35, "Called silage: still green on 31 August, cut around 2 September, green again within weeks (a cover crop)",
-         size=16, bold=True, color=INK)
-    picture(s, "pic_frederick_silage.png", bx, 1.8, bw)
-    text(s, bx, 4.12, bw, 0.35, "Called grain: brown by late September, cut by 7 October", size=16, bold=True, color=INK)
-    picture(s, "pic_frederick_grain.png", bx, 4.5, bw)
-    text(s, bx, 6.85, bw, 0.4, "Two corn fields in Frederick County, Maryland, 2022. Sentinel-2 true colour, 10 m pixels. "
-         "The calls are the model's: these fields have no label.", size=12)
-    notes(s, "These are real satellite pictures of two Maryland fields. The top field was still green on 31 August and was cut around "
-             "2 September, so the model calls it silage. The bottom field turned brown first and was cut in October, so the model "
-             "calls it grain.",
-          "这是马里兰两块地的真实卫星图片。上面这块 8 月 31 日还是绿的，9 月 2 日前后就割了，模型判为青贮。下面这块先变黄，10 月才收，模型判为籽粒。")
+    s = new_slide(prs, "Silage is cut green. Grain is left to dry first")
+    if (FIG / "pic_before_after.jpg").exists():
+        # twelve real fields, the last look before the cut above the first look after it
+        ph = 5.05
+        pw4 = ph * 1613 / 897
+        px = W - MX - pw4
+        picture(s, "pic_before_after.jpg", px, 1.4, pw4)
+        lx, lw4 = MX, px - MX - 0.2
+        rows = [(0.125, "last look standing"), (0.381, "first look after the cut"),
+                (0.638, "last look standing"), (0.894, "first look after the cut")]
+        for frac, label in rows:
+            text(s, lx, 1.4 + frac * ph - 0.05, lw4, 0.4, label, size=13)
+        text(s, lx, 1.4 + 0.125 * ph - 0.6, lw4, 0.5, "Called silage", size=20, bold=True, color=BLUE)
+        text(s, lx, 1.4 + 0.638 * ph - 0.6, lw4, 0.5, "Called grain", size=20, bold=True, color=INK)
+        text(s, MX, 6.6, full, 0.6, "Frederick County, Maryland, 2022: six fields the model calls silage and six it calls grain, picked by rule "
+             "(both looks at least 90% clear, then the fields closest to their group's median size). Sentinel-2 true colour, 10 m pixels. "
+             "These fields have no label.", size=12)
+        notes(s, "These are real satellite pictures of twelve Maryland fields, picked by rule, not by eye. The top rows are fields the "
+                 "model calls silage: green at the last look, bare at the next. The bottom rows are fields it calls grain: already "
+                 "brown before the cut. That difference is what the model reads.",
+              "这是马里兰 12 块地的真实卫星图片，按规则选出，不是挑出来的。上面两行是模型判为青贮的地：割之前还是绿的，下一张就是裸地。"
+              "下面两行是判为籽粒的地：收割前已经变黄。模型读的就是这个差别。")
+    else:
+        bw = 11.2
+        bx = (W - bw) / 2
+        text(s, bx, 1.42, bw, 0.35, "Called silage: still green on 31 August, cut around 2 September, green again within weeks (a cover crop)",
+             size=16, bold=True, color=INK)
+        picture(s, "pic_frederick_silage.png", bx, 1.8, bw)
+        text(s, bx, 4.12, bw, 0.35, "Called grain: brown by late September, cut by 7 October", size=16, bold=True, color=INK)
+        picture(s, "pic_frederick_grain.png", bx, 4.5, bw)
+        text(s, bx, 6.85, bw, 0.4, "Two corn fields in Frederick County, Maryland, 2022. Sentinel-2 true colour, 10 m pixels. "
+             "The calls are the model's: these fields have no label.", size=12)
+        notes(s, "These are real satellite pictures of two Maryland fields. The top field was still green on 31 August and was cut around "
+                 "2 September, so the model calls it silage. The bottom field turned brown first and was cut in October, so the model "
+                 "calls it grain.",
+              "这是马里兰两块地的真实卫星图片。上面这块 8 月 31 日还是绿的，9 月 2 日前后就割了，模型判为青贮。下面这块先变黄，10 月才收，模型判为籽粒。")
 
     # 5 ------------------------------------------------------------------------------------------
     s = new_slide(prs, "The model: check the evidence, then six numbers and a logistic regression")
-    body_picture(s, "module_diagram.png")
+    stages = [
+        ("In", 1.7, "Field outline\n\nSatellite images, April to November (Sentinel-2)", False),
+        ("1  Evidence check", 2.5, "Did the satellite see the harvest?\n\nClearly seen: 12 days or less between the two looks "
+         "around the cut.\nPartly seen: 12 to 20 days.\nOtherwise: not judged.", False),
+        ("2  Six numbers", 2.75, "Moisture just before harvest\nResidue left after harvest\nLength of the dry-down\n"
+         "How fast it browns\nGreenness just before harvest\nDays from peak to harvest", False),
+        ("3  Classifier", 2.1, "Logistic regression\n\nTrained on 8,000 labelled fields in Austria, France and the Netherlands.\n\n"
+         "No US labels.", True),
+        ("4  Add up", 2.1, "The share of silage among the clearly seen fields, times the corn acres from the field outlines.\n\n"
+         "By county and by state.", False),
+    ]
+    gap = (full - sum(st[1] for st in stages)) / (len(stages) - 1)
+    x = MX
+    for i, (head, w, body, strong) in enumerate(stages):
+        card(s, x, 1.5, w, 3.2, fill=BLUE if strong else WHITE, line=None if strong else GREY)
+        text(s, x + 0.2, 1.68, w - 0.4, 0.4, head, size=16, bold=True, color=WHITE if strong else INK)
+        text(s, x + 0.2, 2.2, w - 0.4, 2.4, body, size=13 if i == 2 else 12.5, color=WHITE if strong else INK2, spacing=1.12)
+        if i < len(stages) - 1:
+            arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(x + w + gap * 0.15), Inches(2.95), Inches(gap * 0.7), Inches(0.3))
+            arrow.fill.solid()
+            arrow.fill.fore_color.rgb = rgb(INK2)
+            arrow.line.fill.background()
+            arrow.shadow.inherit = False
+        x += w + gap
+    outs = [
+        ("Out, for each field", "Silage or grain with a probability, or \"not judged\".\nThe evidence behind it: harvest dates, "
+         "greenness, moisture, residue."),
+        ("Out, for a county or a state", "Silage and grain acres, with a range.\nBeside it: how much of the corn was clearly seen, "
+         "and the double-crop acres kept separate."),
+        ("Also tried, shown beside", "Boosted trees on 135 numbers: 37 of 44 on the labelled fields.\nA sequence model on the whole "
+         "season: still running.\nRadar for cloudy weeks: built, not used yet."),
+    ]
+    for i, (head, body) in enumerate(outs):
+        x = MX + i * (tw + 0.3)
+        card(s, x, 5.0, tw, 2.0)
+        text(s, x + 0.25, 5.15, tw - 0.5, 0.4, head, size=16, bold=True, color=INK)
+        text(s, x + 0.25, 5.6, tw - 0.5, 1.35, body, size=12.5, spacing=1.12)
     notes(s, "The model has three steps. First it checks whether the satellite saw the harvest. Then a logistic regression on six "
              "numbers says silage or grain. Last, the fields are added up to county and state acres.",
           "模型有三步。第一步检查卫星有没有看到收割。第二步用六个数做逻辑回归，判断青贮还是籽粒。第三步把地块加起来，得到县和州的面积。")
