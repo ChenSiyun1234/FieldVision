@@ -60,8 +60,8 @@ Policies: `standard` is the one the agent already uses (unchanged); `module_v2` 
 
 | Test | Compared with | Our figure | Seen before? |
 |---|---|---|---|
-| Beltsville, 44 labelled field-years | organisers' labels | 42 of 44 (boosted trees 37; with dates dropped in training 39; always-grain 32) | no, scored once per model |
-| A country the model never saw (Austria, France, Netherlands in turn) | registry labels | mean ROC-AUC 0.765 (boosted trees 0.764; sequence model 0.817, three seeds, not tested on Beltsville) | held out |
+| Beltsville, 44 labelled field-years | organisers' labels | 42 of 44 (sequence model also 42; boosted trees 37; with dates dropped in training 39; always-grain 32) | no, scored once per model |
+| A country the model never saw (Austria, France, Netherlands in turn) | registry labels | mean ROC-AUC 0.765 (boosted trees 0.764; sequence model 0.817, three seeds) | held out |
 | Branch, Michigan 2022 | Census 1.8% silage | 2.1% | no |
 | Gratiot, Michigan 2022 | Census 24.2% | 30.0% | no |
 | Racine, Wisconsin 2023 | survey 2.4% (official figures 2.4 to 6.4%) | 6.4% | no |
@@ -90,5 +90,5 @@ Policies: `standard` is the one the agent already uses (unchanged); `module_v2` 
 
 - That county or state totals are validated. Of the clean tests, Michigan and Racine came out right, Maryland 2025 read low and Marathon was missed.
 - That the harvest-window figures for Maryland 2022 are a test. They were found on those counties.
-- That radar or image models are part of the result. Radar is a pilot; the sequence model was only checked by holding countries out; the pixel models were built and not run to a result.
-- More than three scorings of the Beltsville labels. Each is in the log; the set was then closed.
+- That radar or image models are part of the result. Radar is a pilot and was not run (over Marathon it has the same hole as the optical pictures); the pixel models were built and not run to a result. The sequence model ties the logistic at Beltsville (42 of 44) and calls far less false silage where pictures are missing, but it reads the counties no better overall, so the logistic stays the classifier.
+- More than four scorings of the Beltsville labels (logistic, boosted trees, boosted trees with dates dropped, sequence model). Each is in the log with its pass mark written first.
