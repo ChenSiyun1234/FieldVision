@@ -50,11 +50,16 @@ read low), and the label-free checks did not catch that failure.**
   four seen counties, Frederick judged against its scored-set range 11.2-19.9 %): `eu2_logistic_v1`
   worst error 7.4 points, the Europe-plus-Beltsville logistic 11.5, the Beltsville-only one 9.2.
   So the county and state figures use the Evaluation 2 model, not a locally calibrated one.
-- **Why Kent reads high.** Kent's clear-tier silage calls look like silage in the imagery (green and
-  moist right before the cut, like Beltsville's silage), but 72 of 75 were cut by 2 September, where
-  Frederick's calls spread from August into October. Early-planted Eastern Shore grain cut while
-  still partly green, or high-moisture corn, cannot be told from silage without labels; a date rule
-  would bring back the calendar rule taken out of the vote.
+- **Why Kent reads high: two readings, not settled.** Kent's clear-tier silage calls look like
+  silage in the imagery (green and moist right before the cut; labelled European fields in the same
+  place are 82 % silage), and 72 of 75 were cut by 2 September. (a) The calls are mostly right and the
+  county share is wrong because the clear tier is not a random part of the county: the acres flagged
+  inside the clear tier are close to the county's whole Census silage in Kent (about 1,900 against
+  2,264) and in Queen Anne's (about 770 against 715). (b) Early-planted grain cut while still green,
+  which the training labels never show as grain, is being called silage. Weighting the clear tier's
+  share by harvest window did not help (worst error 10.3 points against 7.4), and the plain lower
+  bound (clear-tier silage acres over all corn acres) fits Kent and Queen Anne's but reads low in
+  Carroll and Frederick, so neither reading explains all four counties yet.
 - **Minimum evidence.** No county figure unless the clear tier has at least 100 fields and 15 % of
   the scored corn area; no state figure unless the drawn blocks hold 300 clear fields and 15 %.
   Otherwise the clear + wide counted share is shown as context and the figure is not reported.
