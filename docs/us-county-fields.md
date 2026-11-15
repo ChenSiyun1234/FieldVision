@@ -400,3 +400,25 @@ Not finished:
 - Land-use prior with each county's own state left out (for the modelling session's per-field check): files
   `C:\t\fv\data\us\landuse\prior_state_left_out_counties.csv` and `prior_state_left_out_states_2025.csv`;
   leaving a state out moves every county prior by at most one point.
+- 01:17 PT: Pennsylvania 2025 sample complete. Parts `us_42_2025_s1`-`s3` merged and finalised, verified, READY
+  lines written, no scene errors. Merged in `C:\t\fv\data\counties\42_2025_sample\`: 4,527 fields (corn 3,931,
+  small-grain/corn double crop 596) in the 150 drawn read blocks of 3,106. The double crop is 13 % of the frame's
+  corn-containing area in Pennsylvania (142,288 of 1,095,462 acres). Median usable dates 25 (s1, s2) and 39 (s3).
+  All three 2025 state samples (Maryland, Wisconsin, Pennsylvania) are now on disk.
+- Lancaster `us_42071_2023` (untouched test county, seeded draw: 70 of 113 read blocks, 24 of 39 10-km blocks,
+  10,533 of 15,548 fields, 108,003 of 168,209 acres = 64.2 % of the county's CSB corn): field file unpacked,
+  run folder created (stub signature ca552af5fcc5 equals Colab's), merge pending. Corn-area check, whole county:
+  CSB polygons 168,209 acres, CDL 2023 corn pixels 146,232, Census 2022 grain + silage 131,537 (polygons 1.28 x),
+  2023 survey 68,800, planted 69,000 (2.44 x). The boundaries agree with the Census scale and are twice the 2023
+  survey, so the Census 2022 total and share (27.4 %) are the reference the boundaries support; the 2023 survey
+  share (44.5 %) comes from an estimate that covers about half the corn the CDL and the Census show. Why the
+  survey is low is not known here (a guess: county survey estimates are modelled from a sample, and many small
+  farms there may be under-sampled).
+- 01:30 PT: Lancaster merged and finalised by the extraction session, verified (70 blocks complete, 10,533 fields
+  usable, Collection 1, no failures; 94 % of fields have at least 8 usable dates in July-November), READY line
+  written (untouched test county, seeded draw, Census total supported), toolbox folder
+  `C:\t\fv\data\counties\42071\2023\` (fields, series, coverage, unscored_corn.json, county_check.json, sample.json).
+- 02:20 PT: Michigan (26) and New York (36) 2025 samples started, same design as Wisconsin and Pennsylvania
+  (CDL2025 corn and small-grain/corn strata, EPSG:5070, 150 read blocks, seed 42, three parts of 50). Boundaries
+  notebook `C:\t\fv\colab\state_frames_2025_mi_ny\` handed to the Colab session; the six extraction bundles
+  `us_26_2025_s1..s3`, `us_36_2025_s1..s3` follow when the frames return. Untouched test places.
