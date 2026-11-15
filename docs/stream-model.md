@@ -14,8 +14,13 @@ its mean ROC-AUC is 0.817, against 0.765 for the 6-feature logistic and
 countries (clearly in Austria and France, at the edge in the
 Netherlands).
 
-**Space inside the field: not scored yet.** The pixel chips are being
-extracted; this page gets the pixel models' rows when they are scored.
+**Space inside the field was built but not run to a result.** The chip
+extractor, the three pixel models and the training notebooks exist and
+pass their tests, but the two-hour chip extraction was stopped when the
+team froze work for the night, so there is no number yet for what the
+pixels add on top of the sequence. Finishing it takes about two hours of
+extraction and one to two hours on one GPU; the steps are at the end of
+this page.
 
 ## The idea
 
@@ -54,15 +59,17 @@ classification, and a mask of the pixels inside the field. It also
 writes the medians again, which gives an exact check: on the fields and
 dates both tables hold, the medians must be the same numbers as in the
 frozen table. They are: 19 of 19 and 12 of 12 field-dates on two test
-extractions, and every full run repeats the check on all its field-dates
-and stops below 99 % agreement.
+extractions of six Austrian fields, and every full run repeats the check
+on all its field-dates and stops below 99 % agreement.
 
-Chips were extracted for a subset: whole read blocks drawn at random
-inside every 10 km label block (seed 0) until each run had enough
+The full extraction was planned for a subset: whole read blocks drawn at
+random inside every 10 km label block (seed 0) until each run had enough
 fields. Reading time grows with blocks, not fields, and every label
-block stays represented.
+block stays represented. The field lists exist
+(`<data>\stream\subsets\<run>\fields.geojson`); the chips for them do
+not yet.
 
-| run | fields with chips | of |
+| run | fields in the chip subset | of |
 |---|---:|---:|
 | Austria 2022 | 601 | 1,200 |
 | Austria 2023 | 592 | 1,200 |
@@ -177,9 +184,51 @@ reproduced exactly.
 
 ### Claim 2: space inside the field (the pixel models)
 
-Not scored yet. The chips for the 4,282 fields are being extracted; the
-three pixel models and the control retrained on exactly those fields are
-trained next, on the same folds, and their rows are added here.
+**Built, not run to a result.** This is the idea in its strict sense,
+and it has no number yet.
+
+What exists and is tested:
+
+- the chip extractor, checked against the frozen table on two test
+  blocks (above), with a resumable run per country-year;
+- the three pixel models and their training loop, tested end to end on
+  small synthetic fields (each learns a late-season difference from
+  chips; padding, hidden dates, missing pixels and pixel order are
+  covered by tests);
+- the field lists of the subset, and two ready notebook jobs: one
+  extracts the chips with the frozen reading code, one trains every
+  model on a GPU and writes predictions in the main line's format;
+- the report that puts the new rows next to the reference models, with
+  the same pairing and intervals as the table above.
+
+What is missing: the chips themselves. The extraction was started on a
+hosted runtime and stopped before it finished when the team froze work
+for the night; no chips from it were brought back. The only chips on
+disk are the two test extractions (`<data>\stream\smoke_*`, six fields).
+
+**To finish it** (about half a day including checks):
+
+1. Extract the chips, about two hours on an 8-core machine with a good
+   connection (roughly 200 read blocks, about 230 MB of output). Either
+   run `extract_stream_px.ipynb` from the job folder `stream_px` (upload
+   the 15 files its README lists, run cells 1-7), or run the command
+   under "Reproduce" for each of the five European runs.
+2. Train, one to two hours on one T4 GPU: `train_stream.ipynb` from the
+   job folder `stream_train`, cells 5-9 (cell 6 holds each country out
+   in turn, cell 7 adds the spatial folds for the loss column), or the
+   second `stream.train` command under "Reproduce".
+3. Build the table and the figure with `stream.report` and add the rows
+   here.
+
+**How to read the result when it exists.** The row to beat is not the
+logistic but `seq` retrained on exactly the fields that have chips (the
+notebook does this): same fields, same dates, same temporal network,
+medians instead of pixels. If `pixelset`, `chipseq` or `conv3d` is ahead
+of that row out of country, the pixels carry something the median
+loses (a half-harvested field, a patchy stand). If they are level, the
+sequence was the whole gain and the cheaper model is the one to keep.
+Fields here are small (a median of 150-220 pixels at 10 m), so level is
+a real possibility; either answer is usable.
 
 ## What it cost
 
@@ -189,9 +238,10 @@ trained next, on the same folds, and their rows are added here.
   model on a busy laptop CPU. Scoring 1,000 fields takes 0.3 seconds on
   a laptop, and there are no features to compute first.
 - **The chips** mean reading every scene again: about 200 read blocks,
-  roughly two hours on an 8-core hosted runtime, and about 1.7 kB per
-  chip (12 x 12 pixels, ten bands, compressed), so a few hundred
-  megabytes for this subset instead of a few megabytes of medians.
+  an estimated two hours on an 8-core hosted runtime, and about 1.7 kB
+  per chip (12 x 12 pixels, ten bands, compressed; measured on the test
+  blocks), so a few hundred megabytes for this subset instead of a few
+  megabytes of medians. Not yet spent: the full extraction was stopped.
 - **What it does not give**: a reason. The logistic says "harvested 20
   days early at high moisture"; the sequence model gives a score. For
   the product the two fit together: the features explain, the sequence
@@ -205,10 +255,36 @@ python -m fieldvision.stream.pixels --fields <data>\stream\subsets\<run>\fields.
 python -m fieldvision.stream.pixels check --run <data>\stream\px\<run> --reference <data>\timeseries\<run>\timeseries.parquet
 python -m fieldvision.stream.folds --reference <data>\foundation\runs\at_fr_nl\predictions.parquet --out folds.parquet
 python -m fieldvision.stream.train --folds folds.parquet --timeseries <data>\timeseries\<run>\timeseries.parquet ... --models seq --out <data>\stream\control_full
-python -m fieldvision.stream.train --folds folds_subset.parquet --timeseries <data>\stream\px\<run>\timeseries.parquet ... --chips <data>\stream\px\<run>\chips.npz ... --models seq pixelset chipseq conv3d --out <data>\stream\subset
-python -m fieldvision.stream.report --stream <data>\stream\subset --reference <data>\foundation\runs\at_fr_nl\predictions.parquet --out <data>\stream\report
+python -m fieldvision.stream.report --stream <data>\stream\control_full --reference <data>\foundation\runs\at_fr_nl\predictions.parquet --out <data>\stream\report_control
 ```
 
-`scripts/build_stream_bundle.py` and `scripts/build_stream_train_bundle.py`
-pack the extraction and the training as notebook jobs for a hosted
-runtime (the extraction with the frozen reading code).
+The first three lines are the chip extraction (line 1 is done, lines 2
+and 3 once per run: `at_2022`, `at_2023`, `at_2024`, `fr_2022`,
+`nl_2025`); the last three are the control as reported above. With the
+chips in place, the pixel models and their table are:
+
+```
+python -m fieldvision.stream.folds --reference <data>\foundation\runs\at_fr_nl\predictions.parquet --fields <data>\stream\subsets\<run>\fields.geojson ... --out folds_subset.parquet
+python -m fieldvision.stream.train --folds folds_subset.parquet --timeseries <data>\stream\px\<run>\timeseries.parquet ... --chips <data>\stream\px\<run>\chips.npz ... --models seq pixelset chipseq conv3d --time greenup --out <data>\stream\subset
+python -m fieldvision.stream.report --stream <data>\stream\subset --reference <data>\foundation\runs\at_fr_nl\predictions.parquet --retrain-reference --timeseries <data>\stream\px\<run>\timeseries.parquet ... --fields <data>\stream\subsets\<run>\fields.geojson ... --out <data>\stream\report
+```
+
+The training needs PyTorch (`pip install torch`; it is not in the shared
+environment, and the tests that need it are skipped without it). On a
+CPU the control is fine; the chip models want a GPU.
+
+As notebook jobs for a hosted runtime:
+
+```
+python scripts/build_stream_bundle.py --subsets <data>\stream\subsets --timeseries-root <data>\timeseries --bundle <jobs>\stream_px --s2-source <frozen source>\fieldvision\s2
+python scripts/build_stream_train_bundle.py --reference <data>\foundation\runs\at_fr_nl\predictions.parquet --timeseries-root <data>\timeseries --subsets <data>\stream\subsets --bundle <jobs>\stream_train
+```
+
+Both folders were built and each has a README naming the files to
+upload and the cells to run (`extract_stream_px.ipynb`, cells 1-7;
+`train_stream.ipynb`, cells 1-9). `--s2-source` points at the frozen
+copy of the reading code (fingerprint `9cd0447b`), because the copy in
+this repository has since gained an optional guard and no longer has
+that fingerprint; the results are the same with the guard off, but the
+notebook checks the fingerprint. After a new run, unpack what comes back
+with `scripts/stream_unpack.py --parts-dir <downloaded parts> --out <data>\stream\px\<run>`.
