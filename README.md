@@ -25,12 +25,30 @@ Presentation is worth as much as technical quality and innovation combined, so t
 ## Layout
 
 ```
-data/        pointers to where data lives (no large files in git)
-notebooks/   exploration and experiments
-src/         reusable code: data access, features, models, evaluation
-app/         demo / map
-docs/        resources, notes, decisions
+src/fieldvision/          the model module: features, frozen models, toolbox, county totals
+src/fieldvision_agents/   the Nemotron agents and the analyst app (command line + web console)
+registry/                 frozen, versioned models the toolbox loads read-only
+rag-pipeline/             the critic: Quick Stats checks and the NASS report index
+recommender/              silage sources for dairies (the agent's optional recommend_sources step)
+app/                      the field map demo (Beltsville, per-field evidence)
+notebooks/                exploration and experiments; notebooks/agents/ for the agent side
+data/                     pointers to where data lives (no large files in git)
+runs/                     agent audit logs, reports and evaluations (not in git)
+docs/, handoff/           notes, decisions, results and the hand-over
 ```
+
+## Run the analyst app
+
+```bash
+uv venv && uv pip install -e ".[agents]"
+fieldvision doctor                   # what this machine can run
+fieldvision run 24033 2022 --report  # one county-season through the agent
+fieldvision serve                    # web console at http://127.0.0.1:8765
+```
+
+County data goes in `data/counties/<fips>/<year>/` (not in git). Without `NVIDIA_API_KEY` in `.env` the
+app runs offline with a rule-based agent under the same guardrails. Details:
+[src/fieldvision_agents/README.md](src/fieldvision_agents/README.md).
 
 ## Working together
 
