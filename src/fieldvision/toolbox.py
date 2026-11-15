@@ -45,7 +45,8 @@ def _require_parquet_engine():
     import importlib.util
     if not any(importlib.util.find_spec(m) for m in ("pyarrow", "fastparquet")):
         raise ImportError(PARQUET_HINT)
-POLICIES = ("standard", "radar_first", "regional_threshold", "in_site")
+POLICIES = ("standard", "radar_first", "regional_threshold", "in_site", "module_v1")
+ANOMALY_MODEL = "anomaly_v1"            # second opinion (layer 3); used when present in the registry
 IN_SITE_MODEL = "eu_barc_logistic_v1"   # Austria + Beltsville, fitted on these fields (fieldvision.beltsville)
 IN_SITE_FIPS = {"24033"}
 STATE_BY_FIPS = {"01": "AL", "04": "AZ", "05": "AR", "06": "CA", "08": "CO", "09": "CT", "10": "DE",
@@ -90,6 +91,17 @@ class Toolbox:
         self.seed = seed
         self._cache = {}
         self._last = {}
+        # reference counties for layer 4: {target fips: {"fips", "year", "census_share"}};
+        # read from <data_root>/references.json, overridable with set_reference()
+        self.references = {}
+        ref_file = self.data_root / "references.json"
+        if ref_file.exists():
+            self.references.update(json.loads(ref_file.read_text(encoding="utf-8")))
+
+    def set_reference(self, fips, ref_fips, ref_year, census_share):
+        """Use `ref_fips` (nearly all grain, Census silage share `census_share`) for `fips`."""
+        self.references[str(fips)] = {"fips": str(ref_fips), "year": int(ref_year),
+                                      "census_share": float(census_share)}
 
     # ------------------------------------------------------------------ helpers
     def _folder(self, fips, year):
@@ -183,12 +195,20 @@ class Toolbox:
             name = IN_SITE_MODEL
             note = (f"every field to {IN_SITE_MODEL}, fitted on these same Beltsville fields: these "
                     "calls are in-sample; its out-of-fold accuracy is in its model card")
-        elif policy in ("standard", "radar_first"):
+        elif policy in ("standard", "radar_first", "module_v1"):
             model, mj, _ = load_model(self.registry, self.standard_model)
             rows, _ = classify_rows(fields, ts, model, self.standard_model, cfg, mj["threshold"])
             name = self.standard_model
             note = ("identical to 'standard': no radar model exists, so no field is routed to one"
                     if policy == "radar_first" else f"every field to {name}")
+            if policy == "module_v1":
+                tiers, second = self._tiers(X, rows)
+                for r, t in zip(rows, tiers):
+                    r["evidence"]["tier"] = t
+                    r["evidence"]["second_opinion"] = second
+                note = (f"module_v1: evidence check, {name} as the field classifier, "
+                        f"second opinion: {second}; county total calibrated on a reference county "
+                        "when one is configured")
         else:
             model, mj, Xs, shift, t_med, here = self._regional_rule(X)
             p = model.predict_proba(Xs)
@@ -198,6 +218,32 @@ class Toolbox:
             note = (f"{self.rule_model} with its drop-date threshold moved by {shift:+.1f} days: this "
                     f"county's median drop day {here:.1f} minus the training median {t_med:.1f}")
         return rows, name, note
+
+    def _tiers(self, X, rows):
+        """Layer 3: confidence tier per field from the anomaly scorer, when it is registered.
+
+        The scorer has learned what normal grain looks like; a field is 'not grain-like' when
+        its score reaches the scorer's threshold. Tier: 'agree' when that view and the
+        classifier's call point the same way, 'disagree' when not, 'abstained' when the
+        evidence check failed. Without a scorer: 'classifier_only'.
+        """
+        folder = self.registry / ANOMALY_MODEL
+        abstained = [bool(r["abstain"]) for r in rows]
+        if not (folder / "model.json").exists():
+            return (["abstained" if ab else "classifier_only" for ab in abstained],
+                    f"not available ({ANOMALY_MODEL} is not in the registry yet)")
+        import joblib
+        mj = json.loads((folder / "model.json").read_text(encoding="utf-8"))
+        scorer = joblib.load(folder / "model.joblib")
+        score = np.asarray(scorer.score(X), float)
+        odd = score >= float(mj["threshold"])
+        tiers = []
+        for r, ab, o in zip(rows, abstained, odd):
+            if ab:
+                tiers.append("abstained")
+            else:
+                tiers.append("agree" if (r["label"] == "silage") == bool(o) else "disagree")
+        return tiers, f"{ANOMALY_MODEL} (score >= {float(mj['threshold']):.3f} means not grain-like)"
 
     def route_options(self, fips, year):
         options, lines = {}, []
@@ -276,12 +322,103 @@ class Toolbox:
         out["headline_method"] = "counted share of the non-abstained area"
         ps = self._prior_shift(p, a, ok)
         out.update(ps)
+        cal = self._reference_calibrated(fips, year, df["model"].iloc[0], a, called, ok)
+        out.update(cal)
+        if out["module_headline_share"] is None and out.get("silage_share_adjusted") is not None:
+            # module_v1 rule: without a reference county, the Europe-rate adjusted share
+            out["module_headline_share"] = out["silage_share_adjusted"]
+            out["module_headline_method"] = "Europe-rate adjusted count (no reference county)"
+        if out.get("notes") and cal.get("calibration_note"):
+            out["notes"] += " " + cal["calibration_note"]
         if out.get("notes"):
             out["notes"] += (f" Headline: counted share {out['silage_share_counted']:.1%}. Prior-shift "
                              f"(EM) re-estimate from the county's own probabilities: "
                              + (f"{ps['silage_share_prior_shift']:.1%}" if ps["prior_shift_converged"]
                                 else "did not converge") + ".")
         return out
+
+    def _reference_calibrated(self, fips, year, model_name, a, called, ok):
+        """Layer 4: counted share corrected with the false-positive rate measured in a nearly
+        all-grain reference county of the same region and season.
+
+        FPR_ref = (counted share in the reference - TPR x its Census share) / (1 - its share),
+        TPR from European held-out fields; share = (counted - FPR_ref) / (TPR - FPR_ref),
+        clipped to [0, 1]. The range resamples the target's fields, the reference's fields
+        and TPR. Validated on European pseudo-counties (fieldvision.model.county_validation).
+        """
+        empty = {"silage_share_calibrated": None, "silage_share_calibrated_low": None,
+                 "silage_share_calibrated_high": None, "silage_acres_calibrated": None,
+                 "calibration_reference": None, "module_headline_share": None,
+                 "module_headline_method": None}
+        ref = self.references.get(str(fips))
+        base = model_name.split("+")[0]
+        rates_path = self.registry / base / "rates.json"
+        if not ref or str(ref["fips"]) == str(fips) or not rates_path.exists():
+            out = dict(empty)
+            if out["module_headline_method"] is None:
+                out["module_headline_share"] = None
+            out["calibration_note"] = ("No reference county configured for this county, so no "
+                                       "calibrated total." if not ref else
+                                       "No reference-calibrated total (reference is this county "
+                                       "or the model has no European error rates).")
+            return out
+        rows, _, _ = self._policy_predictions(ref["fips"], ref["year"], "standard")
+        rf, _, _, _ = self._data(ref["fips"], ref["year"])
+        rarea = rf.set_index("field_id")["area_ha"].astype(float) * HA_TO_ACRE
+        rdf = pd.DataFrame(rows)
+        ra = rdf["source_field_id"].map(rarea).to_numpy(float)
+        rok = ~rdf["abstain"].to_numpy(bool) & np.isfinite(ra)
+        rcalled = (rdf["label"].to_numpy() == "silage")
+        doc = json.loads(rates_path.read_text(encoding="utf-8"))
+        r = doc["sets"][doc["primary"]]
+        s_ref = float(ref["census_share"])
+
+        def share_of(aa, cc, rra, rcc, tpr):
+            counted = np.sum(aa * cc) / np.sum(aa)
+            counted_ref = np.sum(rra * rcc) / np.sum(rra)
+            fpr = np.clip((counted_ref - tpr * s_ref) / (1 - s_ref), 0, 0.95)
+            den = tpr - fpr
+            v = (counted - fpr) / den if den > 0.05 else np.nan
+            return v, fpr, counted_ref
+
+        aa, cc = a[ok], called[ok].astype(float)
+        rra, rcc = ra[rok], rcalled[rok].astype(float)
+        v, fpr, counted_ref = share_of(aa, cc, rra, rcc, r["tpr"])
+        if not np.isfinite(v):
+            out = dict(empty)
+            out["calibration_note"] = "Reference-calibrated total not defined (TPR too close to FPR)."
+            return out
+        clipped = bool(v < 0 or v > 1)
+        v = float(np.clip(v, 0, 1))
+        rng = np.random.default_rng(self.seed + 3)
+        n = max(self.n_resample // 4, 200)
+        boots = []
+        for _ in range(n):
+            i = rng.integers(0, len(aa), len(aa))
+            j = rng.integers(0, len(rra), len(rra))
+            tpr_b = rng.beta(r["tp"] + 1, r["fn"] + 1)
+            vb, _, _ = share_of(aa[i], cc[i], rra[j], rcc[j], tpr_b)
+            if np.isfinite(vb):
+                boots.append(float(np.clip(vb, 0, 1)))
+        lo, hi = np.percentile(boots, [5, 95]) if boots else (np.nan, np.nan)
+        area_ok = float(np.sum(aa))
+        note = (f"Reference-calibrated (module_v1 county step): the reference county {ref['fips']} "
+                f"(Census silage share {s_ref:.1%}) has {counted_ref:.1%} of its area called silage, "
+                f"which puts the local false-positive rate at {fpr:.2f}; with the European TPR "
+                f"{r['tpr']:.2f} this county's share is {v:.1%} [{lo:.1%}, {hi:.1%}]"
+                + (" (clipped to 0-1)" if clipped else "") + ". This estimate uses the reference "
+                "county's Census share, so it is not independent of Census figures.")
+        return {"silage_share_calibrated": round(v, 4),
+                "silage_share_calibrated_low": round(float(lo), 4),
+                "silage_share_calibrated_high": round(float(hi), 4),
+                "silage_acres_calibrated": round(v * area_ok, 1),
+                "calibration_reference": {"fips": ref["fips"], "year": ref["year"],
+                                          "census_share": s_ref, "counted_share": round(float(counted_ref), 4),
+                                          "local_fpr": round(float(fpr), 4), "tpr": round(r["tpr"], 3),
+                                          "clipped": clipped},
+                "module_headline_share": round(v, 4),
+                "module_headline_method": "reference-calibrated count (module_v1)",
+                "calibration_note": note}
 
     def _prior_shift(self, p, a, ok, train_prior=0.5, tol=1e-6, max_iter=500):
         """Re-estimate the silage share from the probabilities alone (EM prior shift).

@@ -373,7 +373,8 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     assert s["fields_with_cloud_gap_radar_ok"] == 0
     r = tb.route_options("24033", 2023)
     assert set(r) == STUB_KEYS["route_options"] | {"notes"}
-    assert set(r["options"]) == {"standard", "radar_first", "regional_threshold", "in_site"}
+    assert set(r["options"]) == {"standard", "radar_first", "regional_threshold", "in_site",
+                                 "module_v1"}
     for o in r["options"].values():
         assert {"models_used", "n_abstain"} <= set(o)
     assert r["options"]["radar_first"]["models_used"] == r["options"]["standard"]["models_used"]
@@ -391,7 +392,10 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
              "adjustment_method", "adjustment_clipped", "adjusted_share_by_rates", "notes",
              "silage_share_headline", "headline_method", "silage_share_prior_shift",
              "silage_share_prior_shift_low", "silage_share_prior_shift_high",
-             "prior_shift_converged", "prior_shift_iterations"}
+             "prior_shift_converged", "prior_shift_iterations", "silage_share_calibrated",
+             "silage_share_calibrated_low", "silage_share_calibrated_high",
+             "silage_acres_calibrated", "calibration_reference", "module_headline_share",
+             "module_headline_method", "calibration_note"}
     assert set(a1) == STUB_KEYS["aggregate"] | extra
     total = gj and sum(f["properties"]["area_ha"] for f in gj["features"]) * 2.47105
     assert abs(a1["silage_acres"] + a1["grain_acres"] + a1["abstained_acres"] - total) < 1.0
@@ -521,3 +525,49 @@ def test_prior_shift_recovers_a_known_share(tmp_path):
     assert r["prior_shift_converged"]
     assert abs(r["silage_share_prior_shift"] - true_share) < 0.05
     assert r["silage_share_prior_shift_low"] <= r["silage_share_prior_shift"] <= r["silage_share_prior_shift_high"]
+
+
+def test_module_v1_tiers_and_reference_calibration(run_dir, tmp_path):
+    import joblib
+    from fieldvision.model import registry
+    from fieldvision.toolbox import Toolbox, make_pseudo_county
+    root, out, fdir, tdir, _ = run_dir
+    reg = tmp_path / "reg"
+    files = sorted(str(p) for p in fdir.iterdir())
+    registry.export(out, "timing_rule", "eu_timing_rule_v1", reg, files, "abc1234")
+    registry.export_composite(out, "composite_v1", reg, files, "abc1234")
+    registry.write_rates(reg / "composite_v1", "composite", {"syn": (out, "composite")}, "syn:spatial")
+    make_pseudo_county(next(fdir.glob("*AT*.geojson")), next(tdir.glob("*AT*.parquet")),
+                       tmp_path / "c", "24033", 2023)
+    make_pseudo_county(next(fdir.glob("*FR*.geojson")), next(tdir.glob("*FR*.parquet")),
+                       tmp_path / "c", "24099", 2023)
+    tb = Toolbox(tmp_path / "c", reg, tmp_path / "o")
+    c = tb.classify("24033", 2023, "module_v1")
+    rows = [json.loads(l) for l in open(c["results_path"].replace(".parquet", ".jsonl"))]
+    assert {r["evidence"]["tier"] for r in rows} <= {"classifier_only", "abstained"}
+    assert all((r["evidence"]["tier"] == "abstained") == r["abstain"] for r in rows)
+    a = tb.aggregate("24033", 2023)
+    assert STUB_KEYS["aggregate"] <= set(a) and a["silage_share_calibrated"] is None
+    assert a["module_headline_method"].startswith("Europe-rate adjusted")
+    tb.set_reference("24033", "24099", 2023, 0.02)
+    tb.classify("24033", 2023, "module_v1")
+    a = tb.aggregate("24033", 2023)
+    assert 0.0 <= a["silage_share_calibrated"] <= 1.0
+    assert a["silage_share_calibrated_low"] <= a["silage_share_calibrated"] <= a["silage_share_calibrated_high"]
+    assert a["module_headline_share"] == a["silage_share_calibrated"]
+    assert a["calibration_reference"]["fips"] == "24099"
+    # a registered anomaly scorer turns the tiers into agree / disagree
+    (reg / "anomaly_v1").mkdir()
+    joblib.dump(_ConstScorer(), reg / "anomaly_v1" / "model.joblib")
+    (reg / "anomaly_v1" / "model.json").write_text(json.dumps({"threshold": 0.5}))
+    c = Toolbox(tmp_path / "c", reg, tmp_path / "o2").classify("24033", 2023, "module_v1")
+    rows = [json.loads(l) for l in open(c["results_path"].replace(".parquet", ".jsonl"))]
+    for r in rows:                       # scorer says "not grain-like" for every field
+        want = "abstained" if r["abstain"] else ("agree" if r["label"] == "silage" else "disagree")
+        assert r["evidence"]["tier"] == want
+
+
+class _ConstScorer:
+    def score(self, X):
+        import numpy as np
+        return np.ones(len(X))
