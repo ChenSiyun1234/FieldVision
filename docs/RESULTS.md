@@ -153,7 +153,10 @@ could explain. The pictures show no level shift between the two Lancaster years 
 peak-anchored timing were tested under a rule logged before fitting (02:18): all equal V0 in Europe
 (0.765-0.766 held out by country), none closes the year-to-year gap by a third (18.4 points for V0,
 15.1-15.2 for the others; 12.3 needed). By the rule the module stays as it is, and the earlier peak is
-not the cause.
+not the cause. With the Maryland 2025 Landsat added afterwards (Frederick's 2025 fields 4.8 %),
+the gaps are 19.7 for V0 and 16.9-17.1 for the others: the decision does not change. Maryland 2025
+itself with Landsat, after the fact: 99 % seen, single-crop 4.2 % [2.9, 5.8], with double crops
+6.2 % [4.7, 7.7], against NASS 8.9 %: still low, now with nothing hidden by clouds.
 
 ## Open leads, in the order we would try them
 
