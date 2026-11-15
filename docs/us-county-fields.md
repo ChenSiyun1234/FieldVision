@@ -207,7 +207,7 @@ most share contrast per block: 22.4 points for about 115 blocks (0.19 points per
 Wisconsin 27.2 points / ~235 blocks (0.12), Texas 37.5 / ~245 (0.15, and the riskiest calendar),
 Iowa 15.1 / ~180 (0.08), Minnesota 15.0 / ~240 (0.06), South Dakota 7.9 / ~330. Both counties lie in
 UTM zone 16 (EPSG:32616). The Colab bundle for the field files is ready, not started, in
-`C:\t\fv\colab\fields_26_2022\` (notebook, code at 62d26e2, Census table); its code was checked by
+`<work>\colab\fields_26_2022\` (notebook, code at 62d26e2, Census table); its code was checked by
 rebuilding the Kent field file from the Maryland subset byte for byte.
 
 ## 2025 statewide samples (the organisers' target: NASS 2025 state figures)
@@ -223,12 +223,12 @@ forms exactly the drawn blocks. Every read block has inclusion probability n/N, 
 N/n times the sum over the drawn blocks. `draw.json` records the draw by stratum and county;
 `state_acres.json` gives the frame acres by class and county beside the NASS target.
 
-Maryland (`C:\t\fv\data\labels\us_24_2025\`, area and grid in UTM 18N): frame 22,273 fields,
+Maryland (`<data>\labels\us_24_2025\`, area and grid in UTM 18N): frame 22,273 fields,
 494,947 acres (corn 21,058 / 477,891; double crop 1,215 / 17,056); 150 of 838 read blocks drawn
 (probability 0.179): 3,929 fields, 84,195 acres (17.0 %); runs `us_24_2025_s1`-`s3`, 50 blocks each.
 Class-1 acres are 1.062 times the NASS 2025 total (410,000 grain + 40,000 silage, 8.9 % silage).
 
-Pennsylvania and Wisconsin: `C:\t\fv\colab\state_frames_2025\` makes both frames and draws on Colab
+Pennsylvania and Wisconsin: `<work>\colab\state_frames_2025\` makes both frames and draws on Colab
 (area and grid in EPSG:5070, because each state spans two UTM zones) and returns only the part field
 files and the two JSON files; extraction bundles follow on the laptop as for Maryland.
 
@@ -262,7 +262,7 @@ blocks drawn of how many, fields and acres drawn of the total and the acre fract
 acres by that fraction, and never read a capped run as the whole county. Racine is expected to fit
 whole (`is_sample` false).
 
-Colab bundles: `C:\t\fv\colab\us_<fips>_2023\`, built by `scripts/build_colab_county.py`
+Colab bundles: `<work>\colab\us_<fips>_2023\`, built by `scripts/build_colab_county.py`
 (field file, survey check and draw on Colab, then the standard extraction with code 9cd0447b and
 `--year 2023`; 2023 imagery is Earth Search Collection 1). Untouched test counties: no model is
 run on them until the modelling session has logged the test.
@@ -291,7 +291,7 @@ crop. What would answer that: the 2022 CDL corn pixel acres for each county (Cro
 statistics, a small table) set beside the class-1 and double-crop polygon acres. Queen Anne's has
 225 acres of such double crops, too few to matter.
 
-The CropScape table answers it (2022 CDL pixel acres per county, `C:\t\fv\data\us\cropscape\`):
+The CropScape table answers it (2022 CDL pixel acres per county, `<data>\us\cropscape\`):
 
 | County | CSB class-1 polygons | CDL corn pixels | CSB small-grain/corn polygons | CDL small-grain/corn pixels | Census grain + silage |
 |---|---:|---:|---:|---:|---:|
