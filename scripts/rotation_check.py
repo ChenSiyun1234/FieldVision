@@ -1,7 +1,7 @@
 """Crop rotation of called fields, from the CSB class sequence (boundaries only, no imagery, no model).
 
-    python scripts/rotation_check.py --results C:/t/fv/data/diag/dairy/results --csb C:/t/fv/data/us/csb/csb1825_md.parquet \\
-        --labels C:/t/fv/data/labels --year 2022 --fips 24021 24035 24029 24013 --out rotation_check.csv
+    python scripts/rotation_check.py --results data/diag/dairy/results --csb data/us/csb/csb1825_md.parquet \\
+        --labels data/labels --year 2022 --fips 24021 24035 24029 24013 --out rotation_check.csv
 
 For each county, joins the per-field calls (MD_<year>_<fips>_module_v2.parquet: field_id, label, abstain,
 evidence with evidence_tier and drop_date) to the CSB polygon's CDL class in every year of the release,

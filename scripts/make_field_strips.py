@@ -6,7 +6,7 @@ first after, two later), each a small window of the scene's 10 m true-colour
 NDVI from the extracted time series below with the chip dates marked. Only those
 small windows are read (one per chip); the extractor itself is not used or changed.
 
-Usage: python scripts/make_field_strips.py --picks picks.json --out C:/t/fv/data/share/strips
+Usage: python scripts/make_field_strips.py --picks picks.json --out data/share/strips
 """
 import argparse
 import io
@@ -212,8 +212,8 @@ def main():
             continue
         fips = str(pick["fips"])
         print(name, pick["field_id"], flush=True)
-        path = draw(pick, Path(f"C:/t/fv/data/timeseries/us_{fips}_2022"),
-                    Path(f"C:/t/fv/data/labels/us_{fips}_2022/fields.geojson"), args.out / f"strip_{name}.png")
+        path = draw(pick, Path(f"data/timeseries/us_{fips}_2022"),
+                    Path(f"data/labels/us_{fips}_2022/fields.geojson"), args.out / f"strip_{name}.png")
         print("  wrote", path, f"{path.stat().st_size / 1e3:.0f} KB", flush=True)
         made.append(path)
     strips = sorted(args.out.glob("strip_*.png"))

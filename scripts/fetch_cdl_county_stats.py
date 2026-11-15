@@ -1,7 +1,7 @@
 """Fetch CropScape county statistics of the Cropland Data Layer (pixel acres by class) for many counties and years.
 
     python scripts/fetch_cdl_county_stats.py --quickstats corn_grain_silage_acres_2012_2025.csv \\
-        --years 2019 2020 2021 2022 2023 2024 2025 --out C:/t/fv/data/us/cropscape/county --workers 24
+        --years 2019 2020 2021 2022 2023 2024 2025 --out data/us/cropscape/county --workers 24
 
 Counties: every county FIPS with any corn record in the Quick Stats table (all years). Files are the
 CropScape cache, https://nassgeodata.gmu.edu/webservice/nass_data_cache/byfips/CDL_<year>_<fips>.csv

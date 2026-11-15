@@ -97,7 +97,7 @@ read low), and the label-free checks did not catch that failure.**
   (64 % and 83 % of corn area) and there was no blind fortnight. Where early green grain is not
   common, the counted clear share follows the silage share from 2 % to 24 %, reading about 6 points
   high in the dairy county.
-- **Beltsville, a third and last scoring** (approved by the coordinator for a candidate the user
+- **Beltsville, a third and last scoring** (approved by the lead for a candidate the lead
   asked for): the date-thinned LightGBM `eu2_gbm_thin_v1` got 39 of 44 (unaugmented LightGBM 37);
   the Evaluation 2 primary stays the logistic (42). The set is closed.
 
@@ -165,7 +165,7 @@ The Evaluation 2 primary was chosen by the rule logged at 14:07 (highest mean RO
 leave-one-country-out, ties to the simpler family). Held out Austria / France / Netherlands:
 logistic 0.754 / 0.826 / 0.717 (mean 0.765), LightGBM 0.763, composite 0.760, timing+moisture rule
 0.728, timing rule 0.662. A reading of "tie" written at 17:41 (gap below the best family's spread
-across countries) would have selected the timing rule; it was corrected by the coordinator after the
+across countries) would have selected the timing rule; it was corrected by the lead after the
 table was seen and before Beltsville was opened, and all three readings are in the access log.
 
 How it was chosen (rule logged at 17:02, result at 17:16): the logistic alone against the mean of

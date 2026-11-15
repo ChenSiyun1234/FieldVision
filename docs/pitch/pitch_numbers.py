@@ -213,7 +213,7 @@ SEQUENCE_PARTLY_SEEN = [("Queen Anne's", 18.3, 1.7), ("Racine", 35.4, 9.7), ("Ke
 LABELLED_SCORINGS = 4
 # Sequence model, three seeds, each country held out in turn: mean 0.817 (Austria 0.845, France
 # 0.854, Netherlands 0.752), against 0.765 and 0.764 above; loss against in-country 0.042 / 0.024 /
-# 0.026, mean 0.031. From the stream experiment's note of 14 Nov, confirmed by the coordinator (it
+# 0.026, mean 0.031. From the stream experiment's note of 14 Nov, confirmed by the lead (it
 # replaces the one-seed 0.797). Not tested on the labelled US fields.
 
 # Tuning 1, the replay on labelled fields (modelling work, access log 19:48 and docs/RESULTS.md):
@@ -258,14 +258,14 @@ NOT_SEEN_SWITCH = 20
 # 1 grain called silage, 31 grain right. So recall 11 of 12, precision 11 of 12, false positive
 # rate 1 of 32.
 CONFUSION = {"silage_found": 11, "silage_missed": 1, "grain_called_silage": 1, "grain_right": 31}
-# Response time, measured by the coordinator on the laptop with other jobs running (message of 14
+# Response time, measured by the lead on the laptop with other jobs running (message of 14
 # Nov, about 23:40): Gratiot County, 3,463 fields, from stored time series to a silage or grain
 # call for every field in 47 seconds (Toolbox.classify, policy module_v2), about 14 ms per field;
 # adding the county up took another 57 seconds.
 RESPONSE_TIME = {"county": "Gratiot", "fields": 3_463, "seconds": 47, "ms_per_field": 14, "adding_up_seconds": 57}
 
 # Why Marathon read low. Source: log 23:33 ("Marathon diagnosis and safety net"), which also
-# holds the coordinator's monthly counts of clear looks per corn field (a look counted when at
+# holds the lead's monthly counts of clear looks per corn field (a look counted when at
 # least 60 % of the field is clear), the radar check and the Landsat scenes.
 # One cloudy spell, 20 September to 15 October 2023, lay over the silage harvest: 39 % of
 # Marathon's fields were cut inside that 25-day gap and could not be judged; the fields seen
@@ -281,7 +281,7 @@ MARATHON_GAP = {
 # A safety net, not a test (same message): mean miss on the eight counties already seen, against
 # the year-matched official figure. The land-use figure was fitted on the 2022 Census, which
 # includes these counties.
-# What sees into the gap (the county work's check, relayed by the coordinator, 14 Nov about 23:40):
+# What sees into the gap (the county work's check, relayed by the lead, 14 Nov about 23:40):
 # Sentinel-1 radar has no scene over Marathon between 18 September and 12 October 2023, so radar
 # cannot date a harvest there; Landsat 9 passed on 1 October 2023 with 6 % cloud and Landsat 8 on
 # 9 October with 24 % (Planetary Computer, landsat-c2-l2). The Landsat extraction was being built
@@ -395,7 +395,7 @@ PENNSYLVANIA_2025 = {
 # points of the band": PASS. Beside it: the update from the last official share (the Census
 # itself) gives 25.1 %, no gain; the update from the land-use figure gives 9.1 %, 18.3 off.
 # Teammates' own earlier run of the same classifier on 1,057 clearly seen fields read 35.2 %; the
-# coordinator had seen that figure before this run (log 01:50) and the procedure did not change.
+# lead had seen that figure before this run (log 01:50) and the procedure did not change.
 LANCASTER_2023 = {
     "fields": 10_533, "blocks": (70, 113), "share_of_county_corn": 64, "seen": 60,
     "clear_fields": 6_404, "clear_tier_area": 63, "not_judged_fields": 2_249,

@@ -172,7 +172,7 @@ def append_access_log(path, frozen_id, kind, out):
     text = p.read_text(encoding="utf-8") if p.exists() else ""
     module = "fieldvision.model.evaluate" if kind == "zero-shot" else "fieldvision.model.evaluate_adapted"
     command = f"python -m {module} " + " ".join(sys.argv[1:])
-    row = (f"| {dt.datetime.now():%H:%M} | modelling worker | {kind} evaluation, run once with "
+    row = (f"| {dt.datetime.now():%H:%M} | modelling track | {kind} evaluation, run once with "
            f"frozen model `{frozen_id}`: `{command}`; output `{out}` | This is the evaluation |")
     lines = text.splitlines()
     last = max((i for i, ln in enumerate(lines) if ln.startswith("|")), default=None)

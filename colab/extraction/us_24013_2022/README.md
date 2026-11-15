@@ -30,5 +30,5 @@ again. Expected: 56 blocks, ~4,000-6,000 scene-block reads, about 20-35 min on 8
 ## Back on the laptop
 
 Follow section A of `<FV_DATA>\colab\README.md` with `RUN=us_24013_2022` (merge, then
-finalise with the frozen code, then print the READY line). The county session writes the
+finalise with the frozen code, then print the READY line). The county track writes the
 toolbox copy and the READY line.

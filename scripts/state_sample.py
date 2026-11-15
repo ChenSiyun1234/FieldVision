@@ -1,7 +1,7 @@
 """Statewide sample of whole read blocks from a corn frame, split into equal parts for parallel extraction.
 
-    python scripts/state_sample.py --frame C:/t/fv/data/labels/us_24_2025/frame/fields.geojson --state 24 --year 2025 \\
-        --blocks 150 --parts 3 --seed 42 --out C:/t/fv/data/labels/us_24_2025 [--target-csv nass_2025_state_targets.csv]
+    python scripts/state_sample.py --frame data/labels/us_24_2025/frame/fields.geojson --state 24 --year 2025 \\
+        --blocks 150 --parts 3 --seed 42 --out data/labels/us_24_2025 [--target-csv nass_2025_state_targets.csv]
 
 The frame is a from_file field file of every CSB polygon whose CDL class that year is corn (1) or a
 small grain followed by corn (225, 226, 228, 237), with cnty_fips kept. This script

@@ -7,10 +7,10 @@ in Git Bash. Nothing here needs the network except where a step says so.
 
 | Run | Colab bundle | What comes back | Laptop run signature | Who writes READY |
 |---|---|---|---|---|
-| `nl_2025` | `colab\nl_2025` (fresh run) | one zip `nl_2025_colab_result.zip` (full outputs) | `5ba8187c8ae7` | coordinator / s2 session |
-| `us_24021_2022` Frederick | `colab\us_24021_2022` (continue) | `us_24021_2022_colab_blocks.zip.000…` + `us_24021_2022_SHA256SUMS.txt` | `af46982b81c5` | county session |
-| `fr_2022` France | `colab\fr_2022_rest` (continue) | `fr_2022_colab_blocks.zip.000…` + `fr_2022_SHA256SUMS.txt` | `569e1fa48ddb` | coordinator / s2 session |
-| `us_24035_2022` Queen Anne's | `colab\us_24035_2022` (continue) | `us_24035_2022_colab_blocks.zip.000…` + `us_24035_2022_SHA256SUMS.txt` | `2fb9dbcedda2` | county session |
+| `nl_2025` | `colab\nl_2025` (fresh run) | one zip `nl_2025_colab_result.zip` (full outputs) | `5ba8187c8ae7` | lead / s2 track |
+| `us_24021_2022` Frederick | `colab\us_24021_2022` (continue) | `us_24021_2022_colab_blocks.zip.000…` + `us_24021_2022_SHA256SUMS.txt` | `af46982b81c5` | county track |
+| `fr_2022` France | `colab\fr_2022_rest` (continue) | `fr_2022_colab_blocks.zip.000…` + `fr_2022_SHA256SUMS.txt` | `569e1fa48ddb` | lead / s2 track |
+| `us_24035_2022` Queen Anne's | `colab\us_24035_2022` (continue) | `us_24035_2022_colab_blocks.zip.000…` + `us_24035_2022_SHA256SUMS.txt` | `2fb9dbcedda2` | county track |
 
 Before downloading: the notebook's step 6 must have ended with exit code 0, or 2 with
 **no** "network read" scene errors left (rerun step 6 on Colab until that holds; a few
@@ -61,7 +61,7 @@ PYTHONPATH=<FV_DATA>/frozen_src_154133e <FV_DATA>/venv/Scripts/python.exe -m fie
 PYTHONPATH=src <FV_DATA>/venv/Scripts/python.exe scripts/report_s2_run.py --run <FV_DATA>/data/timeseries/RUN
 ```
 
-   * Frederick and Queen Anne's: tell the county session the merge is done; it runs
+   * Frederick and Queen Anne's: tell the county track the merge is done; it runs
      step 4 (if not done), its toolbox copy and its own READY line.
    * France: append with the note below (the script refuses if network failures remain):
 
@@ -108,5 +108,4 @@ PYTHONPATH=src <FV_DATA>/venv/Scripts/python.exe scripts/report_s2_run.py --run 
 ## If something does not match
 
 Do not edit files by hand. A checksum, fingerprint or signature mismatch means the
-download or the Colab run is not the one described here: re-download, or tell the s2
-session with the exact message the script printed.
+download or the Colab run is not the one described here: re-download, or tell the s2 track with the exact message the script printed.

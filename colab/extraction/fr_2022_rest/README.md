@@ -36,8 +36,8 @@ Planetary Computer, 30-70 scenes per block). At ~1.2 CPU-s per read: 2 vCPU abou
 
 ## Back on the laptop
 
-Do these in order. The laptop France lane must be stopped first (the coordinator asks
-the s2 session to do that as soon as Colab has started this notebook).
+Do these in order. The laptop France lane must be stopped first (the lead asks
+the s2 track to do that as soon as Colab has started this notebook).
 
 1. Put the downloaded parts and `fr_2022_SHA256SUMS.txt` into
    `<FV_DATA>\colab_results\fr_2022\`, then from the repository root:

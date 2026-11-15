@@ -3,7 +3,7 @@
 Cell C downloads `us_55073_2023_fields.zip` + `us_55073_2023_fields_SHA256SUMS.txt` (fields.geojson = the extracted set,
 fields_all.geojson = every corn field of the county, sample.json = the block draw, summary, corn-area check);
 cell 7 downloads the result parts `us_55073_2023_colab_blocks.zip.NNN` + `us_55073_2023_SHA256SUMS.txt`, as for the other runs.
-Untouched test county: no model on it until the modelling session has logged the test.
+Untouched test county: no model on it until the modelling track has logged the test.
 
 Back on the laptop (repository root, PYTHONPATH=src):
 1. check the fields zip's SHA256, unzip it to <FV_DATA>\data\labels\us_55073_2023\;

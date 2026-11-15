@@ -1,7 +1,7 @@
 """Tests for the demo app export and the synthetic sample generator.
 
 Run from the repository root:
-    python -m pytest tests/test_app_export.py --basetemp C:/t/fv/pytest-app
+    python -m pytest tests/test_app_export.py --basetemp pytest-app
 """
 import json
 import math

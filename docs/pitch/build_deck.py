@@ -334,7 +334,7 @@ def build(out):
             arrow.line.fill.background()
             arrow.shadow.inherit = False
         x += w + gap
-    text(s, MX, 4.1, FULL, 0.35, "Around it, built by our teammates", size=14, bold=True, color=INK)
+    text(s, MX, 4.1, FULL, 0.35, "Around the model", size=14, bold=True, color=INK)
     around = [
         ("Planner", "Which fields to visit."),
         ("Recommender", "Grain fields near dairies that are short of silage."),

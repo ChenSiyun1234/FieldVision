@@ -1,7 +1,7 @@
 """Colab notebook that builds statewide corn frames and block draws from CSB (boundaries only, no imagery).
 
     python scripts/build_colab_state_frames.py --states 42:PENNSYLVANIA 55:WISCONSIN --year 2025 \\
-        --targets C:/t/fv/data/eval/nass_2025_state_targets.csv --dest C:/t/fv/colab/state_frames_2025
+        --targets data/eval/nass_2025_state_targets.csv --dest colab/state_frames_2025
 
 On Colab: range-download the national CSB 2018-2025 archive, cut each state (scripts/csb_subset.py),
 make the frame with from_file (CDL<year> in 1, 225, 226, 228, 237; area and 10 km grid in EPSG:5070,

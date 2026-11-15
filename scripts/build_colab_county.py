@@ -1,10 +1,10 @@
 """Colab bundle for a county with no field file yet: make the field file on Colab, then extract there.
 
     python scripts/build_colab_county.py --fips 55101 --year 2023 --utm EPSG:32616 --code <dir with fieldvision/> \\
-        --template-run C:/t/fv/colab/_templates/9cd0447b_2023 \\
-        --check-external "C:/t/fv/data/timeseries/us_24035_2022|C:/t/fv/data/labels/us_24035_2022/fields.geojson|32618_US-E380N4310_1" \\
+        --template-run colab/_templates/9cd0447b_2023 \\
+        --check-external "data/timeseries/us_24035_2022|data/labels/us_24035_2022/fields.geojson|32618_US-E380N4310_1" \\
         --quickstats corn_grain_silage_acres_2012_2025.csv --census-year 2022 \\
-        --survey-csv corn_grain_silage_acres_2021_2023.csv --max-blocks 70 --seed 42 --dest C:/t/fv/colab/us_55101_2023
+        --survey-csv corn_grain_silage_acres_2021_2023.csv --max-blocks 70 --seed 42 --dest colab/us_55101_2023
 
 Builds the standard continue-a-run bundle with scripts/build_colab_run.py (same-result check,
 extraction, 50 MB result parts and <run>_SHA256SUMS.txt, unchanged), using a temporary stub run
@@ -238,14 +238,14 @@ def main(argv=None):
 Cell C downloads `{run}_fields.zip` + `{run}_fields_SHA256SUMS.txt` (fields.geojson = the extracted set,
 fields_all.geojson = every corn field of the county, sample.json = the block draw, summary, corn-area check);
 cell 7 downloads the result parts `{run}_colab_blocks.zip.NNN` + `{run}_SHA256SUMS.txt`, as for the other runs.
-Untouched test county: no model on it until the modelling session has logged the test.
+Untouched test county: no model on it until the modelling track has logged the test.
 
 Back on the laptop (repository root, PYTHONPATH=src):
 1. check the fields zip's SHA256, unzip it to C:\\t\\fv\\data\\labels\\{run}\\;
 2. create the run folder with the extractor's signature for that file:
    python -c "import sys; sys.path.insert(0, 'scripts'); from pathlib import Path; import build_colab_run as b; b.start_fresh_run(Path(r'C:\\t\\fv\\data\\timeseries\\{run}'), Path(r'C:\\t\\fv\\data\\labels\\{run}\\fields.geojson'), Path(r'{a.frozen_dir}'), Path(r'{a.template_run}'))"
-3. python scripts/merge_colab_blocks.py --parts-dir C:/t/fv/colab_results/{run} --run-dir C:/t/fv/data/timeseries/{run}
-4. finalise with the frozen code: PYTHONPATH={a.frozen_dir.replace(chr(92), "/")} python -m fieldvision.s2.extract --fields C:/t/fv/data/labels/{run}/fields.geojson {" ".join(bundle["cli"])} --out C:/t/fv/data/timeseries/{run} --workers 16
+3. python scripts/merge_colab_blocks.py --parts-dir colab_results/{run} --run-dir data/timeseries/{run}
+4. finalise with the frozen code: PYTHONPATH={a.frozen_dir.replace(chr(92), "/")} python -m fieldvision.s2.extract --fields data/labels/{run}/fields.geojson {" ".join(bundle["cli"])} --out data/timeseries/{run} --workers 16
 ''', encoding='utf-8')
     print(json.dumps({'dest': str(a.dest), 'uploads': uploads, 'check_blocks': bundle['check_blocks'],
                       'code_zip': bundle['code_zip'], 'cli': bundle['cli']}, indent=1))

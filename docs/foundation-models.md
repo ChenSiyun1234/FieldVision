@@ -25,7 +25,7 @@ extra complexity here, and it transfers worst of all (it loses 0.10-0.20
 ROC-AUC across countries). Richer inputs win within Austria and across
 Austrian years, but across countries only the 6-feature logistic keeps its
 in-country accuracy (it loses 0.00-0.02 ROC-AUC, the richer models
-0.06-0.20), which matches the modelling session's one-time US check (as
+0.06-0.20), which matches the modelling track's one-time US check (as
 reported to us: 6-feature logistic 42 of 44 correct, LightGBM 30 of 44;
 not re-checked here, this experiment never read the US data).
 
@@ -448,7 +448,7 @@ Reading:
   picked after seeing them, so the size of its gain should be confirmed
   once on new data before it is relied on. Evaluation 2's primary stays the
   6-feature logistic; the thinned GBM is a candidate second member, to be
-  tested once on Beltsville by the modelling session.
+  tested once on Beltsville by the modelling track.
 
 **Frozen candidate for that one test:** `registry/eu2_gbm_thin_v1`, the
 same 135 features in the same order as `eu2_gbm_v1`, trained on the same

@@ -120,7 +120,7 @@ def county_estimates(c, ref, src, alpha=DEFAULT_ALPHA):
 
 def pseudo_counties(pool, src, construction="random", n=250, n_ref=250, ref_share=0.01, reps=200,
                     seed=0, alpha=DEFAULT_ALPHA):
-    """Pseudo-counties drawn from one held-out group (as in the modelling session's
+    """Pseudo-counties drawn from one held-out group (as in the modelling track's
     county_validation: a ~1% silage reference county and target counties at SHARES).
     construction 'random': fields drawn at random; 'blocks': reference and target come from
     different random halves of the group's blocks (neighbouring, not identical, counties)."""

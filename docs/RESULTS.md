@@ -66,7 +66,7 @@ imagery cannot tell it from silage. **Why Maryland 2025 reads low:** not diagnos
 fields are called silage far more often (38 % against 4.75 %), and corn after a small grain is
 outside the scored set; scoring it lifts the figure to 6.7 %.
 
-## After 22:50 (work resumed at the user's request)
+## After 22:50 (work resumed at the lead's request)
 
 **Wisconsin 2023.** Racine read 6.4 % (band 2.4-6.4 %, inside); Marathon read 4.3 % against the 2023
 survey's 49.9 % (band 32.1-49.9 %): fail. Why: 39 % of Marathon's fields have a harvest bracket over
@@ -92,7 +92,7 @@ of their bracket, accepted where both agree: mean absolute error against the ban
 against 5.7 for the counted clear share (Marathon 17.1 %, Carroll and Frederick inside their bands,
 Branch worse at 7.9 %).
 
-**Response time** (measured by the coordinator at 23:30 on the laptop with other jobs running):
+**Response time** (measured by the lead at 23:30 on the laptop with other jobs running):
 `Toolbox.classify('26057', 2022, 'module_v2')` 46.7 s for Gratiot's 3,463 fields, about 14 ms per
 field; `aggregate` another 56.9 s, mostly re-classifying the reference county, which is now cached.
 
@@ -141,7 +141,7 @@ letting it update a good prior pulls the prior down.
 
 **Lancaster 2023.** An independent run by the teammates in their workspace, with our classifier on
 a smaller set of fields (1,057 clearly seen, 35.7 % of acres not judged), read 35.2 % against the
-2022 Census 27.4 %; it was seen by the coordinator at 01:50, before our own run, and is recorded in
+2022 Census 27.4 %; it was seen by the lead at 01:50, before our own run, and is recorded in
 the log. Our run (02:11, procedure logged at 00:18, Landsat added) read 26.6 % on 6,404 clearly seen fields, 0.8 below the Census, and passes its mark; seen share 60 %, range 18.0-58.1 %.
 
 **Michigan 2025 (clean test, 04:40).** 14.4 % [10.8, 18.0] against NASS 14.7 %: a pass, 0.3 points

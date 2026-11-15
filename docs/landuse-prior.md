@@ -4,7 +4,7 @@
 predicted from how much of its cropland is in forage (alfalfa and hay). It is a proxy, not a field
 label and not a satellite estimate. It describes a usual year in a place, cannot see a season that
 departs from the usual, and says nothing about which field is silage. It is shown beside the
-satellite figure; the modelling session decides whether and how the two are combined.
+satellite figure; the modelling track decides whether and how the two are combined.
 
 ## Data and model
 

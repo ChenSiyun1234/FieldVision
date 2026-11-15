@@ -1,7 +1,7 @@
 """Copy a county's fields and Sentinel-2 time series into the toolbox layout <root>/<fips>/<year>/.
 
-    python scripts/county_snapshot.py --fields C:/t/fv/data/labels/us_24021_2022/fields.geojson \\
-        --run C:/t/fv/data/timeseries/us_24021_2022 --root C:/t/fv/data/counties --fips 24021 --year 2022
+    python scripts/county_snapshot.py --fields data/labels/us_24021_2022/fields.geojson \\
+        --run data/timeseries/us_24021_2022 --root data/counties --fips 24021 --year 2022
 
 While the extractor is still running this writes a partial snapshot: only fields whose block is
 listed as complete in the run's manifest.json, read from those blocks' parquet files (which the

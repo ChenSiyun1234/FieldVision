@@ -234,7 +234,7 @@ files and the two JSON files; extraction bundles follow on the laptop as for Mar
 
 ## 2023 test counties chosen by the team (Wisconsin, Pennsylvania)
 
-The user asked for the teammates' counties (branch `dataset-analysis`, `src/config.py`) instead of
+The lead asked for the teammates' counties (branch `dataset-analysis`, `src/config.py`) instead of
 the Michigan pair above, in season 2023:
 
 | Run | County | 2023 survey: planted / grain / silage (share) | 2022 Census: grain / silage (share) |
@@ -265,7 +265,7 @@ whole (`is_sample` false).
 Colab bundles: `<work>\colab\us_<fips>_2023\`, built by `scripts/build_colab_county.py`
 (field file, survey check and draw on Colab, then the standard extraction with code 9cd0447b and
 `--year 2023`; 2023 imagery is Earth Search Collection 1). Untouched test counties: no model is
-run on them until the modelling session has logged the test.
+run on them until the modelling track has logged the test.
 
 ## Corn outside the scored field set (Frederick, Queen Anne's)
 
@@ -345,7 +345,7 @@ Finished, verified and in `<data>\timeseries\READY.txt`, with toolbox folders un
 fields.geojson, timeseries.parquet, fields_coverage.csv, unscored_corn.json, landscape.parquet), Branch 26023 and
 Gratiot 26057 (2022; no landscape.parquet, their state CSB is not on this laptop), the Maryland 2025 sample
 (`24_2025_sample`: fields, corn and double-crop series, draw.json, state_acres.json, sample_info.json,
-landscape.parquet). Beltsville stays as 24033 (made by the modelling session).
+landscape.parquet). Beltsville stays as 24033 (made by the modelling track).
 
 Not finished:
 - Racine `us_55101_2023` and Marathon `us_55073_2023`: results are in `<work>\colab_results\<run>\` (field zip +
@@ -368,8 +368,7 @@ Not finished:
 - Racine `us_55101_2023` (whole county, 1,946 fields, 39,472 acres) and Marathon `us_55073_2023` (seeded draw:
   70 of 187 read blocks, 20 of 53 10-km blocks, 3,448 of 9,910 fields, 56,316 of 165,998 acres = 33.9 % of the
   county's CSB corn; `sample.json` beside the field file): field files unpacked to `<data>\labels\<run>\`,
-  run folders created (stub signatures equal Colab's: f48235f505b6 and 99805e7b508e); merge by the extraction
-  session pending. Corn-area check: the 2023 survey and the 2022 Census agree for both counties and the boundaries
+  run folders created (stub signatures equal Colab's: f48235f505b6 and 99805e7b508e); merge by the extraction track pending. Corn-area check: the 2023 survey and the 2022 Census agree for both counties and the boundaries
   read high (Marathon polygons 165,998 acres against survey grain + silage 122,300 and Census 123,690; CDL 2023 corn
   pixels 152,862. Racine 39,472 against 33,700 and 33,481; pixels 38,288). Silage share: survey 2023 Racine 2.4 %,
   Marathon 49.9 %; Census 2022 6.4 % and 32.1 %.
@@ -377,27 +376,27 @@ Not finished:
   `us_55_2025_s1..s3\` (50 read blocks each, `--year 2025`, upload the 5 files on README line 1, run cells 1-7),
   laptop run folders with stub manifests in `<data>\timeseries\`. Draws: Pennsylvania 150 of 3,106 read
   blocks (5.1 % of frame acres), Wisconsin 150 of 4,433 (3.4 %).
-- 22:55 PT: Racine and Marathon merged by the extraction session, verified (42 and 70 blocks complete, 1,946 and
+- 22:55 PT: Racine and Marathon merged by the extraction track, verified (42 and 70 blocks complete, 1,946 and
   3,448 fields usable, Collection 1, no failures), READY lines written (Marathon marked as a seeded draw), toolbox
   folders `<data>\counties\55101\2023\` and `55073\2023\` (fields, series, coverage, unscored_corn.json,
   county_check.json, sample.json). `references.json`: 55073 -> 55101, year 2023, share 0.0237 from the 2023
-  county survey (no Census in 2023; recorded in the entry's share_source). Untouched until the modelling session
+  county survey (no Census in 2023; recorded in the entry's share_source). Untouched until the modelling track
   runs them once under its 19:33 rule.
 - 23:20 PT: Sentinel-1 bundle for Marathon 2023 built and dry-checked, `<work>\colab\s1_55073_2023\` (the Kent
   pilot's notebook, code 3fc72639, the 3,448 drawn fields, 70 blocks, April-November; same-result check on the
   pilot's two Kent blocks passed on the laptop). Radar coverage there is thin: Planetary Computer `sentinel-1-rtc`
   has 12 scenes in April-November 2023, one relative orbit (92 ascending), none from May to 12 August, and a 24-day
   gap from 18 September to 12 October (the 30 September pass is missing), nearly the same window as the optical
-  cloud gap (20 September-15 October). Not run, by the coordinator's decision (23:25): radar cannot date the
-  harvests inside the gap; a Landsat 9 scene of 1 October 2023 (6 % cloud) is used instead (extraction session).
+  cloud gap (20 September-15 October). Not run, by the lead's decision (23:25): radar cannot date the
+  harvests inside the gap; a Landsat 9 scene of 1 October 2023 (6 % cloud) is used instead (extraction track).
 - Per-county land-use prior table: `python scripts/landuse_prior.py prior-table ...` writes
   `<data>\us\landuse\county_prior.csv` / `.parquet` (2,890 counties).
 - 00:10 PT (15 Nov): Wisconsin 2025 sample complete. Parts `us_55_2025_s1`-`s3` merged and finalised by the
-  extraction session, verified, READY lines written (with the Collection 1 note); s1 is partial from one permanent
+  extraction track, verified, READY lines written (with the Collection 1 note); s1 is partial from one permanent
   plausibility rejection (2025-04-17, one block). Merged in `<data>\counties\55_2025_sample\`: 8,246 fields
   (corn 8,199, double crop 47) in the 150 drawn read blocks of 4,433, corn and double-crop series in separate files,
-  draw.json, state_acres.json, sample_info.json. Landsat rows from the extraction session go into the same folder.
-- Land-use prior with each county's own state left out (for the modelling session's per-field check): files
+  draw.json, state_acres.json, sample_info.json. Landsat rows from the extraction track go into the same folder.
+- Land-use prior with each county's own state left out (for the modelling track's per-field check): files
   `<data>\us\landuse\prior_state_left_out_counties.csv` and `prior_state_left_out_states_2025.csv`;
   leaving a state out moves every county prior by at most one point.
 - 01:17 PT: Pennsylvania 2025 sample complete. Parts `us_42_2025_s1`-`s3` merged and finalised, verified, READY
@@ -414,7 +413,7 @@ Not finished:
   share (44.5 %) comes from an estimate that covers about half the corn the CDL and the Census show. Why the
   survey is low is not known here (a guess: county survey estimates are modelled from a sample, and many small
   farms there may be under-sampled).
-- 01:30 PT: Lancaster merged and finalised by the extraction session, verified (70 blocks complete, 10,533 fields
+- 01:30 PT: Lancaster merged and finalised by the extraction track, verified (70 blocks complete, 10,533 fields
   usable, Collection 1, no failures; 94 % of fields have at least 8 usable dates in July-November), READY line
   written (untouched test county, seeded draw, Census total supported), toolbox folder
   `<data>\counties\42071\2023\` (fields, series, coverage, unscored_corn.json, county_check.json, sample.json).

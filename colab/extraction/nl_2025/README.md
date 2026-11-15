@@ -36,7 +36,7 @@ notebook proves that this does not change results before it starts.
    6. runs the extraction, printing one line per block with `done/95`,
    7. prints row counts and builds `nl_2025_colab_result.zip` (also copied to Drive),
       then offers it for download.
-3. If step 4 fails: stop, do not run step 6, tell the coordinator. The laptop fallback
+3. If step 4 fails: stop, do not run step 6, tell the lead. The laptop fallback
    is unchanged (below).
 
 ## Expected run time

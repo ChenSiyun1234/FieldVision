@@ -36,7 +36,7 @@ counts only about half the corn acres that the Census, the field boundaries and 
 show. So 0.8 points low, and 0.8 below the range of official figures (27.4 to 54.8); the pass mark
 was "within 10 points of that range". Beside it: updating from the Census figure gave 25.1 %, no
 gain; updating from the land-use figure gave 9.1 %, far off. Teammates had run the same classifier
-on 1,057 clearly seen Lancaster fields and read 35.2 %; the coordinator had seen that figure
+on 1,057 clearly seen Lancaster fields and read 35.2 %; the lead had seen that figure
 before this run (log 01:50) and the procedure was not changed.
 
 **And before Michigan 2025 (log 04:42), which passed.** A fourth clean test, added at log 02:22

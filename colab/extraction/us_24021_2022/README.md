@@ -44,7 +44,7 @@ prefetched list add ~30 s each, interleaved.
 
 ## Back on the laptop
 
-1. Stop the laptop's Frederick extraction (the county session's process) so two
+1. Stop the laptop's Frederick extraction (the county track's process) so two
    writers never touch the same folder.
 2. Put the downloaded parts and `us_24021_2022_SHA256SUMS.txt` in one folder, e.g.
    `<FV_DATA>\colab_results\us_24021_2022\`, then from the repository root:
@@ -63,7 +63,7 @@ PYTHONPATH=src <FV_DATA>/venv/Scripts/python.exe scripts/merge_colab_blocks.py -
 PYTHONPATH=<FV_DATA>/frozen_src_154133e <FV_DATA>/venv/Scripts/python.exe -m fieldvision.s2.extract --fields <FV_DATA>/data/labels/us_24021_2022/fields.geojson --year 2022 --out <FV_DATA>/data/timeseries/us_24021_2022 --workers 16
 ```
 
-4. READY line (the county session may prefer to write its own):
+4. READY line (the county track may prefer to write its own):
 
 ```bash
 PYTHONPATH=src <FV_DATA>/venv/Scripts/python.exe scripts/report_s2_run.py --run <FV_DATA>/data/timeseries/us_24021_2022 --append <FV_DATA>/data/timeseries/READY.txt --note "61 of 70 blocks extracted on Google Colab with the same frozen code 9cd0447b and arguments; same-result check passed; merged by checksum and run signature"

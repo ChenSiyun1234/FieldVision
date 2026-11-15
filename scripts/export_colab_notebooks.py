@@ -51,7 +51,7 @@ def main():
             text = path.read_text(encoding="utf-8")
             # A drive letter standing alone (not the "s:" of "https:" or of an escaped "\\n").
             for bad in (r"(?<![A-Za-z])[A-Za-z]:\\\\?(?![nrt\"\\])", r"(?<![A-Za-z])[A-Za-z]:/(?!/)", r"/c/t/",
-                        r"\\Users\\", "20053"):
+                        r"\\Users\\"):
                 if re.search(bad, text):
                     leftovers.append((str(path.relative_to(dest)), bad))
     print("copied", len(copied), "bundles:", copied)

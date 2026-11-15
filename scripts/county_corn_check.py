@@ -1,6 +1,6 @@
 """Sanity check of a county corn-field file before any modelling.
 
-    python scripts/county_corn_check.py --fields C:/t/fv/data/labels/us_24021_2022/fields.geojson \\
+    python scripts/county_corn_check.py --fields data/labels/us_24021_2022/fields.geojson \\
         --fips 24021 --year 2022 --counties tl_2022_us_county.zip \\
         --quickstats corn_grain_silage_acres_2012_2025.csv [--csb csb1825_md.parquet] [--out check.json]
 

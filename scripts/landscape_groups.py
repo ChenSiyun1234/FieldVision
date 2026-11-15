@@ -1,6 +1,6 @@
 """Distribution of the forage-landscape share by the rotation-check groups of called fields.
 
-    python scripts/landscape_groups.py --results C:/t/fv/data/diag/dairy/results --counties C:/t/fv/data/counties \\
+    python scripts/landscape_groups.py --results data/diag/dairy/results --counties data/counties \\
         --year 2022 --fips 24021 24035 24029 24013 --out landscape_groups.csv
 
 Groups as in scripts/rotation_check.py (clear tier called silage with drop before day 252; clear tier called

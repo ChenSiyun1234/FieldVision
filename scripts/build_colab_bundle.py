@@ -197,7 +197,7 @@ else:
     print(result.stdout[-6000:])
     if result.returncode != 0:
         print(result.stderr[-3000:])
-        raise SystemExit("Same-result check FAILED: do not use this runtime for the extraction. Tell the coordinator.")
+        raise SystemExit("Same-result check FAILED: do not use this runtime for the extraction. Tell the lead.")
     passed_marker.write_text(stamp)
 """),
         code("""

@@ -1,10 +1,10 @@
 """County silage share predicted from land use (CDL forage and pasture shares): a prior, not a field label.
 
-    python scripts/landuse_prior.py table   --cdl-dir C:/t/fv/data/us/cropscape/county --out C:/t/fv/data/us/landuse/county_landuse.csv
+    python scripts/landuse_prior.py table   --cdl-dir data/us/cropscape/county --out data/us/landuse/county_landuse.csv
     python scripts/landuse_prior.py holdout --landuse county_landuse.csv --census corn_grain_silage_acres_2012_2025.csv \\
-                                            --survey corn_grain_silage_acres_2021_2023.csv --out-dir C:/t/fv/data/us/landuse
+                                            --survey corn_grain_silage_acres_2021_2023.csv --out-dir data/us/landuse
     python scripts/landuse_prior.py predict --landuse county_landuse.csv --census ... --targets nass_2025_state_targets.csv \\
-                                            --model <name> --out-dir C:/t/fv/data/us/landuse
+                                            --model <name> --out-dir data/us/landuse
 
 Land use per county and year from CropScape county statistics (30 m CDL pixel acres by class):
   forage   = alfalfa 36 + other hay 37 + clover/wildflowers 58 + vetch 224

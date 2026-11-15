@@ -1,8 +1,8 @@
 """Merge the finished parts of a statewide sample into one toolbox-style folder.
 
-    python scripts/sample_snapshot.py --sample-dir C:/t/fv/data/labels/us_24_2025 \\
-        --runs C:/t/fv/data/timeseries/us_24_2025_s1 C:/t/fv/data/timeseries/us_24_2025_s2 C:/t/fv/data/timeseries/us_24_2025_s3 \\
-        --out C:/t/fv/data/counties/24_2025_sample
+    python scripts/sample_snapshot.py --sample-dir data/labels/us_24_2025 \\
+        --runs data/timeseries/us_24_2025_s1 data/timeseries/us_24_2025_s2 data/timeseries/us_24_2025_s3 \\
+        --out data/counties/24_2025_sample
 
 Only parts whose run is finished (manifest complete, every block complete, coverage listing every
 field) are taken. Writes:

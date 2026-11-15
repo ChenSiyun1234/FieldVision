@@ -220,7 +220,7 @@ Use `--only at-2024 --n 40` to rebuild one region.
 ## Tests
 
 ```bash
-python -m pytest tests/test_app_export.py --basetemp C:/t/fv/pytest-app
+python -m pytest tests/test_app_export.py --basetemp pytest-app
 ```
 
 ## Layout

@@ -1,6 +1,6 @@
 """Figure for docs/landuse-prior.md: county forage share (2019-2023 mean) against the Census 2022 silage share.
 
-    python scripts/landuse_prior_figure.py --data C:/t/fv/data/us/landuse --out docs/img/landuse_prior.png
+    python scripts/landuse_prior_figure.py --data data/us/landuse --out docs/img/landuse_prior.png
 """
 import argparse
 import json

@@ -1,7 +1,7 @@
 """Forage landscape around each scored corn field, from CSB polygons (boundaries only, no imagery, no model).
 
-    python scripts/forage_landscape.py --fields C:/t/fv/data/counties/24021/2022/fields.geojson \\
-        --csb C:/t/fv/data/us/csb/csb1825_md.parquet --year 2022 --out C:/t/fv/data/counties/24021/2022/landscape.parquet
+    python scripts/forage_landscape.py --fields data/counties/24021/2022/fields.geojson \\
+        --csb data/us/csb/csb1825_md.parquet --year 2022 --out data/counties/24021/2022/landscape.parquet
 
 For every field: the CSB polygons whose representative point lies within 2 km and 5 km of the field's
 centroid (the field's own polygon excluded) are summed by area in EPSG:5070 (the CSB's equal-area CRS),

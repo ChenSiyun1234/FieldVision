@@ -20,7 +20,7 @@ Europe.
 
 **Known weak point, up front.** Any reference-county method assumes the target
 county's grain looks to the classifier like the reference county's grain. The
-modelling session found on the same partial Frederick snapshot that the false-positive
+modelling track found on the same partial Frederick snapshot that the false-positive
 rate taken from Queen Anne's at the 0.5 cut-off (0.218) is larger than Frederick's whole
 counted share (18.9%), so a reference county's rate need not carry to its neighbour.
 This method does not escape that assumption; it only moves it from the 0.5 cut-off to
@@ -174,9 +174,9 @@ the source scores (`local_eval.source_and_target_scores`, default). With it, the
 matched recall for Maryland is 0.535 instead of 0.462. Both Frederick numbers are
 reported below.
 
-### Pseudo-counties, on the modelling session's footing
+### Pseudo-counties, on the modelling track's footing
 
-The modelling session's county check (`fieldvision.model.county_validation`) draws
+The modelling track's county check (`fieldvision.model.county_validation`) draws
 pseudo-counties of 250 held-out fields at silage shares from 1% to 50%, with a separate
 250-field reference county at about 1%, 200 draws, and scores the area share against
 the truth. The same construction here, on the 6-feature logistic trained on the other
@@ -245,7 +245,7 @@ pooled version in the "pooled" column). Block-split, mean absolute error over 1-
   versions never exceed 0.13. That robustness is the reason to use a local reference.
 - The plain locally-flagged share has the lower mean error: it is better at 10-30%
   silage and worse at 1-5% (it cannot read below about the alpha share), the same
-  pattern the modelling session found on its composite scores. The adjusted version
+  pattern the modelling track found on its composite scores. The adjusted version
   still over-counts by about 0.08 in 2022 and 2024, because those years separate the
   classes better than the training years, which the matched recall cannot know.
 
@@ -289,8 +289,7 @@ defined, not from Frederick):
 
 Self-check on the reference itself (by construction): the classifier at 0.5 calls
 14.9% of Queen Anne's fields (18.1% of area) silage; the local threshold flags 10.1% of
-fields (11.5% of area) and the adjusted share is 0. These differ from the modelling
-session's 22.4% because that check used its own trained model and abstention rule.
+fields (11.5% of area) and the adjusted share is 0. These differ from the modelling track's 22.4% because that check used its own trained model and abstention rule.
 
 ## Stage 2: Frederick County
 
