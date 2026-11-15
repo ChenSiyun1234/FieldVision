@@ -56,6 +56,29 @@ def usda_numbers(csv, fips, year):
     return out
 
 
+SURVEY_SERIES = {'CORN - ACRES PLANTED': 'planted_acres', 'CORN, GRAIN - ACRES HARVESTED': 'grain_harvested_acres',
+                 'CORN, SILAGE - ACRES HARVESTED': 'silage_harvested_acres'}
+
+
+def survey_numbers(csv, fips, year):
+    """County SURVEY estimates (domain TOTAL, reference period YEAR) for one year; one record per series, checked."""
+    raw = quickstats.load(csv)
+    rows = raw[(raw.aggregation_level == 'COUNTY') & (raw.source == 'SURVEY') & (raw.year == year)
+               & (raw.domain == 'TOTAL') & (raw.reference_period == 'YEAR')
+               & (raw.state_ansi.str.zfill(2) == fips[:2]) & (raw.county_ansi.fillna('').str.zfill(3) == fips[2:])
+               & raw.short_description.isin(SURVEY_SERIES)]
+    if rows.short_description.duplicated().any():
+        raise SystemExit(f'more than one survey record per series for {fips} {year}')
+    out = {'year': year, 'records': rows[['short_description', 'value']].to_dict('records')}
+    for desc, key in SURVEY_SERIES.items():
+        r = rows[rows.short_description == desc]
+        out[key] = None if r.empty or r.suppressed.iloc[0] else float(r.value_num.iloc[0])
+    g, s = out['grain_harvested_acres'], out['silage_harvested_acres']
+    out['grain_plus_silage_acres'] = g + s if g is not None and s is not None else None
+    out['silage_share'] = s / (g + s) if out['grain_plus_silage_acres'] else None
+    return out
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--fields', type=Path, required=True)
@@ -65,6 +88,9 @@ def main(argv=None):
     ap.add_argument('--quickstats', type=Path, required=True)
     ap.add_argument('--csb', type=Path, help='state CSB GeoParquet, for the other-corn-classes context')
     ap.add_argument('--utm', default='EPSG:32618')
+    ap.add_argument('--census-year', type=int, help='Census year for the USDA comparison (default: --year)')
+    ap.add_argument('--survey-csv', type=Path, help='Quick Stats table with county SURVEY rows (e.g. 2021-2023)')
+    ap.add_argument('--survey-year', type=int, help='survey year to report (default: --year)')
     ap.add_argument('--out', type=Path)
     a = ap.parse_args(argv)
 
@@ -86,11 +112,19 @@ def main(argv=None):
         'fields_with_point_outside_tiger_county': int((~inside_point).sum()),
         'area_ha_outside_tiger_county': float(area.sum() - inside_area.sum()),
         'county_land_ha': float(county.ALAND.iloc[0]) / 10000,
-        'usda': usda_numbers(a.quickstats, a.fips, a.year),
+        'census_year': a.census_year or a.year,
+        'usda': usda_numbers(a.quickstats, a.fips, a.census_year or a.year),
     }
     u = res['usda']
     if u['grain_plus_silage_acres']:
         res['polygon_acres_over_census_harvested'] = res['area_acres_total'] / u['grain_plus_silage_acres']
+    if a.survey_csv:
+        res['survey'] = survey_numbers(a.survey_csv, a.fips, a.survey_year or a.year)
+        s = res['survey']
+        if s['grain_plus_silage_acres']:
+            res['polygon_acres_over_survey_harvested'] = res['area_acres_total'] / s['grain_plus_silage_acres']
+        if s['planted_acres']:
+            res['polygon_acres_over_survey_planted'] = res['area_acres_total'] / s['planted_acres']
     if a.csb:
         csb = gpd.read_parquet(a.csb)
         c = csb[csb.CNTYFIPS.astype(str).str.zfill(3) == a.fips[2:]]
