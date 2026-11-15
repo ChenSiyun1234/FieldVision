@@ -23,7 +23,8 @@ so it is not a clean test. Headline = what the log named as the headline when th
 | Land-use prior, Maryland | 2025 | 10.6 % | NASS 8.9 % | no (county work) | 19:48 |
 | Racine WI | 2023 | 6.4 % counted clear (window 6.3 %) | survey 2023 2.4 %; band 2.4-6.4 % | no: inside the band | 22:58 |
 | Marathon WI (drawn blocks) | 2023 | 4.3 % counted clear (window 10.0 %) | survey 2023 49.9 %; band 32.1-49.9 % | no: **fail**, 28 points low; 48 % of fields abstained (harvest bracket over 20 days) | 22:58 |
-| Wisconsin (150 random blocks), Sentinel-2 + Landsat | 2025 | 16.5 % [13.7, 19.4] counted clear; shift guard flagged (reference 15.0 % vs Census 4.5 %); prior-updated 12.9 % (last official 19.8 %) and 11.6 % (land-use) | NASS 21.6 % | no: **fail** (5.1 low), as predicted before opening | 01:43 |
+| Wisconsin (150 random blocks), Sentinel-2 + Landsat | 2025 | 16.6 % [13.8, 19.5] all corn incl. double crops (single-crop 16.5 %); shift guard flagged; prior-updated 12.9 % (last official 19.8 %), 11.6 % (land-use) | NASS 21.6 % | no: **pass by 0.02 point** (4.98 low; first reported as a fail, corrected 01:53) | 01:43, 01:53 |
+| Pennsylvania (150 random blocks), Sentinel-2 + Landsat | 2025 | 15.2 % [12.9, 17.5] all corn incl. double crops (single-crop 9.5 %); guard clean; prior-updated 18.7 % (last official 31.4 %), 13.1 % (land-use) | NASS 32.8 % | no: **fail** (17.6 low), as predicted before opening | 01:53 |
 
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
@@ -123,13 +124,22 @@ so it is shown beside, never as the headline.
 **Sequence model on Beltsville** (fourth scoring, logged 23:03 / 23:37): 42 of 44, 11 of 12 silage,
 passes its mark; on the seen counties it reads no better than the logistic and not Marathon.
 
-**Wisconsin 2025 (locked procedure, run once, 01:40).** With Landsat the sample is 96 % seen; the
-satellite alone reads 16.5 % [13.7, 19.4] against NASS 21.6 %, 5.1 points low, a fail by 0.1 point
-of its mark and the low reading predicted in the log before opening. The shift guard fired: the two
-lowest-silage reference counties read 15.0 % against their 4.5 % Census share. The prior updates are
-worse (12.9 % from the last official 19.8 %, 11.6 % from the land-use prior): where the satellite
-reads low, letting it update a good prior pulls the prior down. By region the counted share is
-Eastern 34.0 %, Southern 14.3 %, Central-Western-Northern 14.7 %.
+**Wisconsin and Pennsylvania 2025 (locked procedure, each run once).** With Landsat the samples are
+96 % and 98 % seen. The headline (share of all corn, including the corn sown after a small grain) is
+16.6 % [13.8, 19.5] in Wisconsin against NASS 21.6 %, 4.98 points low, inside its 5-point mark by
+0.02 point (first reported as a fail on the single-crop figure, corrected in the log at 01:53; the
+written prediction "below 16.6 %" missed by the same 0.02), and 15.2 % [12.9, 17.5] in Pennsylvania
+against 32.8 %, 17.6 points low, a fail as predicted. The single-crop share is 16.5 % and 9.5 %:
+the classifier calls far too little of the dairy states' corn silage even when it sees all of it.
+Wisconsin's shift guard fired (its two lowest-silage reference counties read 15.0 % against a 4.5 %
+Census share); Pennsylvania's did not. The prior updates are worse than their priors in both states
+(Wisconsin 12.9 % from 19.8 %, Pennsylvania 18.7 % from 31.4 %): where the satellite reads low,
+letting it update a good prior pulls the prior down.
+
+**Lancaster 2023.** An independent run by the teammates in their workspace, with our classifier on
+a smaller set of fields (1,057 clearly seen, 35.7 % of acres not judged), read 35.2 % against the
+2022 Census 27.4 %; it was seen by the coordinator at 01:50, before our own run, and is recorded in
+the log. Our run follows the procedure logged at 00:18.
 
 ## Open leads, in the order we would try them
 
