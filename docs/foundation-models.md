@@ -450,6 +450,20 @@ Reading:
   6-feature logistic; the thinned GBM is a candidate second member, to be
   tested once on Beltsville by the modelling session.
 
+**Frozen candidate for that one test:** `registry/eu2_gbm_thin_v1`, the
+same 135 features in the same order as `eu2_gbm_v1`, trained on the same
+European field-years (identical file hashes) plus 3 date-thinned copies of
+every field (seed 101), from the standard run directory
+`<data>\model\runs\eu_all_gbm_thin` (`python -m
+fieldvision.foundation.augment_train`), so `python -m
+fieldvision.model.evaluate --model <that run> --which gbm_thin` scores it
+like any other run. Its own out-of-fold results in that run: spatial
+ROC-AUC 0.834, leave-one-country-out 0.791 / 0.827 / 0.725 (Austria /
+France / the Netherlands), within 0.002 of the experiment above (the
+field order differs). Expectation written before the test: the
+unaugmented `eu2_gbm_v1` scored 37 of 44 on Beltsville in Evaluation 2;
+the augmentation passes if the thinned model scores more than 37.
+
 ## Field plus surroundings
 
 The idea raised in the team: let a model look at a field and at the fields
