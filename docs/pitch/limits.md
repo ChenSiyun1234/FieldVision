@@ -10,15 +10,15 @@ on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
   8.9 %, 4.2 points low, and the USDA figure lies outside our range. The range covers sampling
   only, not the method's own miss.
 - **Why it reads low is not diagnosed.** What we know: on the Maryland counties seen in 2022,
-  silage is cut early and lands more often among the partly seen fields, which the count leaves
-  out. In the 2025 sample 37.9 % of the partly seen area is called silage, against 4.75 % of the
-  clearly seen. Cloud hiding whole harvest weeks is not the reason in 2025 (0.6 % of the corn
-  area).
-- **Double-crop corn closes part of the gap, after the fact.** Corn planted after a small grain
-  (17,056 acres) was outside the reported figure. Scored afterwards with the same model, it
-  brings the total to 33,135 acres of silage, 6.7 % (range 5.3 to 8.2); USDA is still above that
-  range. This was done after the result was seen, and no labelled double-crop field exists
-  anywhere, so those calls are untested. The reported figure stays 22,700.
+  early-cut silage lands more often among the partly seen fields (Frederick), which the count
+  leaves out. In the 2025 sample 37.9 % of the partly seen area is called silage, against 4.75 %
+  of the clearly seen. Cloud hiding whole harvest weeks is not the reason in 2025 (0.6 % of the
+  corn area). The variant weighted by harvest window, computed in the same run, read 3.8 %.
+- **Double-crop corn closes part of the gap, after the fact.** Corn sown after a small grain
+  (17,056 acres) is outside the scored set. Scored after the fact with the same model, 61 % of
+  it is called silage, which lifts the figure to 33,135 acres, 6.7 % (range 5.3 to 8.2), still
+  below 8.9 %. No labelled double-crop field exists anywhere, so those calls are untested. The
+  reported figure stays 22,700.
 - **The first county method failed.** On the Maryland test whose limits were written down before
   it ran, Kent County read 21.0 % silage where the Census has 5.5 % (fail line 20.5 %), and
   Carroll read 0.0 % where the Census has 8.9 % (weak). Two causes are suspected, neither
@@ -41,9 +41,10 @@ on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
   shows the plain count and puts the variant beside it.
 - **42 of 44 is a small test, not an accuracy figure.** One site, three seasons, 44 field-years;
   one field is 2.3 points. The set was scored three times, each under a rule written beforehand,
-  and is now closed. The small model was named as the main model on European data, but after
-  the first run had already shown it ahead; the log says so, and every model family is shown
-  side by side for that reason.
+  and is now closed. The small model was named as the main model on European data, by the
+  held-out-country table of the training run (small model mean 0.765, big model 0.763), with
+  near-ties going to the simpler model. That was after the first run had already shown it
+  ahead; the log says so, and every model family is shown side by side for that reason.
 - **The small model is not better everywhere.** Inside one country the big model is ahead (0.86
   against 0.78 in Austria 2024). When Austria is the new country three bigger models are still
   ahead (by 0.016, 0.035 and 0.045). The claim is only that the small model loses least when the
@@ -69,7 +70,7 @@ a model that also reads the pixels around the field (no result in this pack).
 | Other models, same run | big model 37, timing + moisture rule 36, average of three simple models 36, timing rule 35, always grain 32 | Log 18:02 |
 | Big model with dates dropped, scored later | 39 of 44; pass line "more than 37" | Log 18:50 (rule), 19:16 (result) |
 | First run, models trained on Austria only | small model 42, big model 30, always grain 32 | Log 14:07 (accuracy 0.682 and 0.727 of 44); `docs/module.md`, module_v1 table |
-| Scored three times; how the main model was named | | Log 13:53, 14:07, 18:01, 18:50 |
+| Scored three times; how the main model was named | training run, each country held out: small model 0.754 / 0.826 / 0.717, mean 0.765; big model 0.770 / 0.805 / 0.713, mean 0.763 | Log 13:53, 14:07, 17:49, 18:01, 18:50 |
 | One field is 2.3 points | | `docs/model.md`, under the in-site table |
 | What the small model keys on | 0.103, 0.049, 0.038, 0.030, 0.008, 0.000 (with spreads) | `docs/features.md`, "The six features the small model uses" |
 | Training data of the classifier | 8,000 fields: Austria 2022-2024, France 2022, Netherlands 2025 | Log 17:40 |
@@ -86,7 +87,7 @@ a model that also reads the pixels around the field (no result in this pack).
 | Early windows: clearly seen fields called silage | 26 to 55 % | Log 18:49 |
 | Harvest-window variant on the four Maryland counties | worst miss 3.8 or 10.3, by date convention | Log 18:54, 19:05 |
 | Harvest-window variant, Michigan and Maryland 2025; how the headline was argued | 3.6 / 29.8 %, pass; 3.8 % [2.6, 4.9] | Log 19:05, 19:18 |
-| Double-crop corn scored after the fact | 33,135 silage acres of 494,947, 6.7 % [5.3, 8.2]; about 10,430 of them double-crop; no labelled double-crop field | Log 19:21, 19:23 |
+| Double-crop corn scored after the fact | 60.9 % of its clearly seen area called silage; 33,135 silage acres of 494,947, 6.7 % [5.3, 8.2]; about 10,430 of them double-crop; no labelled double-crop field | Log 19:21, 19:23 |
 | Classifiers that saw the labelled Maryland fields | Queen Anne's 10.2 % against 4.0 % | Log 18:33 |
 | Michigan test: rule | 10 points apart, no miss above 10 points | Log 18:25, 18:37 |
 | Michigan test: result | Branch 2.1 % (Census 1.8 %), Gratiot 30.0 % (24.2 %), 27.9 points apart: pass | Log 19:11 |
@@ -100,4 +101,5 @@ One difference between two runs, stated so nobody trips on it: the training run 
 models reports the big model at 0.770 / 0.805 / 0.713 with each country held out (mean 0.763, log
 17:49); the comparison run in `docs/foundation-models.md` reports 0.770 / 0.810 / 0.713 (mean
 0.764). Figures 2 and 4 use the comparison run, because only it has the in-country values and the
-date-dropping arms. The small model's values are the same in both.
+date-dropping arms. Anything said about choosing the main model quotes the training run, because
+that table made the logged choice. The small model's values are the same in both.
