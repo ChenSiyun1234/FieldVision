@@ -69,8 +69,9 @@ and run the script again.
 
 ## The slide deck
 
-The deck itself (16 slides, 16:9, speaker notes in English and Chinese on every slide) is built
-from the same numbers. The PowerPoint and PDF files are not in git; they are made by:
+The deck itself (ten plain slides and three backup slides, 16:9, speaker notes in English and
+Chinese on every slide) is built from the same numbers. An earlier, longer version (16 slides) is
+in this folder's history. The PowerPoint and PDF files are not in git; they are made by:
 
 ```
 python docs/pitch/deck_figs.py --pictures <folder with strip_*.png> --maps <folder with map_*.png>
@@ -81,9 +82,11 @@ pwsh docs/pitch/export_deck.ps1 -Pptx <folder>/FieldVision_model_story.pptx
 `deck_figs.py` draws the figure bodies into `docs/pitch/deck/` (the slide carries the title, so
 these have none) and cuts the field pictures and county maps out of the sheets made by the
 extraction work. `build_deck.py` needs python-pptx; titles, cards and notes are editable text.
-`export_deck.ps1` asks PowerPoint for the PDF. The story: the problem, the data, the model, the
-result on the labelled fields, then four tuning steps driven by what the county data showed, the
-clean test in Michigan, the open state figure, and what comes next.
+`export_deck.ps1` asks PowerPoint for the PDF. The story: the problem and its catch, what the
+satellite sees, the small model and its test, the county total that went wrong, two lessons from
+the data, what could not be fixed, the places never looked at (Michigan passes, Maryland 2025
+reads low), and what the team gets. Backup slides: why the simple model won, how the tests were
+logged, Maryland 2025 in detail.
 
 ## Still to come
 

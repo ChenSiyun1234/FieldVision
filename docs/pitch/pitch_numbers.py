@@ -189,12 +189,22 @@ FREDERICK_CALLS_HAY = (16, 22)
 KENT_CALLS_CUT_EARLY = (72, 75)  # cut by 2 September
 
 # Slide "why simple won". Mean over the three held-out countries and mean loss:
-# docs/foundation-models.md, augmentation table. Sequence model: the stream experiment's note
-# (season read as a sequence of per-date band medians; ONE seed, settings fixed beforehand,
-# in-country loss not measured yet). Last column: the 44 labelled US field-years (log 18:02, 19:16).
+# docs/foundation-models.md, augmentation table. Sequence model: the stream experiment (season
+# read as a sequence of per-date band medians; see below). Last column: the 44 labelled US
+# field-years (log 18:02, 19:16).
 TRANSFER_SUMMARY = [
     ("Small model", "6 features, logistic regression", 0.765, 0.005, "42 of 44"),
     ("Big model", "135 features, boosted trees", 0.764, 0.047, "37 of 44"),
     ("Big model, dates dropped", "observation dates removed at random in training", 0.780, 0.035, "39 of 44"),
-    ("Sequence model", "the whole season as a sequence; one seed, still running", 0.797, None, "not scored"),
+    ("Sequence model", "the whole season as a sequence; three seeds", 0.817, 0.031, "not tested"),
 ]
+# Sequence model, three seeds, each country held out in turn: mean 0.817 (Austria 0.845, France
+# 0.854, Netherlands 0.752), against 0.765 and 0.764 above; loss against in-country 0.042 / 0.024 /
+# 0.026, mean 0.031. From the stream experiment's note of 14 Nov, confirmed by the coordinator (it
+# replaces the one-seed 0.797). Not tested on the labelled US fields.
+
+# Tuning 1, the replay on labelled fields (modelling work, access log 19:48 and docs/RESULTS.md):
+# Beltsville with the small model, labelled grain called silage: 3.1 % on the full series, 27.5 %
+# and 39.4 % with 28 and 35 days of observations around the drop removed. Fields that stay
+# clearly seen after that (few): 0 % at Beltsville, 0-5 % in France 2022.
+REPLAY = {"full": 3, "hidden": (28, 39), "clear": (0, 5)}

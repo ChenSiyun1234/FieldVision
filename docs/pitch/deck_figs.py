@@ -66,7 +66,7 @@ def transfer_summary():
     D.clean(ax)
     ax.tick_params(axis="x", labelsize=14)
     rows = N.TRANSFER_SUMMARY
-    n, lo, hi = len(rows), 0.75, 0.83
+    n, lo, hi = len(rows), 0.75, 0.86
     for i, (name, sub, out, loss, us) in enumerate(rows):
         y = n - 1 - i
         if loss is not None:
@@ -75,7 +75,7 @@ def transfer_summary():
         ax.scatter([out], [y], s=200, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=4)
         ax.text(lo + 0.002, y + 0.33, f"{out:.3f}", fontsize=19, color=INK, va="center",
                 fontweight="bold" if i == 0 else "normal")
-        ax.text(lo + 0.0135, y + 0.33, f"loses {loss:.3f}" if loss is not None else "loss not measured yet",
+        ax.text(lo + 0.019, y + 0.33, f"loses {loss:.3f}" if loss is not None else "loss not measured here",
                 fontsize=14, color=INK2, va="center")
         ax.text(lo - 0.004, y + 0.13, name, fontsize=18, fontweight="bold", color=INK, ha="right", va="center")
         ax.text(lo - 0.004, y - 0.2, sub, fontsize=12.5, color=INK2, ha="right", va="center")
@@ -84,7 +84,7 @@ def transfer_summary():
     ax.set_xlim(lo, hi)
     ax.set_ylim(-0.55, n - 0.05)
     ax.set_yticks([])
-    ax.set_xticks([0.76, 0.78, 0.80, 0.82])
+    ax.set_xticks([0.76, 0.78, 0.80, 0.82, 0.84])
     handles = [
         plt.Line2D([], [], marker="o", ls="", markersize=11, markerfacecolor=BLUE, markeredgecolor=BG,
                    label="in a country it never saw (number shown)"),
@@ -122,18 +122,17 @@ def gap_evidence():
     tiers = [("Clearly seen", "12 days or less", "counted"), ("Partly seen", "12 to 20 days", "shown beside the count"),
              ("Not judged", "over 20 days, or no harvest found", "left out")]
     for i, (name, rule, use) in enumerate(tiers):
-        y = 8.05 - i * 1.25
+        y = 7.9 - i * 1.45
         bx.add_patch(FancyBboxPatch((0.2, y - 0.42), 2.9, 0.84, boxstyle="round,pad=0,rounding_size=0.18",
                                     fc=BLUE if i == 0 else BG, ec=BLUE if i == 0 else INK2, lw=1.5))
         bx.text(1.65, y, name, fontsize=15, fontweight="bold", color="#ffffff" if i == 0 else INK, ha="center", va="center")
         bx.text(3.4, y + 0.22, rule, fontsize=14.5, color=INK, va="center")
         bx.text(3.4, y - 0.26, use, fontsize=12.5, color=INK2, va="center")
-    seen, part = N.LABELLED_BY_EVIDENCE["clearly_seen"], N.LABELLED_BY_EVIDENCE["partly_seen"]
-    bx.text(0.2, 3.95, "Check on the 44 labelled US field-years", fontsize=16, fontweight="bold", color=INK, va="center")
-    bx.text(0.2, 3.2, f"{seen[0]} clearly seen: {'none' if seen[1] == 0 else seen[1]} wrong", fontsize=15, color=INK, va="center")
-    bx.text(0.2, 2.55, f"{part[0]} partly seen: {part[1]} wrong", fontsize=15, color=INK, va="center")
-    bx.text(0.2, 1.45, "Also changed: the rule on the harvest date left the vote.\nMaryland harvests earlier than Austria, so it read early as silage.",
-            fontsize=12.5, color=INK2, va="center", linespacing=1.45)
+    r = N.REPLAY
+    bx.text(0.2, 3.0, "The same thing on fields whose answer we know", fontsize=16, fontweight="bold", color=INK, va="center")
+    bx.text(0.2, 1.85, f"Hide four to five weeks of pictures around the cut, and grain\ncalled silage rises from {r['full']}% to "
+            f"{r['hidden'][0]}-{r['hidden'][1]}%. The few fields still\nclearly seen stay at {r['clear'][0]}-{r['clear'][1]}%.",
+            fontsize=14.5, color=INK, va="center", linespacing=1.45)
     put(fig, "s09_gap_evidence")
 
 
@@ -296,7 +295,10 @@ if __name__ == "__main__":
     crop_history()
     michigan()
     if args.pictures:
-        chips(args.pictures, "strip_frederick_silage_clear.png", "pic_frederick_silage")
+        # the title slide gets the larger rendering of its strip when the maps folder has one
+        big = Path(args.maps or args.pictures) / "strip_frederick_silage_clear.png"
+        src = big.parent if big.exists() and big.stat().st_size > 20_000 else args.pictures
+        chips(src, "strip_frederick_silage_clear.png", "pic_frederick_silage")
         chips(args.pictures, "strip_frederick_grain_clear.png", "pic_frederick_grain")
         chips(args.pictures, "strip_kent_cloudy_spell.png", "pic_kent_cloudy")
         chips(args.pictures, "strip_kent_silage_clear_early.png", "pic_kent_early")
@@ -308,6 +310,6 @@ if __name__ == "__main__":
         if sheet.exists():  # twelve fields just before and just after the cut: keep the chips, drop the sheet's own labels
             im = Image.open(sheet)
             w, h = im.size
-            crop = im.crop((int(0.135 * w), int(0.137 * h), int(0.975 * w), int(0.968 * h))).convert("RGB")
+            crop = im.crop((int(0.177 * w), int(0.148 * h), int(0.979 * w), int(0.977 * h))).convert("RGB")
             crop.save(OUT / "pic_before_after.jpg", quality=90)  # a photograph: JPEG keeps it small
             print("pic_before_after.jpg: from", sheet.name)
