@@ -35,6 +35,9 @@ _load_env()
 # FIELDVISION_FINAL were two folders in the workspace (team copy and GitHub main); here they are one.
 FIELDVISION = REPO
 FIELDVISION_FINAL = REPO
+# Landsat 8/9 rows beside Sentinel-2 wherever a county has timeseries_landsat.parquet (fieldvision.ls);
+# counties without the file run on Sentinel-2 alone. FIELDVISION_LANDSAT=0 turns it off.
+LANDSAT = os.environ.get("FIELDVISION_LANDSAT", "1") != "0"
 REGISTRY = REPO / "registry"
 COUNTY_DATA = Path(os.environ.get("FIELDVISION_COUNTY_DATA", REPO / "data" / "counties"))
 RAG_PIPELINE = REPO / "rag-pipeline"                    # the critic's checks and the NASS report index

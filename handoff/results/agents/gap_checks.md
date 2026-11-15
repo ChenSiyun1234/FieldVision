@@ -8,7 +8,7 @@ Model estimates, not NASS statistics. Built from results on disk; nothing re-tra
 
 ## 2. Corn Belt
 
-In the Corn Belt the model lands within 3.8 points of NASS 2025 (WI +3.8, IA +2.9, NE -1.3); USDA's figure is inside our sampling range in WI, NE. Where silage is rare a few points is still a large relative miss, so low-silage states need a higher bar before a field is called silage. PA is 24.2 points low, so the big miss is in the East, not the Corn Belt. Each state rests on 228–233 clearly seen fields.
+In the Corn Belt the model lands within 3.8 points of NASS 2025 (WI +3.8, IA +2.9, NE -1.3); USDA's figure is inside our sampling range in WI, NE. Where silage is rare a few points is still a large relative miss, so low-silage states need a higher bar before a field is called silage. PA is 24.2 points low, so the big miss is in the East, not the Corn Belt. Each state rests on 228–233 clearly seen fields. Further north it breaks: Marathon, Wisconsin 2023 reads 13.8% with Landsat against USDA's 49.9%. Northern silage is cut after the crop yellows, so a model trained in Europe reads it as grain; this needs labelled northern fields.
 
 ## 3. Year gap
 
@@ -16,7 +16,7 @@ Pennsylvania's survey share jumped to 33.7% in 2023 from about 30.2% in 2022, so
 
 ## 4. Unjudged fields
 
-In Lancaster the share could be anywhere from 22.6% to 58.3% depending on the unjudged fields. Filling them with the model's own lean gives 40.1%. The unjudged fields are mostly ones whose harvest fell in a long cloud gap; radar (Sentinel-1) is the fix, and the 'radar_first' route is wired for it, but these counties have no radar series extracted yet.
+In Lancaster the share could be anywhere from 22.6% to 58.3% depending on the unjudged fields. Filling them with the model's own lean gives 40.1%. Most unjudged fields were cut inside a long gap between clear images (wide_harvest_interval); Landsat 8/9 is the fix the team took: a second satellite whose passes fill the gaps. Kent: corn seen 9% to 94%, silage 12.9% to 7.3% (USDA 5.5). Queen Anne's: corn seen 14% to 70%, silage 4.0% to 2.4% (USDA 1.3). Marathon: corn seen 29% to 83%, silage 4.3% to 13.8% (USDA 49.9). The app uses Landsat wherever a county has it on disk; Frederick and Lancaster do not yet. These are checks on counties seen while tuning.
 
 ## 5. Price story
 
@@ -24,7 +24,7 @@ Our four-state silage error nets out to 301,000 acres, about 0.31 points of US c
 
 ## 6. Blind test
 
-4 of 6 blind comparisons land within 5 points of USDA. The misses: Frederick County, MD -6.4, PA -24.2. Frederick's critic range (24.3–32.1%, from the 2012 and 2017 Census) would only have warned on the true 19.6% as well, so the history check cannot see a real change coming.
+4 of 6 blind comparisons land within 5 points of USDA. The misses: Frederick County, MD -6.4, PA -24.2. Frederick's critic range (24.3–32.1%, from the 2012 and 2017 Census) would only have warned on the true 19.6% as well, so the history check cannot see a real change coming. Starting from USDA's last figure and letting the fields update it, 6 of 8 counties move closer to the truth, mean miss 2.6 points (the satellite alone 9.7); these counties were seen while tuning, so it is not a clean test. Clean tests, written down before opening: Wisconsin 2025, Pennsylvania 2025, Lancaster, Pa. 2023 (results to come).
 
 ## 7. Scale
 

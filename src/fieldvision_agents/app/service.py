@@ -40,7 +40,8 @@ def counties(root=COUNTY_DATA):
         if (folder / "timeseries.parquet").is_file():
             fips, year = folder.parent.name, int(folder.name)
             out.append({"fips": fips, "year": year, "name": COUNTY_NAMES.get(fips, fips),
-                        "partial": (folder / "PARTIAL.json").is_file()})
+                        "partial": (folder / "PARTIAL.json").is_file(),
+                        "landsat": (folder / "timeseries_landsat.parquet").is_file()})
     return out
 
 

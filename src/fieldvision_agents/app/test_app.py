@@ -152,6 +152,20 @@ def test_gap_checks_from_saved_results():
     bt = gc.blind_test()
     assert bt["blind_n"] >= 6 and all(r["hidden"].startswith(("yes", "no")) for r in bt["rows"])
     assert "not a forecast" in gc.price()["finding"]
+    bt = gc.blind_test()
+    if bt["history_update_seen_while_tuning"]:                  # the team's logged numbers, when main is merged
+        assert sum(u["closer"] for u in bt["history_update_seen_while_tuning"]) == 6
+
+
+def test_toolbox_adds_landsat_where_a_county_has_it():
+    from ..fieldvision_bridge import FieldVisionToolbox
+    inner = type("Inner", (), {"landsat": True, "scout": lambda self, f, y: {"n_fields": 1}})()
+    with tempfile.TemporaryDirectory() as tmp:
+        tb = FieldVisionToolbox(inner=inner, county_data=tmp)
+        assert tb.scout("24021", 2022)["landsat"] == "Sentinel-2 only"
+        (Path(tmp) / "24021" / "2022").mkdir(parents=True)
+        (Path(tmp) / "24021" / "2022" / "timeseries_landsat.parquet").touch()
+        assert tb.scout("24021", 2022)["landsat"].startswith("Landsat 8/9")
 
 
 def test_web_api_serves_the_page_and_status():

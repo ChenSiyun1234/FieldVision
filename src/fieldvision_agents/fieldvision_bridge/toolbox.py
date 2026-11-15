@@ -18,7 +18,7 @@ load_team_toolbox() imports the team's Toolbox itself; county_check uses it dire
 import sys
 from pathlib import Path
 
-from ..settings import FIELDVISION_DEPS, FIELDVISION_FINAL
+from ..settings import FIELDVISION_DEPS, FIELDVISION_FINAL, LANDSAT
 from .config import (COUNTY_DATA, FINAL_POLICY, MIN_COUNTY_COVERAGE, MODEL_DECISIONS, QUICKSTATS_CSV,
                      STANDARD_MODEL, SUPERSEDED_POLICIES)
 from .prevalence import county_corn_acres, shift_probability, silage_share_prior, simulate_range
@@ -49,9 +49,10 @@ def load_team_toolbox(root=FIELDVISION_FINAL, deps=FIELDVISION_DEPS, **kwargs):
 class FieldVisionToolbox:
     def __init__(self, inner=None, critic=None, standard_model=STANDARD_MODEL, county_data=COUNTY_DATA,
                  quickstats_csv=QUICKSTATS_CSV, prior=None, county_corn=None, min_coverage=MIN_COUNTY_COVERAGE,
-                 reports=None, final_policy=FINAL_POLICY):
+                 reports=None, final_policy=FINAL_POLICY, landsat=LANDSAT):
         self.inner = inner if inner is not None else load_team_toolbox(standard_model=standard_model,
-                                                                        module_model=standard_model)
+                                                                        module_model=standard_model,
+                                                                        landsat=landsat)
         self.final_policy = final_policy   # what the agent's "standard" route runs
         self.critic = critic               # critic(fips, year, county_result, policy)
         self.reports = reports             # search(query, fips, year=None, k=3), or None
@@ -74,7 +75,10 @@ class FieldVisionToolbox:
         return getattr(inner, name)
 
     def scout(self, fips, year):
-        return self.inner.scout(fips, year)
+        result = self.inner.scout(fips, year)
+        has = (self.county_data / str(fips) / str(year) / "timeseries_landsat.parquet").is_file()
+        return {**result, "landsat": ("Landsat 8/9 rows added to the Sentinel-2 series" if has and
+                                      getattr(self.inner, "landsat", False) else "Sentinel-2 only")}
 
     def route_options(self, fips, year):
         """The team's routes, with "standard" running the final module and superseded routes marked."""

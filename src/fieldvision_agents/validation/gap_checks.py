@@ -26,6 +26,14 @@ RESULTS = REPO / "handoff" / "results"
 NATIONAL_ACRES_PER_POINT = 971_350          # 1 point of silage share of US harvested corn, 2025 (price_impact.json)
 
 
+def _team():
+    """The pipeline team's logged numbers (docs/pitch/pitch_numbers.py on main): Landsat and the update of
+    USDA's last figure. Development checks on counties seen while tuning, unless marked otherwise."""
+    import runpy
+    path = REPO / "docs" / "pitch" / "pitch_numbers.py"
+    return runpy.run_path(str(path)) if path.is_file() else {}
+
+
 def _json(path):
     return json.loads(path.read_text()) if path.is_file() else None
 
@@ -104,6 +112,7 @@ def corn_belt():
     belt = [r for r in rows if r["corn_belt"]]
     return {"states": rows,
             "corn_belt_mean_abs_error_pts": round(float(np.mean([abs(r["error_pts"]) for r in belt])), 1) if belt else None,
+            "marathon_2023": _team().get("LANDSAT_MARATHON"),
             "finding": _corn_belt_finding(rows)}
 
 
@@ -119,7 +128,11 @@ def _corn_belt_finding(rows):
             f"USDA's figure is inside our sampling range in {', '.join(inside) or 'no state'}. Where silage is rare a few "
             "points is still a large relative miss, so low-silage states need a higher bar before a field is called "
             f"silage.{east} Each state rests on {min(r['clear_fields'] for r in belt)}–{max(r['clear_fields'] for r in belt)} "
-            "clearly seen fields.")
+            "clearly seen fields."
+            + ("" if not (m := _team().get("LANDSAT_MARATHON")) else
+               f" Further north it breaks: Marathon, Wisconsin 2023 reads {m['silage_after']}% with Landsat against USDA's "
+               f"{m['usda']}%. Northern silage is cut after the crop yellows, so a model trained in Europe reads it as "
+               "grain; this needs labelled northern fields."))
 
 
 # 3 ------------------------------------------------------------------------------------------------------------
@@ -183,12 +196,19 @@ def unjudged():
             "median_acres_not_judged": round(float(nj["acres"].median()), 1) if len(nj) else None,
             "reasons": nj["reason"].fillna("unknown").value_counts().to_dict()}
     la = out.get("Lancaster 2023")
+    pairs = _team().get("LANDSAT_PAIR") or []
+    out["landsat"] = [{"county": x["name"], "corn_seen_pct": list(x["seen"]), "silage_pct": list(x["figure"]),
+                       "usda": x["usda"], "control": x["control"]} for x in pairs]
+    ls = "".join(f" {x['name']}: corn seen {x['seen'][0]}% to {x['seen'][1]}%, silage {x['figure'][0]}% to {x['figure'][1]}% "
+                 f"(USDA {x['usda'] if not isinstance(x['usda'], tuple) else '–'.join(map(str, x['usda']))})."
+                 for x in pairs if not x["control"])
     out["finding"] = (None if not la else
                       f"In Lancaster the share could be anywhere from {la['share_if_all_grain_pct']}% to "
                       f"{la['share_if_all_silage_pct']}% depending on the unjudged fields. Filling them with the model's own "
                       f"lean gives {la['share_with_model_lean_pct']}%. Most unjudged fields were cut inside a long gap between "
-                      "clear images (wide_harvest_interval); radar (Sentinel-1) is the fix, and the 'radar_first' route is wired for it, "
-                      "but these counties have no radar series extracted yet.")
+                      "clear images (wide_harvest_interval); Landsat 8/9 is the fix the team took: "
+                      f"a second satellite whose passes fill the gaps.{ls} The app uses Landsat wherever a county has "
+                      "it on disk; Frederick and Lancaster do not yet. These are checks on counties seen while tuning.")
     return out
 
 
@@ -235,14 +255,26 @@ def blind_test():
                      "hidden": "no: nearest year, and the critic saw it"})
     for r in rows:
         r["error_pts"] = round(r["ours_pct"] - r["usda_pct"], 1)
+    t = _team()
+    update = [{"county": c, "last_official_pct": last, "updated_pct": upd, "true_pct": true,
+               "closer": abs(upd - true) < abs(last - true)} for c, last, upd, true, _ in t.get("HISTORY_UPDATE", [])]
+    pending = [{"place": n, "usda_pct": u, "usda_band": b, "ours_pct": o} for n, u, b, o in t.get("PLACES_TO_OPEN", [])]
     blind = [r for r in rows if r["hidden"].startswith("yes")]
     within5 = sum(abs(r["error_pts"]) <= 5 for r in blind)
-    return {"rows": rows, "blind_n": len(blind), "blind_within_5_pts": within5,
+    miss = t.get("HISTORY_UPDATE_MISS") or {}
+    upd_text = ("" if not update else
+                f" Starting from USDA's last figure and letting the fields update it, {sum(u['closer'] for u in update)} of "
+                f"{len(update)} counties move closer to the truth, mean miss {miss.get('updated')} points (the satellite "
+                f"alone {miss.get('satellite')}); these counties were seen while tuning, so it is not a clean test. "
+                f"Clean tests, written down before opening: {', '.join(p['place'] for p in pending)}"
+                + ("" if all(p["ours_pct"] is not None for p in pending) else " (results to come)") + ".")
+    return {"rows": rows, "history_update_seen_while_tuning": update, "history_update_mean_miss_pts": miss,
+            "clean_tests": pending, "blind_n": len(blind), "blind_within_5_pts": within5,
             "blind_mean_abs_error_pts": round(float(np.mean([abs(r["error_pts"]) for r in blind])), 1),
             "finding": (f"{within5} of {len(blind)} blind comparisons land within 5 points of USDA. The misses: "
                         + ", ".join(f"{r['place']} {r['error_pts']:+}" for r in blind if abs(r["error_pts"]) > 5)
                         + ". Frederick's critic range (24.3–32.1%, from the 2012 and 2017 Census) would only have warned "
-                        "on the true 19.6% as well, so the history check cannot see a real change coming.")}
+                        "on the true 19.6% as well, so the history check cannot see a real change coming." + upd_text)}
 
 
 def build():
