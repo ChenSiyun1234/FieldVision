@@ -368,7 +368,9 @@ physical + Presto or physical + raw GBMs gain 0.035-0.045.
 
 **Caveat: country and imagery source are partly confounded.** France 2022
 and Austria 2022 come from Planetary Computer (Sentinel-2 L2A), Austria
-2023 and 2024 from Earth Search (Collection 1). The pairs that hold the
+2023 and 2024 and the Netherlands 2025 from Earth Search (Collection 1),
+so in the three-country hold-out source and country are mixed in both
+directions. The pairs that hold the
 source fixed (AT 2022 <-> FR 2022) show the same direction-dependent
 pattern as the full country hold-out, so the ordering is not just a
 change of processing; but the source-fixed pairs use one training year
