@@ -405,3 +405,12 @@ Not finished:
   small-grain/corn double crop 596) in the 150 drawn read blocks of 3,106. The double crop is 13 % of the frame's
   corn-containing area in Pennsylvania (142,288 of 1,095,462 acres). Median usable dates 25 (s1, s2) and 39 (s3).
   All three 2025 state samples (Maryland, Wisconsin, Pennsylvania) are now on disk.
+- Lancaster `us_42071_2023` (untouched test county, seeded draw: 70 of 113 read blocks, 24 of 39 10-km blocks,
+  10,533 of 15,548 fields, 108,003 of 168,209 acres = 64.2 % of the county's CSB corn): field file unpacked,
+  run folder created (stub signature ca552af5fcc5 equals Colab's), merge pending. Corn-area check, whole county:
+  CSB polygons 168,209 acres, CDL 2023 corn pixels 146,232, Census 2022 grain + silage 131,537 (polygons 1.28 x),
+  2023 survey 68,800, planted 69,000 (2.44 x). The boundaries agree with the Census scale and are twice the 2023
+  survey, so the Census 2022 total and share (27.4 %) are the reference the boundaries support; the 2023 survey
+  share (44.5 %) comes from an estimate that covers about half the corn the CDL and the Census show. Why the
+  survey is low is not known here (a guess: county survey estimates are modelled from a sample, and many small
+  farms there may be under-sampled).
