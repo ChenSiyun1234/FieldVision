@@ -241,7 +241,11 @@ def _scene_read_limits():
 
 
 def _scene_load_bar(n_items: int, label: str):
-    """odc-stac calls this with the block iterator. The bar moves as each block is read."""
+    """odc-stac calls this with the block iterator. The bar moves as each block is read.
+
+    Used only when load() reads pixels itself (no ``chunks``). A dask load ignores
+    this argument; that path uses :func:`_dask_block_bar` instead.
+    """
     from tqdm import tqdm
 
     def _bar(work):
@@ -251,9 +255,43 @@ def _scene_load_bar(n_items: int, label: str):
             desc=f"loading {n_items} {label} scenes",
             unit="block",
             leave=False,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
         )
 
     return _bar
+
+
+def _dask_block_bar(label: str) -> tuple:
+    """Scheduler callbacks for one dask compute: a tqdm bar over its tasks.
+
+    Shows blocks done, total, rate, and time remaining. The tuple is
+    (start, start_state, pretask, posttask, finish), the form dask's scheduler takes.
+    """
+    from tqdm import tqdm
+
+    holder: dict = {}
+
+    def start_state(dsk, state):
+        total = sum(len(state[key]) for key in ("ready", "waiting", "running", "finished"))
+        holder["bar"] = tqdm(
+            total=total,
+            desc=label,
+            unit="block",
+            leave=True,
+            bar_format="{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, {rate_fmt}]",
+        )
+
+    def posttask(key, result, dsk, state, worker_id):
+        bar = holder.get("bar")
+        if bar is not None:
+            bar.update(1)
+
+    def finish(dsk, state, errored):
+        bar = holder.pop("bar", None)
+        if bar is not None:
+            bar.close()
+
+    return (None, start_state, None, posttask, finish)
 
 
 def call_with_retry(action, label: str):
@@ -293,15 +331,18 @@ def search_items(collection: str, bbox: tuple[float, float, float, float], year:
     return call_with_retry(_search, f"{collection} {year} search")
 
 
-def _compute_threaded(cube):
+def _compute_threaded(cube, label: str = "satellite"):
     """Run a dask-backed cube on a thread pool. A numpy cube is returned as-is."""
     lazy = [variable for variable in cube.data_vars.values() if hasattr(getattr(variable, "data", None), "compute")]
     if not lazy:
         return cube
-    import dask
-
-    with dask.config.set(scheduler="threads", num_workers=N_LOAD_THREADS):
-        return cube.compute()
+    # The bar and thread count go to this compute only. dask's registered callbacks
+    # and config are process-wide, so two tiles loading at once would share them.
+    return cube.compute(
+        scheduler="threads",
+        num_workers=N_LOAD_THREADS,
+        callbacks=[_dask_block_bar(label)],
+    )
 
 
 def geobox_mid_lon(cube) -> float:
@@ -343,13 +384,15 @@ def load_cube(
             "progress": _scene_load_bar(len(items), progress_label),
         }
         if optimize:
+            # chunks makes odc build a dask graph. progress= and pool= apply only
+            # to the non-dask path, so the bar is attached to compute instead.
             kwargs["chunks"] = {"x": LOAD_CHUNK_XY, "y": LOAD_CHUNK_XY}
             kwargs["pool"] = N_LOAD_THREADS
             print(f"{progress_label}: parallel load, {N_LOAD_THREADS} threads", flush=True)
         with _scene_read_limits():
             cube = load(items, **kwargs)
             if optimize:
-                cube = _compute_threaded(cube)
+                cube = _compute_threaded(cube, f"loading {len(items)} {progress_label} scenes")
             return cube
 
     return call_with_retry(_load, f"load {epsg}")
