@@ -87,16 +87,18 @@ def counties():
     rows = [("Queen Anne's, MD", 1.3, 4.0, "used in tuning"), ("Kent, MD", 5.5, 12.9, "used in tuning"),
             ("Carroll, MD", 8.9, 3.6, "used in tuning"), ("Frederick, MD", 19.6, 13.2, "used in tuning"),
             ("Branch, MI", 1.8, 2.1, "never looked at"), ("Gratiot, MI", 24.2, 30.0, "never looked at")]
-    fig, ax = plt.subplots(figsize=(11, 4.8))
+    la = json.loads((REPO / "handoff/results/agents/lancaster_2023_county_check.json").read_text())
+    rows.append(("Lancaster, PA · 2023*", la["census_silage_pct"], round(100 * la["module_v2"]["silage_share_headline"], 1), "run once, nothing tuned"))
+    fig, ax = plt.subplots(figsize=(11, 5.4))
     y = np.arange(len(rows))[::-1]
     for yi, (name, census, ours, tag) in zip(y, rows):
         ax.plot([census, ours], [yi, yi], color=LINE, lw=4, zorder=1)
         ax.scatter([census], [yi], s=140, color=USDA, zorder=3, edgecolor=PANEL, linewidth=1.5)
         ax.scatter([ours], [yi], s=140, color=SILAGE, zorder=3, marker="D", edgecolor=PANEL, linewidth=1.5)
-        ax.text(1.02, yi, tag, va="center", fontsize=12, color=GOLD if tag == "never looked at" else FAINT,
+        ax.text(1.02, yi, tag, va="center", fontsize=12, color=FAINT if tag == "used in tuning" else GOLD,
                 transform=ax.get_yaxis_transform(), clip_on=False)
-    ax.set_yticks(y, [r[0] for r in rows]); ax.set_xlim(0, 32); ax.grid(axis="y", visible=False); ax.tick_params(axis="y", length=0)
-    ax.set_xlabel("Silage share of corn, % (2022)")
+    ax.set_yticks(y, [r[0] for r in rows]); ax.set_xlim(0, 40); ax.grid(axis="y", visible=False); ax.tick_params(axis="y", length=0)
+    ax.set_xlabel("Silage share of corn, %  (2022; *Lancaster 2023 against the 2022 Census, the latest county figure)")
     ax.legend(handles=[Line2D([], [], marker="o", ls="", color=USDA, markersize=10, label="USDA Census 2022"),
                        Line2D([], [], marker="D", ls="", color=SILAGE, markersize=9, label="Our count of clearly seen fields")],
               loc="lower right", bbox_to_anchor=(1, 1.0), ncol=2, fontsize=12)
@@ -226,8 +228,28 @@ def frederick():
     plt.close(fig); print("saved m_frederick")
 
 
+def lancaster():
+    from fieldvision_agents.app import geo
+    fc = geo.field_calls("42071", 2023)
+    f = gpd.GeoDataFrame.from_features(fc["features"], crs=4326).to_crs(26918)
+    county = gpd.read_file(HERE / "counties.geojson", on_invalid="fix")
+    county = county[county["id"] == "42071"].to_crs(26918)
+    colors = {"silage": SILAGE, "grain": GRAIN, "not judged": ABSTAIN}
+    fig, ax = plt.subplots(figsize=(12, 9))
+    fig.patch.set_facecolor(BG); ax.set_facecolor(BG)
+    county.plot(ax=ax, color="#101c16", edgecolor=LINE, linewidth=1.5)
+    for call in ("not judged", "grain", "silage"):
+        f[f["call"] == call].plot(ax=ax, color=colors[call], edgecolor="none")
+    ax.set_axis_off()
+    n = fc["counts"]
+    ax.legend(handles=[Patch(color=SILAGE, label=f"called silage · {n['silage']:,}"), Patch(color=GRAIN, label=f"called grain · {n['grain']:,}"),
+                       Patch(color=ABSTAIN, label=f"not judged · {n['not judged']:,}")], loc="lower right", fontsize=13, labelcolor=MUTED)
+    fig.savefig(OUT / "m_lancaster.png", dpi=200, bbox_inches="tight", pad_inches=0.1, facecolor=BG)
+    plt.close(fig); print("saved m_lancaster")
+
+
 if __name__ == "__main__":
     only = set(sys.argv[2:])
-    for fn in (field_test, loco, counties, states, price, whatif, planner, us_map, frederick):
+    for fn in (field_test, loco, counties, states, price, whatif, planner, us_map, frederick, lancaster):
         if not only or fn.__name__ in only:
             fn()

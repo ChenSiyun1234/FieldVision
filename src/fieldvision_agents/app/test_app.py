@@ -138,6 +138,10 @@ def test_us_map_data_for_states_and_counties():
     census = {h["year"]: h["silage_share_pct"] for h in fr["history"] if h["source"] == "CENSUS"}
     assert census == {2012: 32.1, 2017: 24.3, 2022: 19.6}           # withheld duplicate rows ignored
     assert geo.county_detail("46059")["seasons"] == []                 # USDA data for any county, ours where we have it
+    pa = geo.state_summary("42")
+    assert any("Lancaster" in o["what"] and o["usda_pct"] == 27.4 for o in pa["ours"])   # the second state's county result
+    from . import dashboard
+    assert dashboard.silage()["lancaster_2023"]["census_year"] == 2022
 
 
 def test_web_api_serves_the_page_and_status():

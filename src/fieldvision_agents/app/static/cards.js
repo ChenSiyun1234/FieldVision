@@ -169,14 +169,19 @@ export function whatIfCard(w) {
 
 export function silageCompare(s) {
   const st = s.states_2025 || [];
-  const cats = [...st.map((x) => x.state + " 2025"), ...(s.maryland_2025 ? ["MD 2025"] : []), ...(s.frederick_2022 ? ["Frederick 2022"] : [])];
-  const usda = [...st.map((x) => x.usda_pct), ...(s.maryland_2025 ? [s.maryland_2025.usda_pct] : []), ...(s.frederick_2022 ? [s.frederick_2022.census_pct] : [])];
-  const ours = [...st.map((x) => x.ours_pct), ...(s.maryland_2025 ? [s.maryland_2025.ours_pct] : []), ...(s.frederick_2022 ? [s.frederick_2022.ours_pct] : [])];
+  const la = s.lancaster_2023;
+  const cats = [...st.map((x) => x.state + " 2025"), ...(s.maryland_2025 ? ["MD 2025"] : []), ...(s.frederick_2022 ? ["Frederick 2022"] : []),
+    ...(la ? ["Lancaster 2023*"] : [])];
+  const usda = [...st.map((x) => x.usda_pct), ...(s.maryland_2025 ? [s.maryland_2025.usda_pct] : []), ...(s.frederick_2022 ? [s.frederick_2022.census_pct] : []),
+    ...(la ? [la.census_pct] : [])];
+  const ours = [...st.map((x) => x.ours_pct), ...(s.maryland_2025 ? [s.maryland_2025.ours_pct] : []), ...(s.frederick_2022 ? [s.frederick_2022.ours_pct] : []),
+    ...(la ? [la.ours_pct] : [])];
   const chart = groupedBars({
     title: "Silage share of harvested corn: USDA vs our model", categories: cats, width: 900,
     series: [{ name: "USDA (survey or Census)", color: "var(--s1)", values: usda }, { name: "Our model", color: "var(--s2)", values: ours }],
     yFormat: (v, full) => (full ? `${fmt(v)}%` : `${v}%`),
-    note: "Our county and state totals are not validated yet: Pennsylvania and Nebraska read low, Iowa and Wisconsin high.",
+    note: "Our county and state totals are not validated yet: Pennsylvania and Nebraska read low, Iowa and Wisconsin high."
+      + (la ? ` *Lancaster County, PA 2023 against the ${la.census_year} Census: USDA has no 2023 county figure.` : ""),
   });
   const ft = s.field_test;
   return el("div", {}, chart, ft ? el("p", { class: "small muted" },

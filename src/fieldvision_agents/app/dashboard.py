@@ -128,6 +128,11 @@ def silage():
     if fr:
         out["frederick_2022"] = {"ours_pct": round(100 * fr["module_v2"]["silage_share_headline"], 1),
                                  "census_pct": fr["census_silage_pct"], "fields": fr["rows"][0]["fields"]}
+    la = _read(AGENT_RESULTS / "lancaster_2023_county_check.json")
+    if la:   # USDA has no 2023 county figure: compared with the 2022 Census
+        out["lancaster_2023"] = {"ours_pct": round(100 * la["module_v2"]["silage_share_headline"], 1),
+                                 "census_pct": la["census_silage_pct"], "census_year": la["census_year"],
+                                 "fields": la["fields"], "clear_fields": la["module_v2"]["clear_tier_fields"]}
     out["field_test"] = {"right": 42, "of": 44, "silage_found": 11, "silage_total": 12, "always_grain": 32,
                          "source": "handoff/results/REPORT.md (Beltsville, 44 labelled field-years, scored once)"}
     return out
