@@ -1,4 +1,4 @@
-"""Per-field Sentinel-2 NDVI and NDTI. One load per BARC year, or per county tile."""
+"""Per-field Sentinel-2 indices and band medians. One load per BARC year, or per county tile."""
 
 from __future__ import annotations
 
@@ -97,9 +97,16 @@ def _rows_from_cube(cube, fields, year: int):
     if missing:
         return [], [f"{year}: cube is missing {missing}, skipped"]
     reflectance = scale_reflectance(cube, S2_REFLECTANCE)
+    # Indices are medians of the per-pixel values, not indices of the band medians.
+    # NDMI is (B08 - B11) / (B08 + B11). Band columns are the same clear pixels.
     arrays = {
         "ndvi": normalized_difference(reflectance["B08"], reflectance["B04"]),
         "ndti": normalized_difference(reflectance["B11"], reflectance["B12"]),
+        "ndmi": normalized_difference(reflectance["B08"], reflectance["B11"]),
+        "b04": reflectance["B04"],
+        "b08": reflectance["B08"],
+        "b11": reflectance["B11"],
+        "b12": reflectance["B12"],
     }
     clear = np.isin(cube["SCL"].values, SCL_CLASSES)
     rows = []
@@ -265,6 +272,11 @@ def main(region: str, test: bool = False, optimize: bool = True) -> None:
             ("years", years),
             ("cloud threshold", f"eo:cloud_cover < {CLOUD_COVER_LT}"),
             ("bands", ", ".join(S2_BANDS)),
+            (
+                "indices",
+                "per-pixel then median: ndvi (B08, B04), ndti (B11, B12), ndmi (B08, B11); "
+                "b04, b08, b11, b12 are median reflectance on the same mask",
+            ),
             ("crs", epsg),
             ("resolution_m", RESOLUTION_M),
             ("buffer_m", BUFFER_M),

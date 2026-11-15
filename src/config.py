@@ -5,7 +5,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 # BARC labeled years. Add 2021 or 2022 here later; finished years are not redone.
-YEARS = [2023]
+YEARS = [2021, 2022, 2023]
 # Transfer counties are corn in this CDL year only. Other years are a different crop.
 TRANSFER_YEAR = 2023
 
@@ -102,7 +102,8 @@ FOCUS_STATES = ("PENNSYLVANIA", "WISCONSIN", "CALIFORNIA", "MARYLAND")
 TOP_STATES = ("PENNSYLVANIA", "WISCONSIN", "CALIFORNIA")
 
 S2_COLUMNS = [
-    "field_id", "year", "date", "doy", "ndvi", "ndti", "clear_frac", "n_pixels", "label",
+    "field_id", "year", "date", "doy", "ndvi", "ndti", "ndmi",
+    "b04", "b08", "b11", "b12", "clear_frac", "n_pixels", "label",
 ]
 S1_COLUMNS = [
     "field_id", "year", "date", "doy", "vv_db", "vh_db", "vh_vv_db",
