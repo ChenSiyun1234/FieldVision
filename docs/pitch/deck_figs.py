@@ -219,6 +219,58 @@ def scoreboard():
     put(fig, "s06_scoreboard")
 
 
+# --- a second satellite in the two counties where clouds hid the harvest ---------------------------
+def landsat_pair():
+    rows = N.LANDSAT_PAIR
+    fig = body()
+    fig.text(0.25, 0.875, "Corn area we could see", fontsize=16, fontweight="bold", color=INK, va="center")
+    fig.text(0.6, 0.875, "Our silage figure, against USDA's", fontsize=16, fontweight="bold", color=INK, va="center")
+    axl = fig.add_axes([0.25, 0.2, 0.27, 0.62])
+    axr = fig.add_axes([0.6, 0.2, 0.38, 0.62])
+    D.clean(axl, grid=None)
+    D.clean(axr)
+    n = len(rows)
+    for i, r in enumerate(rows):
+        yc = (n - 1 - i) * 2.2
+        one, two = r["seen"]
+        axl.barh(yc + 0.32, one, height=0.52, color=GREY, zorder=3)
+        axl.barh(yc - 0.32, two, height=0.52, color=BLUE, zorder=3)
+        axl.text(one + 2.5, yc + 0.32, f"{one}%", va="center", fontsize=17, color=INK)
+        axl.text(two - 2.5, yc - 0.32, f"{two}%", va="center", ha="right", fontsize=17, fontweight="bold", color="#ffffff", zorder=4)
+        axl.text(-5, yc + 0.3, r["name"], ha="right", va="center", fontsize=16, fontweight="bold", color=INK)
+        axl.text(-5, yc - 0.38, r["when"], ha="right", va="center", fontsize=11.5, color=INK2, linespacing=1.3)
+        before, after = r["figure"]
+        axr.annotate("", xy=(after, yc), xytext=(before, yc), zorder=3,
+                     arrowprops=dict(arrowstyle="-|>", color=BLUE, lw=2.8, mutation_scale=22, shrinkA=8, shrinkB=8))
+        axr.scatter([before], [yc], s=140, facecolors=BG, edgecolors=GREY, linewidths=2.6, zorder=4)
+        axr.scatter([after], [yc], s=190, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
+        axr.scatter([r["usda"]], [yc], s=160, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
+        axr.text(0.8, yc + 0.62, f"{before}%  →  {after}%", fontsize=18, fontweight="bold", color=BLUE, va="center")
+        axr.text(24.5, yc + 0.62, f"USDA says {r['usda']}%", fontsize=15, color=INK, va="center")
+    for ax, top in ((axl, 100), (axr, 54)):
+        ax.set_xlim(0, top)
+        ax.set_ylim(-1.1, (n - 1) * 2.2 + 1.1)
+        ax.set_yticks([])
+    axl.set_xticks([0, 50, 100])
+    axl.set_xticklabels(["0%", "50%", "100%"])
+    axr.set_xticks([0, 10, 20, 30, 40, 50])
+    axr.set_xticklabels(["0%", "10%", "20%", "30%", "40%", "50%"])
+    handles = [
+        plt.Line2D([], [], marker="s", ls="", markersize=11, markerfacecolor=GREY, markeredgecolor=GREY, label="one satellite (Sentinel-2)"),
+        plt.Line2D([], [], marker="s", ls="", markersize=11, markerfacecolor=BLUE, markeredgecolor=BLUE,
+                   label="two satellites (Sentinel-2 and Landsat)"),
+        plt.Line2D([], [], marker="D", ls="", markersize=10, markerfacecolor=INK, markeredgecolor=BG, label="what USDA reports"),
+    ]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.24, 1.0), ncol=3, frameon=False, fontsize=13,
+               labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
+    nj = rows[0]["not_judged"]
+    fig.text(0.02, 0.02, "Checks on two counties we had already seen, so not tests. "
+             f"In Kent the fields we could not judge fell from {nj[0]}% to {nj[1]}% of the area.\n"
+             "In Marathon the rest of the gap is not cloud: silage in the north is cut after the crop has yellowed, "
+             "and that needs labelled northern fields.", fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
+    put(fig, "s_landsat")
+
+
 # --- starting from USDA's last figure: which way did the pictures move it? --------------------------
 def history_update():
     def pct(v):
@@ -269,8 +321,8 @@ def history_update():
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.19, 1.0), ncol=2, frameon=False, fontsize=13,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
     m, st = N.HISTORY_UPDATE_MISS, N.HISTORY_UPDATE_STATE
-    fig.text(0.02, 0.02, "Eight counties we had already seen while tuning, so this is not a test yet. USDA's last figure: the 2017 Census "
-             "(in Wisconsin, the 2022 survey).\n"
+    fig.text(0.02, 0.02, "Eight counties we had already seen while tuning, so this is not a test yet. One satellite (Sentinel-2) only. "
+             "USDA's last figure: the 2017 Census (in Wisconsin, the 2022 survey).\n"
              f"Mean miss: last figure alone {m['last']} points, updated {m['updated']}; without Marathon {m['last_no_marathon']} and "
              f"{m['updated_no_marathon']}. The satellite on its own: {m['satellite']}.\n"
              f"For the one state tried, {st['name']}, the update moved away from the truth ({st['last']}% to {st['updated']}%, true {st['true']}%).",
@@ -548,6 +600,7 @@ if __name__ == "__main__":
     D.state_2025()
     places()
     scoreboard()
+    landsat_pair()
     history_update()
     marathon_gap()
     transfer_summary()

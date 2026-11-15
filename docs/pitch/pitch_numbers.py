@@ -316,3 +316,14 @@ PLACES_TO_OPEN = [
     ("Pennsylvania 2025", 32.8, None, None),
     ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
 ]
+
+# The two counties where clouds hid the harvest, with Sentinel-2 alone and with Landsat 8 and 9
+# added: development checks on places already seen, not tests. Kent 2022: log 00:23 (seen 9 -> 94 %,
+# not judged 22 -> 4 % of area, figure 12.9 -> 7.3 %, Census 5.5 %). Marathon 2023: log 23:59 and
+# 00:18 (seen 29 -> 83 %, figure 4.3 -> 13.8 %, survey 49.9 %).
+LANDSAT_PAIR = [
+    {"name": "Kent, Maryland", "when": "2022: a cloudy fortnight\nin September", "seen": (9, 94), "figure": (12.9, 7.3),
+     "usda": 5.5, "not_judged": (22, 4)},
+    {"name": "Marathon, Wisconsin", "when": "2023: 25 cloudy days over\nthe silage harvest", "seen": (29, 83), "figure": (4.3, 13.8),
+     "usda": 49.9},
+]

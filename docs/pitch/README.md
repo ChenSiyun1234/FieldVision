@@ -102,10 +102,12 @@ US labels, so learn from European farm registries (the new data source). 3 The s
 pictures: silage is cut green and wet (the harvest signal). 4 How it works in three plain steps,
 and the rule that a hidden harvest is not guessed. 5 The test on USDA's 44 labelled fields, with
 the rubric's four measures. 6 The scoreboard: nine places against USDA, close where silage is
-rare, a miss where it is everywhere. 7 Starting from USDA's last figure, the pictures move six of
-eight counties closer to the truth (the value; counties seen while tuning, so not a test).
-8 What went wrong on the way and what it taught us (the process). 9 Where the model sits in the
-team's system. 10 What USDA gets today, what comes next, and the closing line. After a divider
+rare, a miss where it is everywhere. 7 A second satellite, Landsat, in the two counties where
+clouds hid the harvest: both figures move towards USDA's (the second new data source). 8 Starting
+from USDA's last figure, the pictures move six of eight counties closer to the truth (the value;
+counties seen while tuning, so not a test). 9 What went wrong on the way and what it taught us
+(the process). 10 Where the model sits in the team's system. 11 What USDA gets today, what comes
+next, and the closing line. After a divider
 come the slides that go deeper; every slide stands on its own, so any of them can be lifted into
 another deck. The notes of slide 1 end with a one-minute spoken version of the whole story.
 

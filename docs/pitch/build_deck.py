@@ -141,7 +141,7 @@ def build(out):
     half = (FULL - 0.4) / 2
     third = (FULL - 2 * 0.3) / 3
 
-    # ===== the story, ten slides ======================================================================
+    # ===== the story, eleven slides ===================================================================
 
     # 1  the question ----------------------------------------------------------------------------
     s = new_slide(prs, "Can you tell what happened in a cornfield from space?", size=38, top=0.7, height=1.3)
@@ -261,7 +261,16 @@ def build(out):
              "We are close where silage is rare, and we miss the county where silage is everywhere.",
           "然后我们想办法把它考倒：拿九个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；青贮最多的那个县，我们读错了。")
 
-    # 7  starting from USDA's last figure ---------------------------------------------------------------------
+    # 7  a second satellite for the cloudy counties --------------------------------------------------------------
+    s = new_slide(prs, "A second satellite sees past the clouds: in both cloudy counties our figure moved towards USDA's")
+    body_picture(s, "s_landsat.png")
+    notes(s, "In two counties, clouds hid the harvest. So we added a second satellite, Landsat. "
+             "In Kent we now see 94 percent of the corn, and our figure moved from 12.9 to 7.3 where USDA says 5.5. "
+             "In Marathon it moved from 4 to 14 where USDA says 50, so that one is only partly fixed.",
+          "有两个县的收割期被云挡住了，所以我们加了第二颗卫星 Landsat。在 Kent 县，现在能看到 94% 的玉米，"
+          "读数从 12.9% 降到 7.3%，美国农业部是 5.5%。在 Marathon 县，读数从 4% 升到 14%，美国农业部是 50%，所以那里只修好了一部分。")
+
+    # 8  starting from USDA's last figure ---------------------------------------------------------------------
     s = new_slide(prs, "Start from USDA's last figure: our pictures move six of eight counties closer to the truth")
     body_picture(s, "s_update.png")
     notes(s, "USDA already has an older number for every county. We start from it and let the pictures update it, field by field. "
@@ -345,7 +354,7 @@ def build(out):
          "Free public data, no US labels, about a minute per county on a laptop.", size=16, color=INK, spacing=1.08)
     card(s, MX + half + 0.4, 1.5, half, 3.55)
     text(s, MX + half + 0.8, 1.7, half - 0.8, 0.5, "Next", size=24, bold=True, color=BLUE)
-    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "The second satellite, Landsat, everywhere: it brought a cloud-hidden county back into view.\n\n"
+    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "The second satellite, Landsat, everywhere: it brought two cloud-hidden counties back into view.\n\n"
          "Labelled fields from northern dairy country, where silage is cut later than in Europe.\n\n"
          "Count the corn sown after a small grain.", size=16, color=INK, spacing=1.08)
     card(s, MX, 5.3, FULL, 1.6, fill=BLUE, line=None)
@@ -360,7 +369,7 @@ def build(out):
     # ===== more detail: each slide stands on its own ====================================================================
 
     s = new_slide(prs, "The slides after this one go deeper. Each stands on its own", size=34, top=2.6, height=1.4)
-    text(s, MX, 4.2, FULL, 1.2, "Slides 1 to 10 tell the story in order. Take any of the slides that follow into your own deck: "
+    text(s, MX, 4.2, FULL, 1.2, "Slides 1 to 11 tell the story in order. Take any of the slides that follow into your own deck: "
          "each has its point in the title and one picture.", size=20, spacing=1.2)
     notes(s, "This slide only separates the story from the detail. Do not show it.",
           "这一页只是把主线和细节分开，演讲时不要放。")
