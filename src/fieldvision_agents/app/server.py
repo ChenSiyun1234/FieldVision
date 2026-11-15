@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 from ..settings import REPO
 from . import chat as chat_agent
-from . import dairy, dashboard, service
+from . import dairy, dashboard, geo, service
 
 STATIC = Path(__file__).with_name("static")
 VENDOR = REPO / "app" / "vendor"                     # Leaflet, shared with the field map demo
@@ -86,6 +86,18 @@ def status():
 @app.get("/api/counties")
 def counties():
     return service.counties()
+
+
+# --- US map: states, their counties, one county's data -------------------------------
+
+@app.get("/api/geo/state/{state}")
+def geo_state(state: str):
+    return _guard(geo.state_summary, state)
+
+
+@app.get("/api/geo/county/{fips}")
+def geo_county(fips: str):
+    return _guard(geo.county_detail, fips)
 
 
 # --- chat (both roles) -----------------------------------------------------------

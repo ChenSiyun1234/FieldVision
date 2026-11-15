@@ -129,6 +129,17 @@ def test_dairy_finder_on_local_data():
     assert len(r["map"]["features"]) == len(r["fields"])
 
 
+def test_us_map_data_for_states_and_counties():
+    from . import geo
+    md = geo.state_summary("24")
+    assert md["name"] == "Maryland" and md["nass_2025"]["silage"] == 40000 and "24021" in md["counties"]
+    assert all(h["source"] == "SURVEY" for h in md["history"])
+    fr = geo.county_detail("24021")
+    census = {h["year"]: h["silage_share_pct"] for h in fr["history"] if h["source"] == "CENSUS"}
+    assert census == {2012: 32.1, 2017: 24.3, 2022: 19.6}           # withheld duplicate rows ignored
+    assert geo.county_detail("46059")["seasons"] == []                 # USDA data for any county, ours where we have it
+
+
 def test_web_api_serves_the_page_and_status():
     try:
         from fastapi.testclient import TestClient

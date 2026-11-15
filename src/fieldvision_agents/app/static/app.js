@@ -3,11 +3,12 @@
 import { renderCard } from "./cards.js";
 import { dairyMapPage, dashboardPage, runPage, runsPage } from "./pages.js";
 import { $, STATUS, api, el, fmt, mdEl, store } from "./ui.js";
+import { usMapPage } from "./usmap.js";
 
 const ROLES = {
-  dairy: { name: "Dairy owner", tabs: [["chat", "Ask"], ["map", "Silage map"]],
+  dairy: { name: "Dairy owner", tabs: [["chat", "Ask"], ["map", "Silage map"], ["usmap", "US map"]],
     intro: "Ask where you can still buy standing corn for silage, how much, how far and roughly what it costs delivered. Set your dairy on the left." },
-  usda: { name: "USDA analyst", tabs: [["chat", "Ask"], ["runs", "Runs"], ["dashboard", "Dashboard"]],
+  usda: { name: "USDA analyst", tabs: [["chat", "Ask"], ["runs", "Runs"], ["dashboard", "Dashboard"], ["usmap", "US map"]],
     intro: "Ask the agent to run a county, explain how sure it is, write the report, plan field visits, compare our silage estimates with USDA's, or walk through corn supply and price." },
 };
 
@@ -36,6 +37,7 @@ const app = {
   setDairyLocation(lat, lon) { this.profile = { ...this.profile, mode: "location", lat: +lat.toFixed(5), lon: +lon.toFixed(5) }; this.save(); this.refreshSide(); },
   async openRun(runId) { this.ctx.run_id = runId; this.tab = "runs"; this.renderTabs(); await this.show(runPage(await api(`/api/runs/${runId}`), this)); this.refreshSide(); },
   openMap(r) { this.tab = "map"; this.renderTabs(); this.show(dairyMapPage(this, r)); },
+  goTab(id) { this.tab = id; this.renderTabs(); showTab(); },
 };
 
 // --- shell -------------------------------------------------------------------------
@@ -74,6 +76,7 @@ async function showTab() {
     if (app.tab === "map") return app.show(dairyMapPage(app, app.lastSilage));
     if (app.tab === "runs") return app.show(app.ctx.run_id ? runPage(await api(`/api/runs/${app.ctx.run_id}`), app) : runsPage(app));
     if (app.tab === "dashboard") return app.show(dashboardPage(app));
+    if (app.tab === "usmap") return app.show(usMapPage(app));
   } catch (e) { app.show(el("div", { class: "page" }, el("p", { class: "err" }, e.message))); }
 }
 
@@ -92,7 +95,9 @@ app.refreshSide = async () => {
   const mode = el("div", { class: "seg", role: "group", "aria-label": "Agent" },
     ["nemotron", "offline"].map((m) => el("button", { "aria-pressed": String(app.mode === m), disabled: m === "nemotron" && !online,
       onclick: () => { app.mode = m; app.refreshSide(); } }, m === "nemotron" ? "Nemotron" : "Offline rules")));
-  const blocks = [el("div", {}, el("h3", {}, ROLES[app.role].name), el("label", {}, "County and season", season), el("div", {}, el("span", { class: "k" }, "Agent"), mode))];
+  const pickOnMap = el("button", { class: "small", style: "width:100%;margin:-4px 0 12px", onclick: () => app.goTab("usmap") }, "🗺 Pick on the US map");
+  const blocks = [el("div", {}, el("h3", {}, ROLES[app.role].name), el("label", {}, "County and season", season), pickOnMap,
+    el("div", {}, el("span", { class: "k" }, "Agent"), mode))];
 
   if (app.role === "dairy") {
     const p = app.profile, y = app.ctx.year;
