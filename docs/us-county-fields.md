@@ -210,6 +210,28 @@ UTM zone 16 (EPSG:32616). The Colab bundle for the field files is ready, not sta
 `C:\t\fv\colab\fields_26_2022\` (notebook, code at 62d26e2, Census table); its code was checked by
 rebuilding the Kent field file from the Maryland subset byte for byte.
 
+## 2025 statewide samples (the organisers' target: NASS 2025 state figures)
+
+Boundaries for 2025: the CSB 2018-2025 rev23 release is built from the 2018-2025 CDLs, so every
+polygon carries `CDL2025`, its 2025 majority class. Frame = every polygon of the state with
+`CDL2025` corn (1, stratum `corn`) or a small grain followed by corn (225, 226, 228, 237, stratum
+`dblcrop_sg_corn`), made with `from_file` (cnty_fips, county_name kept) and completed by
+`scripts/state_sample.py`, which adds `county_fips`, `stratum` and draws whole extractor read blocks
+by simple random sampling with `numpy.random.default_rng(42)`, split into equal parts. Each drawn
+read block's id becomes the fields' `block_id` (10 km id kept in `block10_id`), so the extractor
+forms exactly the drawn blocks. Every read block has inclusion probability n/N, so a state total is
+N/n times the sum over the drawn blocks. `draw.json` records the draw by stratum and county;
+`state_acres.json` gives the frame acres by class and county beside the NASS target.
+
+Maryland (`C:\t\fv\data\labels\us_24_2025\`, area and grid in UTM 18N): frame 22,273 fields,
+494,947 acres (corn 21,058 / 477,891; double crop 1,215 / 17,056); 150 of 838 read blocks drawn
+(probability 0.179): 3,929 fields, 84,195 acres (17.0 %); runs `us_24_2025_s1`-`s3`, 50 blocks each.
+Class-1 acres are 1.062 times the NASS 2025 total (410,000 grain + 40,000 silage, 8.9 % silage).
+
+Pennsylvania and Wisconsin: `C:\t\fv\colab\state_frames_2025\` makes both frames and draws on Colab
+(area and grid in EPSG:5070, because each state spans two UTM zones) and returns only the part field
+files and the two JSON files; extraction bundles follow on the laptop as for Maryland.
+
 ## 2023 test counties chosen by the team (Wisconsin, Pennsylvania)
 
 The user asked for the teammates' counties (branch `dataset-analysis`, `src/config.py`) instead of
