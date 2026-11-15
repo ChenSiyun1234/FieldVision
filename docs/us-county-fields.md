@@ -422,3 +422,8 @@ Not finished:
   (CDL2025 corn and small-grain/corn strata, EPSG:5070, 150 read blocks, seed 42, three parts of 50). Boundaries
   notebook `C:\t\fv\colab\state_frames_2025_mi_ny\` handed to the Colab session; the six extraction bundles
   `us_26_2025_s1..s3`, `us_36_2025_s1..s3` follow when the frames return. Untouched test places.
+- 02:40 PT: Michigan and New York 2025 frames back from Colab and unzipped to `C:\t\fv\data\labels\us_26_2025\`
+  and `us_36_2025\`; six extraction bundles built and handed to the Colab session (Michigan first). Michigan: 150
+  of 3,374 read blocks, 4,845 fields, 116,492 acres (4.4 % of the frame); 4 drawn blocks touch Branch and 6 touch
+  Gratiot (the 2022 development counties). New York: 150 of 2,806 read blocks, 3,743 fields, 65,265 acres (5.7 %);
+  the small-grain/corn double crop is 3.5 % of New York's frame.
