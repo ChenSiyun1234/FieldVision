@@ -55,7 +55,7 @@ def shares(calls, area, ok):
     return by_n, by_area
 
 
-def failure_checks(ref_p, ref_a, tgt_p, tgt_a, src_p, src_y, est, alphas=(0.05, 0.10, 0.20, 0.30)):
+def failure_checks(ref_p, ref_a, tgt_p, tgt_a, src_p, src_y, est, src_g=None, alphas=(0.05, 0.10, 0.20, 0.30)):
     """Signs that the reference county's grain does not stand in for the target's grain.
 
     alpha_sweep  adjusted area share at several alphas; if local grain behaves like the
@@ -70,7 +70,8 @@ def failure_checks(ref_p, ref_a, tgt_p, tgt_a, src_p, src_y, est, alphas=(0.05, 
     from .local import local_share
     f = np.isfinite(src_p)
     sp, sy = src_p[f], np.asarray(src_y)[f]
-    sweep = {f"{a:.2f}": local_share(ref_p, sp, sy, tgt_p, a, ref_a, tgt_a) for a in alphas}
+    sg = None if src_g is None else np.asarray(src_g)[f]
+    sweep = {f"{a:.2f}": local_share(ref_p, sp, sy, tgt_p, a, ref_a, tgt_a, src_g=sg) for a in alphas}
     med = float(np.median(ref_p))
     ref_below = float(np.sum(ref_a * (ref_p < med)) / np.sum(ref_a))
     sil_below = float((sp[sy == 1] < np.median(sp[sy == 0])).mean())
@@ -113,7 +114,8 @@ def main(argv=None):
 
     ok_ref = ~ref["low_evidence"].astype(bool).to_numpy() & np.isfinite(p_ref)
     ok_tgt = ~tgt["low_evidence"].astype(bool).to_numpy() & np.isfinite(p_tgt)
-    lt = LocalThreshold(args.alpha).fit(p_ref[ok_ref], s_src, y_src)
+    src_g = (ms["country"].astype(str) + ms["year"].astype(str)).to_numpy()
+    lt = LocalThreshold(args.alpha).fit(p_ref[ok_ref], s_src, y_src, src_g)
     a_ref, a_tgt = ref["area_ha"].to_numpy(float), tgt["area_ha"].to_numpy(float)
     ref_calls, tgt_calls = lt.calls(p_ref), lt.calls(p_tgt)
     fixed_ref, fixed_tgt = (p_ref >= 0.5).astype(float), (p_tgt >= 0.5).astype(float)
@@ -142,13 +144,13 @@ def main(argv=None):
                    "distance_flag_share_n_area": shares(d_tgt, a_tgt, ok_tgt)},
     }
     res["target"]["diagnostics"] = failure_checks(p_ref[ok_ref], a_ref[ok_ref], p_tgt[ok_tgt], a_tgt[ok_tgt],
-                                                  s_src, y_src, res["target"]["local_adjusted_share_area"])
+                                                  s_src, y_src, res["target"]["local_adjusted_share_area"], src_g)
     from .local import stratified_share
     from .local_eval import stratum
     s_s = stratum(Xs)
     res["target"]["stratified_adjusted_share_area"] = stratified_share(
         p_ref[ok_ref], stratum(ref)[ok_ref], s_src, y_src, s_s, p_tgt[ok_tgt], stratum(tgt)[ok_tgt],
-        args.alpha, a_ref[ok_ref], a_tgt[ok_tgt])
+        args.alpha, a_ref[ok_ref], a_tgt[ok_tgt], src_g=src_g)
     res["target"]["stratum_area_share"] = {k: float(a_tgt[ok_tgt][stratum(tgt)[ok_tgt] == k].sum()
                                                     / a_tgt[ok_tgt].sum()) for k in ("tight", "loose")}
     res["reference"]["stratum_area_share"] = {k: float(a_ref[ok_ref][stratum(ref)[ok_ref] == k].sum()

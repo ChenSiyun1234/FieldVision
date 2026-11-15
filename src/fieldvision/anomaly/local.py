@@ -26,11 +26,34 @@ import pandas as pd
 DEFAULT_ALPHA = 0.10
 
 
-def matched_tpr(source_scores, source_y, alpha=DEFAULT_ALPHA):
-    """Share of source silage above the score that flags `alpha` of source grain."""
+def matched_tpr(source_scores, source_y, alpha=DEFAULT_ALPHA, groups=None, min_n=30):
+    """Share of source silage above the score that flags `alpha` of source grain.
+
+    groups  optional source domain per row (e.g. country + year). The local threshold is a
+            quantile inside one county, so the recall that goes with it must also be measured
+            inside one domain: per group (both classes with at least `min_n` scored fields),
+            then averaged weighted by the group's scored fields. Pooling domains whose scores
+            sit at different levels gives the recall at a pooled quantile, which is not the
+            within-domain recall (with source countries of different calibration it can be far
+            off). Returns (threshold, tpr); the threshold is NaN when grouped.
+    """
     s = np.asarray(source_scores, dtype=float)
     y = np.asarray(source_y).astype(int)
     ok = np.isfinite(s)
+    if groups is not None:
+        g = np.asarray(groups)[ok]
+        s, y = s[ok], y[ok]
+        tprs, ws = [], []
+        for k in np.unique(g):
+            m = g == k
+            if (y[m] == 0).sum() < min_n or (y[m] == 1).sum() < min_n:
+                continue
+            t_k = float(np.quantile(s[m & (y == 0)], 1 - alpha))
+            tprs.append(float((s[m & (y == 1)] >= t_k).mean()))
+            ws.append(m.sum())
+        if not tprs:
+            raise ValueError("no source group has both classes")
+        return float("nan"), float(np.average(tprs, weights=ws))
     s, y = s[ok], y[ok]
     if not ((y == 0).any() and (y == 1).any()):
         raise ValueError("source needs both classes")
@@ -56,14 +79,14 @@ class LocalThreshold:
     def __init__(self, alpha=DEFAULT_ALPHA):
         self.alpha = alpha
 
-    def fit(self, reference_scores, source_scores, source_y):
+    def fit(self, reference_scores, source_scores, source_y, source_groups=None):
         r = np.asarray(reference_scores, dtype=float)
         r = r[np.isfinite(r)]
         if len(r) < 50:
             raise ValueError(f"reference has {len(r)} scored fields; need at least 50")
         self.threshold = float(np.quantile(r, 1 - self.alpha))
         self.reference_flag_rate = float((r >= self.threshold).mean())
-        self.source_threshold, self.tpr = matched_tpr(source_scores, source_y, self.alpha)
+        self.source_threshold, self.tpr = matched_tpr(source_scores, source_y, self.alpha, source_groups)
         self.n_reference = int(len(r))
         return self
 
@@ -92,7 +115,8 @@ def _wmean(x, w):
     return float(np.sum(x[ok] * w[ok]) / np.sum(w[ok])) if ok.any() and np.sum(w[ok]) > 0 else float("nan")
 
 
-def local_share(ref_p, src_p, src_y, tgt_p, alpha=DEFAULT_ALPHA, ref_w=None, tgt_w=None, adjust=True):
+def local_share(ref_p, src_p, src_y, tgt_p, alpha=DEFAULT_ALPHA, ref_w=None, tgt_w=None, adjust=True,
+                src_g=None):
     """One county-wide local threshold; shares weighted by `*_w` (e.g. area) when given."""
     ref_p = np.asarray(ref_p, dtype=float)
     t = float(np.nanquantile(ref_p, 1 - alpha))
@@ -100,12 +124,12 @@ def local_share(ref_p, src_p, src_y, tgt_p, alpha=DEFAULT_ALPHA, ref_w=None, tgt
     flag = _wmean(np.asarray(tgt_p, dtype=float) >= t, tgt_w)
     if not adjust:
         return flag
-    _, tpr = matched_tpr(src_p, src_y, alpha)
+    _, tpr = matched_tpr(src_p, src_y, alpha, src_g)
     return adjusted_share(flag, ref_flag, tpr)
 
 
 def stratified_share(ref_p, ref_s, src_p, src_y, src_s, tgt_p, tgt_s, alpha=DEFAULT_ALPHA,
-                     ref_w=None, tgt_w=None, min_ref=30):
+                     ref_w=None, tgt_w=None, min_ref=30, src_g=None):
     """Local threshold per stratum of evidence quality (threshold, reference flagged share and
     matched recall all within the stratum), combined by the target's weight per stratum.
     A stratum with fewer than `min_ref` reference fields uses the county-wide threshold."""
@@ -121,7 +145,8 @@ def stratified_share(ref_p, ref_s, src_p, src_y, src_s, tgt_p, tgt_s, alpha=DEFA
         fin = np.isfinite(src_p)
         if rk.sum() < min_ref or (fin & sk & (src_y == 0)).sum() < min_ref or (fin & sk & (src_y == 1)).sum() < min_ref:
             rk, sk = np.ones(len(ref_p), bool), np.ones(len(src_p), bool)
-        e = local_share(ref_p[rk], src_p[sk], src_y[sk], tgt_p[tk], alpha, rw[rk], tw[tk])
+        e = local_share(ref_p[rk], src_p[sk], src_y[sk], tgt_p[tk], alpha, rw[rk], tw[tk],
+                        src_g=None if src_g is None else np.asarray(src_g)[sk])
         if not np.isfinite(e):
             return float("nan")
         est += e * tw[tk].sum()

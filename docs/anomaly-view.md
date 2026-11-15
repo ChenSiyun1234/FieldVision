@@ -240,6 +240,22 @@ on Frederick or on any Census number.
   true grain false-positive rate is slightly below the reference's flagged share; we do
   not correct for it, because that would use the Census number.
 
+**Recipe as amended before the full Frederick county was scored** (committed before
+it was read; both changes come from European data and from how the local threshold is
+defined, not from Frederick):
+
+- matched recall from source fields that are not low evidence (the correction above);
+- matched recall measured inside each source domain (country-year), then averaged by
+  the domain's number of scored fields. The local threshold is a quantile inside one
+  county, so its recall must be measured inside one domain too; a pooled quantile over
+  domains whose scores sit at different levels is not any domain's 10% point. For
+  Maryland the source is still Austria 2022-2024 only, so the domains are the three years.
+- reported side by side: the adjusted share (as fixed at first) and the plain locally
+  flagged share, since the three-country pseudo-counties below favour the plain share;
+  plus the two failure checks. A county figure is read as a number only if both checks
+  are inside their Austrian 95% range (alpha drift below about 0.25, lower-tail ratio
+  between about 0.6 and 1.3 for references of a few hundred fields).
+
 Self-check on the reference itself (by construction): the classifier at 0.5 calls
 14.9% of Queen Anne's fields (18.1% of area) silage; the local threshold flags 10.1% of
 fields (11.5% of area) and the adjusted share is 0. These differ from the modelling

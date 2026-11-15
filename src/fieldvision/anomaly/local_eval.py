@@ -28,7 +28,7 @@ from .local import DEFAULT_ALPHA, emulate_counties
 
 META = ["field_id", "block_id", "country", "year", "y", "area_ha"]
 SHARES = (0.01, 0.02, 0.05, 0.10, 0.20, 0.30, 0.50)
-ESTIMATORS = ("counted", "adj_eu", "local", "local_flagged", "local_strat")
+ESTIMATORS = ("counted", "adj_eu", "local", "local_pooled", "local_flagged", "local_strat")
 
 
 def stratum(X):
@@ -102,7 +102,7 @@ def county_estimates(c, ref, src, alpha=DEFAULT_ALPHA):
     """All estimators of the area share for one target county `c` (frame y, p, area, stratum,
     abstain), with reference county `ref` and source out-of-fold (p, y, stratum)."""
     from .local import local_share, stratified_share
-    sp, sy, ss = src
+    sp, sy, ss, sg = src
     ok, rok = ~c["abstain"].to_numpy(), ~ref["abstain"].to_numpy()
     p, a, s = c["p"].to_numpy()[ok], c["area"].to_numpy()[ok], c["stratum"].to_numpy()[ok]
     rp, ra, rs = ref["p"].to_numpy()[rok], ref["area"].to_numpy()[rok], ref["stratum"].to_numpy()[rok]
@@ -112,9 +112,10 @@ def county_estimates(c, ref, src, alpha=DEFAULT_ALPHA):
     from .local import adjusted_share
     return {"truth": float(np.sum(c["area"] * c["y"]) / np.sum(c["area"])),
             "counted": counted, "adj_eu": adjusted_share(counted, fpr05, tpr05),
-            "local": local_share(rp, sp, sy, p, alpha, ra, a),
+            "local": local_share(rp, sp, sy, p, alpha, ra, a, src_g=sg),
+            "local_pooled": local_share(rp, sp, sy, p, alpha, ra, a),
             "local_flagged": local_share(rp, sp, sy, p, alpha, ra, a, adjust=False),
-            "local_strat": stratified_share(rp, rs, sp, sy, ss, p, s, alpha, ra, a)}
+            "local_strat": stratified_share(rp, rs, sp, sy, ss, p, s, alpha, ra, a, src_g=sg)}
 
 
 def pseudo_counties(pool, src, construction="random", n=250, n_ref=250, ref_share=0.01, reps=200,
@@ -173,7 +174,9 @@ def pseudo_main(argv=None):
     allsum = []
     for name, mask in groups:
         s_src, y_src, tgt = source_and_target_scores(X, meta, mask, args.seed)
-        src = (s_src, y_src, meta.loc[~mask, "stratum"].to_numpy())
+        src_meta = meta.loc[~mask]
+        src = (s_src, y_src, src_meta["stratum"].to_numpy(),
+               (src_meta["country"].astype(str) + src_meta["year"].astype(str)).to_numpy())
         pool = pd.DataFrame({"y": tgt["y"].to_numpy(int), "p": tgt["p"].to_numpy(),
                              "area": tgt["area_ha"].to_numpy(float), "stratum": tgt["stratum"].to_numpy(),
                              "abstain": tgt["low_evidence"].astype(bool).to_numpy(),
