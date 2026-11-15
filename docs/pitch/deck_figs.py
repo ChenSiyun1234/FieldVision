@@ -152,7 +152,7 @@ def scoreboard():
 
     zones = [("Little silage", "we are close", lambda u: u < 8),
              ("Some silage", "off by 4 to 6 points", lambda u: 8 <= u < 40),
-             ("Mostly silage", "we miss it", lambda u: u >= 40)]
+             ("Mostly silage", "we miss it: cloud\nhid the harvest", lambda u: u >= 40)]
     rows = sorted(N.PLACES, key=lambda r: r[2])
     fig = body()
     ax = fig.add_axes([0.36, 0.13, 0.63, 0.8])
@@ -204,6 +204,39 @@ def scoreboard():
     fig.text(0.02, 0.02, "Share of the corn area that is silage. The four Maryland counties (2022) were used to tune the method; "
              "the other five places were tests, each run once.", fontsize=11.5, color=INK2, va="bottom")
     put(fig, "s06_scoreboard")
+
+
+# --- Marathon: the silage weeks were the cloudy weeks ---------------------------------------------
+def marathon_gap():
+    g = N.MARATHON_GAP
+    fig = plt.figure(figsize=(8.6, 5.0), dpi=200, facecolor=BG)
+    ax = fig.add_axes([0.09, 0.12, 0.89, 0.66])
+    D.clean(ax, grid="y")
+    w = 0.36
+    xs = range(len(g["months"]))
+    sep = g["months"].index("Sep")
+    ax.axvspan(sep - 0.46, sep + 1.1, color=GRID, alpha=0.55, zorder=0)
+    ax.text(sep + 0.32, 7.3, "silage is cut here", ha="center", va="center", color=INK2, fontsize=12)
+    ax.bar([x - w / 2 - 0.02 for x in xs], g["marathon"], width=w, color=BLUE, zorder=3)
+    ax.bar([x + w / 2 + 0.02 for x in xs], g["racine"], width=w, color=GREY, zorder=3)
+    for x, (a, b) in enumerate(zip(g["marathon"], g["racine"])):
+        if g["months"][x] in ("Aug", "Sep", "Oct"):
+            ax.text(x - w / 2 - 0.02, a + 0.15, f"{a:.1f}", ha="center", va="bottom", color=INK, fontsize=13,
+                    fontweight="bold" if x == sep else "normal")
+            ax.text(x + w / 2 + 0.02, b + 0.15, f"{b:.1f}", ha="center", va="bottom", color=INK2, fontsize=12)
+    ax.set_xticks(list(xs))
+    ax.set_xticklabels(g["months"], color=INK, fontsize=12.5)
+    ax.set_ylim(0, 7.9)
+    ax.set_yticks([0, 2, 4, 6])
+    ax.tick_params(axis="y", labelsize=12, colors=INK2)
+    ax.set_ylabel("clear looks per field in the month", color=INK2, fontsize=12)
+    handles = [
+        plt.Rectangle((0, 0), 1, 1, color=BLUE, label="Marathon County (half its corn is silage)"),
+        plt.Rectangle((0, 0), 1, 1, color=GREY, label="Racine County (almost all grain)"),
+    ]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.07, 0.99), ncol=1, frameon=False, fontsize=12.5,
+               labelcolor=INK2, handlelength=1.1, handletextpad=0.5)
+    put(fig, "marathon_gap")
 
 
 # --- slide 7: why simple won ---------------------------------------------------------------------
@@ -439,6 +472,7 @@ if __name__ == "__main__":
     D.state_2025()
     places()
     scoreboard()
+    marathon_gap()
     transfer_summary()
     gap_evidence()
     maryland_test()

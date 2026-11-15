@@ -250,3 +250,22 @@ CONFUSION = {"silage_found": 11, "silage_missed": 1, "grain_called_silage": 1, "
 # classified and added up between 19:07 and 19:10 (log 19:07, 19:11), on a laptop, with the
 # satellite series already extracted.
 RESPONSE_TIME = {"fields": 3_390 + 3_463, "counties": 2, "minutes": 3}
+
+# Why Marathon read low. Source: the coordinator's message of 14 Nov (after 23:15), measured by
+# the modelling work and by the coordinator, who agree; the monthly counts are those of the
+# chart script marathon_gap_chart.py (clear looks per corn field by month, a look counted when at
+# least 60 % of the field is clear). Not yet a row of the access log when this was written.
+# One cloudy spell, 20 September to 15 October 2023, lay over the silage harvest: 39 % of
+# Marathon's fields were cut inside that 25-day gap and could not be judged; the fields seen
+# clearly on both sides of the cut are the late harvest, which is grain. The "not seen" measure
+# missed it because it placed fields by the first picture after the cut.
+MARATHON_GAP = {
+    "days": 25, "start": "20 September", "end": "15 October", "fields_cut_inside": 39,
+    "months": ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"],
+    "marathon": [2.1, 5.4, 6.6, 3.8, 3.8, 1.1, 2.6, 5.9],
+    "racine": [1.2, 6.0, 6.2, 6.0, 5.2, 4.0, 4.6, 3.0],
+}
+# A safety net, not a test (same message): mean miss on the eight counties already seen, against
+# the year-matched official figure. The land-use figure was fitted on the 2022 Census, which
+# includes these counties.
+SAFETY_NET = {"counties": 8, "satellite": 8.6, "land_use": 8.2, "both": 6.8}

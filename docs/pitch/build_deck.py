@@ -1,4 +1,4 @@
-"""Builds the slide deck (PowerPoint, 16:9): a nine-slide story for the judges, then backup slides.
+"""Builds the slide deck (PowerPoint, 16:9): a nine-slide story for the judges, then slides that go deeper.
 
     python docs/pitch/deck_figs.py --pictures <folder with the field picture strips> --maps <folder with the county maps>
     python docs/pitch/build_deck.py --out <folder>/FieldVision_model_story.pptx
@@ -116,6 +116,25 @@ def notes(slide, english, chinese):
     slide.notes_slide.notes_text_frame.text = english + "\n\n" + chinese
 
 
+ONE_MINUTE = """
+
+=== ONE MINUTE: the whole model story, to say as it is ===
+1. USDA asked: from space, was a cornfield chopped for silage, or combined for grain?
+2. The US has almost no labelled fields. So we trained on 8,000 fields from farm registries in Europe.
+3. Our model had never seen an American field. At Beltsville it got 42 of USDA's 44 labelled fields right.
+4. In counties where silage is rare, our numbers are close to USDA's.
+5. We missed one dairy county in Wisconsin. Clouds hid the silage harvest there for 25 days.
+6. Next, we will report such a county as a range, and try radar, which sees through cloud.
+
+=== 一分钟版本（上面六句的中文） ===
+1. 美国农业部问：从太空看，一块玉米地是切碎做了青贮，还是收了籽粒？
+2. 美国几乎没有带标签的地块，所以我们用欧洲农场登记里的 8,000 个地块来训练。
+3. 我们的模型从没见过美国的地。在 Beltsville，美国农业部 44 个带标签的地块它对了 42 个。
+4. 在青贮很少的县，我们的数字和美国农业部的很接近。
+5. 我们读错了威斯康星的一个奶牛县：那里的云把青贮收割期挡住了 25 天。
+6. 下一步，这样的县我们会报一个范围，并且试用能穿透云层的雷达。"""
+
+
 def build(out):
     prs = Presentation()
     prs.slide_width, prs.slide_height = Inches(W), Inches(H)
@@ -133,7 +152,8 @@ def build(out):
          "Green in August, bare in early September, green again in October.", size=13)
     notes(s, "Here is the question USDA asked us. Can you tell from space what happened in a cornfield? "
              "Was it chopped for silage, or combined for grain?",
-          "这是美国农业部给我们的问题：能不能从太空看出一块玉米地发生了什么？是切碎做了青贮，还是收了籽粒？")
+          "这是美国农业部给我们的问题：能不能从太空看出一块玉米地发生了什么？是切碎做了青贮，还是收了籽粒？"
+          + ONE_MINUTE)
 
     # 2  the catch, and the idea -------------------------------------------------------------------
     s = new_slide(prs, "Nobody labels American cornfields. European farmers do. So we learned from them")
@@ -180,7 +200,7 @@ def build(out):
           "这就是卫星看到的。青贮是趁植株还绿、还湿的时候割的；籽粒玉米要先晾干、变黄。")
 
     # 4  how it works ---------------------------------------------------------------------------------
-    s = new_slide(prs, "How it works: look, check, decide. If clouds hid the harvest, we do not guess")
+    s = new_slide(prs, "How our model works: look, check, decide. If clouds hid the harvest, it does not guess")
     steps = [
         ("1", "Look", "One season of free satellite pictures of the field."),
         ("2", "Check", "Did we see the harvest? If clouds hid it, the field is \"not judged\"."),
@@ -204,7 +224,7 @@ def build(out):
     c = N.CONFUSION
     silage, grain = c["silage_found"] + c["silage_missed"], c["grain_called_silage"] + c["grain_right"]
     calls = c["silage_found"] + c["grain_called_silage"]
-    s = new_slide(prs, f"It had never seen an American field. On USDA's {total} labelled fields it got {best} right")
+    s = new_slide(prs, f"Our model had never seen an American field. On USDA's {total} labelled fields it got {best} right")
     lw = 4.9
     card(s, MX, 1.5, lw, 2.35, fill=BLUE, line=None)
     text(s, MX + 0.35, 1.55, lw - 0.7, 1.4, f"{best} of {total}", size=76, bold=True, color=WHITE)
@@ -234,14 +254,14 @@ def build(out):
           "我们的模型从没见过美国的地。在美国农业部 44 个带标签的地块上，它对了 42 个。12 块青贮地找到了 11 块，只有一次误报。")
 
     # 6  the scoreboard against USDA ---------------------------------------------------------------------
-    s = new_slide(prs, "Then we checked nine places against USDA: close where silage is rare, a miss where it is everywhere")
+    s = new_slide(prs, "Nine places checked against USDA: close where silage is rare, a miss where it is everywhere")
     body_picture(s, "s06_scoreboard.png")
     notes(s, "Then we tried to break it. We compared nine places with USDA's own numbers. "
              "We are close where silage is rare, and we miss the county where silage is everywhere.",
           "然后我们想办法把它考倒：拿九个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；青贮最多的那个县，我们读错了。")
 
     # 7  what the data taught us ---------------------------------------------------------------------------
-    s = new_slide(prs, "What went wrong on the way, and what it taught us")
+    s = new_slide(prs, "What went wrong while we built it, and what it taught us")
     f = N.FIRST_COUNTY_TOTAL
     lessons = [
         ("Do not count what you cannot see",
@@ -250,8 +270,9 @@ def build(out):
          "A clever correction failed the test we had written for it (21% for 5.5%). We dropped it.", False),
         ("Green is not always silage",
          "Some grain is cut early, still green. Crop history tells them apart; the picture cannot.", False),
-        ("Still open: the heaviest dairy county",
-         f"Half its fields could not be judged, and we read 4% where USDA says 50%. We are looking for the cause.", True),
+        ("A cloudy month can hide a whole harvest",
+         f"In the heaviest dairy county, {N.MARATHON_GAP['days']} cloudy days sat on the silage harvest. We read 4% where USDA "
+         "says 50%, and our own warning did not go off. We are repairing it now.", True),
     ]
     for i, (head, line, open_) in enumerate(lessons):
         x = MX + (i % 2) * (half + 0.4)
@@ -261,11 +282,12 @@ def build(out):
         text(s, x + 1.2, y + 0.3, half - 1.5, 0.9, head, size=21, bold=True, color=WHITE if open_ else INK, spacing=1.05)
         text(s, x + 1.2, y + 1.2, half - 1.5, 1.2, line, size=15, color=WHITE if open_ else INK2, spacing=1.15)
     notes(s, "The data taught us four things on the way. Do not count what you cannot see. Test your own fix. "
-             "And one problem, the heavy dairy county, is still open.",
-          "一路上数据教了我们四件事：看不见的不要数；自己的修正也要检验；绿的不一定是青贮；还有一个问题没解决，就是奶牛最多的那个县。")
+             "And clouds can hide a whole harvest, as they did in one dairy county.",
+          "一路上数据教了我们四件事：看不见的不要数；自己的修正也要检验；绿的不一定是青贮；"
+          "还有，云可以挡住一整个收割期，一个奶牛县就是这样读错的。")
 
     # 8  the whole team system -------------------------------------------------------------------------------
-    s = new_slide(prs, "Where the model sits in the team's system")
+    s = new_slide(prs, "Where our model sits in the team's system")
     chain = [
         ("In", 1.7, "Satellite pictures and field outlines", False),
         ("Our part: the model", 2.8, "A call for every field, county and state totals, and the evidence behind them.", True),
@@ -316,7 +338,7 @@ def build(out):
     text(s, MX + half + 0.8, 1.7, half - 0.8, 0.5, "Next", size=24, bold=True, color=BLUE)
     text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "Radar for cloudy weeks: it sees through cloud, and the reader is built.\n\n"
          "Count the corn sown after a small grain, which today's state number leaves out.\n\n"
-         "Find out why the heaviest dairy county is missed.", size=16, color=INK, spacing=1.08)
+         "Report a cloudy county as a range, not as one number.", size=16, color=INK, spacing=1.08)
     card(s, MX, 5.3, FULL, 1.6, fill=BLUE, line=None)
     text(s, MX + 0.4, 5.42, FULL - 0.8, 0.7, "We do not ask you to trust the model. We show where it can be trusted, and where not yet.",
          size=22, bold=True, color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
@@ -326,15 +348,41 @@ def build(out):
              "And we show where it can be trusted, and where not yet.",
           "那么美国农业部能得到什么？每块地一个判断，附上依据，用的是免费数据。并且我们说清楚哪里可以信，哪里还不行。")
 
-    # ===== backup ====================================================================================================
+    # ===== more detail: each slide stands on its own ====================================================================
 
-    s = new_slide(prs, "Backup: every place, with both ways of adding up")
+    s = new_slide(prs, "The slides after this one go deeper. Each stands on its own", size=34, top=2.6, height=1.4)
+    text(s, MX, 4.2, FULL, 1.2, "Slides 1 to 9 tell the story in order. Take any of the slides that follow into your own deck: "
+         "each has its point in the title and one picture.", size=20, spacing=1.2)
+    notes(s, "This slide only separates the story from the detail. Do not show it.",
+          "这一页只是把主线和细节分开，演讲时不要放。")
+
+    s = new_slide(prs, "In Marathon County, clouds sat on the silage harvest for 25 days")
+    g = N.MARATHON_GAP
+    cw = 7.9
+    picture(s, "marathon_gap.png", MX, 1.45, cw)
+    tx, tw = MX + cw + 0.35, FULL - cw - 0.35
+    text(s, tx, 1.55, tw, 0.5, "What happened", size=18, bold=True, color=BLUE)
+    text(s, tx, 2.1, tw, 3.0, f"In September, Marathon's fields had one clear picture each. Racine had four.\n\n"
+         f"{g['fields_cut_inside']}% of Marathon's fields were cut inside a {g['days']}-day cloudy gap ({g['start']} to {g['end']}). "
+         "We could not judge them.\n\n"
+         "The fields we did see clearly were the late harvest, which is grain. So we read 4% where USDA says 50%.",
+         size=14.5, color=INK, spacing=1.12)
+    sn = N.SAFETY_NET
+    card(s, tx, 5.3, tw, 1.6)
+    text(s, tx + 0.2, 5.4, tw - 0.4, 1.45, f"A safety net, not a test: on the {sn['counties']} counties we have seen, the satellite alone misses by "
+         f"{sn['satellite']} points on average, land use alone by {sn['land_use']}, the two averaged by {sn['both']}. "
+         "The land-use figure was fitted on a Census that includes these counties.", size=11.5, spacing=1.08)
+    notes(s, "The classifier is not broken here. Clouds hid the silage harvest for 25 days, so we only saw the late fields, which are grain. "
+             "And our own warning for hidden harvests did not go off.",
+          "这里不是分类器坏了。云把青贮收割期挡住了 25 天，我们只看到了晚收的地，那些是籽粒。而且我们自己设的“没看到”警告也没有响。")
+
+    s = new_slide(prs, "Every place checked against USDA, with both ways of adding up")
     body_picture(s, "s05_places.png")
-    notes(s, "Backup. Every place we compared with USDA, with both ways of adding up the fields. "
+    notes(s, "Every place we compared with USDA, with both ways of adding up the fields. "
              "The grey bands are the ranges USDA's own figures allow.",
-          "备用页。所有和美国农业部对比过的地方，两种加总方式都列出来。灰色带是美国农业部自己的数字允许的范围。")
+          "所有和美国农业部对比过的地方，两种加总方式都列出来。灰色带是美国农业部自己的数字允许的范围。")
 
-    s = new_slide(prs, "Backup: what went wrong, and what we did about it")
+    s = new_slide(prs, "What went wrong, what we did, and what came out")
     cols = [(MX, 4.75, "What went wrong"), (MX + 4.95, 3.75, "What we did"), (MX + 8.9, FULL - 8.9, "What came out")]
     for x, w, head in cols:
         text(s, x + 0.2, 1.42, w - 0.2, 0.35, head, size=14, bold=True, color=BLUE)
@@ -351,28 +399,31 @@ def build(out):
          "Scored it with the same model, afterwards", "Maryland 2025: 4.75% → 6.7% (USDA 8.9%)"),
         ("The big model did not travel to a new country",
          "Dropped dates in training; tried a sequence model", "37 → 39 of 44; 0.817 against 0.765 in Europe"),
-        ("A northern dairy county reads far too low: Marathon 4% for 50%",
-         "Half its fields could not be judged. Cause under investigation now", "Open: a clear miss"),
+        ("A northern dairy county reads far too low: Marathon 4% for 50%. A 25-day cloudy spell lay over the silage harvest, "
+         "and our \"not seen\" measure did not flag it",
+         "Repair the measure so such a county is reported as a range; add a land-use figure beside; try radar for the gap",
+         "In progress tonight"),
     ]
-    rh = 0.66
+    y = 1.85
     for i, cells in enumerate(fixes):
-        y = 1.85 + i * (rh + 0.06)
+        rh = 1.08 if i == len(fixes) - 1 else 0.6
         card(s, MX, y, FULL, rh)
         for (x, w, _), cell, strong in zip(cols, cells, (False, False, True)):
-            text(s, x + 0.2, y, w - 0.3, rh, cell, size=14, bold=strong, color=INK, anchor=MSO_ANCHOR.MIDDLE, spacing=1.05)
-    notes(s, "Backup. The tuning in one table: each row is a problem the data showed us, what we did, and what came out. "
-             "Two are still open: early green grain, and the miss in Marathon County.",
-          "备用页。一张表讲完调优过程：每一行是数据暴露出的一个问题、我们的做法和结果。"
-          "有两个还没解决：趁绿早收的籽粒玉米，以及 Marathon 县读数过低。")
+            text(s, x + 0.2, y, w - 0.3, rh, cell, size=13.5, bold=strong, color=INK, anchor=MSO_ANCHOR.MIDDLE, spacing=1.05)
+        y += rh + 0.06
+    notes(s, "The tuning in one table: each row is a problem the data showed us, what we did, and what came out. "
+             "Early green grain is not solved, and the fix for the cloudy dairy county is in progress.",
+          "一张表讲完调优过程：每一行是数据暴露出的一个问题、我们的做法和结果。"
+          "趁绿早收的籽粒玉米还没解决；多云的那个奶牛县，修正正在做。")
 
-    s = new_slide(prs, "Backup: why we count only the fields we saw clearly")
+    s = new_slide(prs, "Why we count only the fields we saw clearly")
     body_picture(s, "s09_gap_evidence.png")
-    notes(s, "Backup. When the two pictures around the harvest are far apart, the model says silage far too often. "
+    notes(s, "When the two pictures around the harvest are far apart, the model says silage far too often. "
              "So we count only the fields we saw clearly.",
-          "备用页。收割前后两张影像隔得远的时候，模型判成青贮的次数多得离谱。所以我们只数那些看清了的地块。")
+          "收割前后两张影像隔得远的时候，模型判成青贮的次数多得离谱。所以我们只数那些看清了的地块。")
 
     worst_before, worst_after = N.WINDOW_FIX_WORST
-    s = new_slide(prs, "Backup: clouds. Half the corn was cut in one cloudy fortnight")
+    s = new_slide(prs, "On Maryland's Eastern Shore, half the corn was cut in one cloudy fortnight")
     pw = 9.3
     picture(s, "pic_kent_cloudy.png", MX, 1.42, pw)
     text(s, MX + pw + 0.3, 1.6, FULL - pw - 0.3, 1.8, "A Kent County field, 2022.\nLast clear look on 2 September, the next on "
@@ -382,12 +433,12 @@ def build(out):
     tile(s, MX + half + 0.4, 3.8, half, 3.1, f"{worst_before} → {worst_after} points",
          "The worst county miss, once we add up by harvest window and say how much corn we could not see.\n"
          "Found on counties we had already seen, so not proof yet.", big_size=40)
-    notes(s, "Backup. On the Eastern Shore, more than half of the corn was cut in one cloudy fortnight. "
+    notes(s, "On the Eastern Shore, more than half of the corn was cut in one cloudy fortnight. "
              "So we add up by harvest window, and we say how much we could not see.",
-          "备用页。在东岸，一半以上的玉米是在同一个多云的两周里收的。所以我们按收割窗口来加总，并且说明有多少没看到。")
+          "在东岸，一半以上的玉米是在同一个多云的两周里收的。所以我们按收割窗口来加总，并且说明有多少没看到。")
 
     soy, hay = N.KENT_CALLS_HISTORY[0][1], N.KENT_CALLS_HISTORY[2][1]
-    s = new_slide(prs, "Backup: grain cut early and green looks like silage")
+    s = new_slide(prs, "Grain cut early and green looks like silage from space")
     picture(s, "pic_kent_early.png", MX, 1.42, pw)
     text(s, MX + pw + 0.3, 1.6, FULL - pw - 0.3, 1.8, "A Kent County field the model calls silage.\nGreen in late August, "
          "bare by 2 September.", size=14, spacing=1.15)
@@ -397,19 +448,19 @@ def build(out):
          f"hay is {N.FREDERICK_CALLS_HAY[0]} to {N.FREDERICK_CALLS_HAY[1]}%.", big_color=INK)
     tile(s, MX + 2 * (third + 0.3), 3.8, third, 3.1, "We say so", "Probably grain cut early while still green. "
          "Crop history shows it. The picture cannot.", fill=BLUE, big_size=40)
-    notes(s, "Backup. Some grain is cut early while still green, and in the pictures it looks like silage. "
+    notes(s, "Some grain is cut early while still green, and in the pictures it looks like silage. "
              "Crop history shows the difference; pictures do not.",
-          "备用页。有些籽粒玉米趁绿早收，在图片上看起来和青贮一样。轮作历史能看出区别，图片看不出。")
+          "有些籽粒玉米趁绿早收，在图片上看起来和青贮一样。轮作历史能看出区别，图片看不出。")
 
-    s = new_slide(prs, "Backup: why the simple model won")
+    s = new_slide(prs, "Why the simple model won: it travels to a new country")
     body_picture(s, "s07_why_simple_won.png")
-    notes(s, "Backup. In a new country the small model loses almost nothing; the big one loses more. "
+    notes(s, "In a new country the small model loses almost nothing; the big one loses more. "
              "Dropping dates in training lifts the big model from 37 to 39 of 44. "
              "A sequence model does better in Europe, 0.817 against 0.765, but it has not been tested on the US fields.",
-          "备用页。换一个国家，小模型几乎不掉精度，大模型掉得多。训练时丢掉一些日期，大模型从 37 升到 39（共 44）。"
+          "换一个国家，小模型几乎不掉精度，大模型掉得多。训练时丢掉一些日期，大模型从 37 升到 39（共 44）。"
           "序列模型在欧洲更好（0.817 对 0.765），但还没有在美国的地块上检验过。")
 
-    s = new_slide(prs, "Backup: each test had its rule written down first")
+    s = new_slide(prs, "Each test had its rule written down before it was run")
     ph = 3.25
     picture(s, "s10_maryland_test.png", MX, 1.4, ph * 1920 / 972)
     text(s, MX + ph * 1920 / 972 + 0.3, 1.6, FULL - ph * 1920 / 972 - 0.3, 3.0, "Every test rule went into a log, with the time, before the "
@@ -427,15 +478,15 @@ def build(out):
         text(s, x + 0.25, 5.4, sw - 0.5, 0.35, f"{rule_at}  rule written", size=13, color=WHITE if good else INK2)
         text(s, x + 0.25, 5.75, sw - 0.5, 0.35, f"{test_at}  test run once", size=13, color=WHITE if good else INK2)
         text(s, x + 0.2, 6.2, sw - 0.4, 0.6, f"{what}: {result}", size=15, bold=True, color=WHITE if good else INK)
-    notes(s, "Backup. Every test rule was written in a log before the test ran. "
+    notes(s, "Every test rule was written in a log before the test ran. "
              "The 44 labelled fields were scored three times, each time logged.",
-          "备用页。每条检验规则都在检验之前写进了日志。44 个带标签的地块一共打了三次分，每次都有记录。")
+          "每条检验规则都在检验之前写进了日志。44 个带标签的地块一共打了三次分，每次都有记录。")
 
-    s = new_slide(prs, "Backup: Maryland 2025 in detail")
+    s = new_slide(prs, "Maryland 2025, the state USDA scores: we read low")
     body_picture(s, "state_2025.png")
-    notes(s, "Backup. For Maryland in 2025 we get 22,700 acres of silage; USDA reports 40,000. "
+    notes(s, "For Maryland in 2025 we get 22,700 acres of silage; USDA reports 40,000. "
              "With double-crop corn scored afterwards it is 33,135, still low.",
-          "备用页。2025 年的马里兰，我们算出青贮 22,700 英亩，美国农业部是 40,000。事后把双季玉米也打分后是 33,135，仍然偏低。")
+          "2025 年的马里兰，我们算出青贮 22,700 英亩，美国农业部是 40,000。事后把双季玉米也打分后是 33,135，仍然偏低。")
 
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
