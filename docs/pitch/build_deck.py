@@ -124,7 +124,7 @@ ONE_MINUTE = """
 3. Our model had never seen an American field. At Beltsville it got 42 of USDA's 44 labelled fields right.
 4. In counties where silage is rare, our numbers are close to USDA's.
 5. We missed one dairy county in Wisconsin. Clouds hid the silage harvest there for 25 days.
-6. Next, we will report such a county as a range, and try radar, which sees through cloud.
+6. Next, we will report such a county as a range, and add a second satellite, Landsat, which had a clear picture inside that gap.
 
 === 一分钟版本（上面六句的中文） ===
 1. 美国农业部问：从太空看，一块玉米地是切碎做了青贮，还是收了籽粒？
@@ -132,7 +132,7 @@ ONE_MINUTE = """
 3. 我们的模型从没见过美国的地。在 Beltsville，美国农业部 44 个带标签的地块它对了 42 个。
 4. 在青贮很少的县，我们的数字和美国农业部的很接近。
 5. 我们读错了威斯康星的一个奶牛县：那里的云把青贮收割期挡住了 25 天。
-6. 下一步，这样的县我们会报一个范围，并且试用能穿透云层的雷达。"""
+6. 下一步，这样的县我们会报一个范围，并且加上第二颗卫星 Landsat，它在那段多云期中间拍到了一张清晰的影像。"""
 
 
 def build(out):
@@ -247,11 +247,11 @@ def build(out):
     for i, (big, label) in enumerate(tiles):
         tile(s, MX + i * (third + 0.3), 4.05, third, 2.05, big, label, big_size=44, label_size=15)
     rt = N.RESPONSE_TIME
-    text(s, MX, 6.35, FULL, 0.6, f"Response time: {rt['counties']} whole counties, {rt['fields']:,} fields, in about {rt['minutes']} minutes "
-         "on a laptop, once the satellite pictures are read.", size=16, color=INK)
+    text(s, MX, 6.35, FULL, 0.6, f"Response time: about a minute per county on a laptop (measured: {rt['fields']:,} fields in "
+         f"{rt['seconds']} seconds, {rt['ms_per_field']} ms per field), once the satellite pictures are read.", size=16, color=INK)
     notes(s, "Our model had never seen an American field. On USDA's 44 labelled fields it got 42 right. "
-             "It found 11 of the 12 silage fields, with one false alarm.",
-          "我们的模型从没见过美国的地。在美国农业部 44 个带标签的地块上，它对了 42 个。12 块青贮地找到了 11 块，只有一次误报。")
+             "It found 11 of the 12 silage fields, with one false alarm. A whole county takes about a minute on a laptop (measured).",
+          "我们的模型从没见过美国的地。在美国农业部 44 个带标签的地块上，它对了 42 个。12 块青贮地找到了 11 块，只有一次误报。在笔记本电脑上，一个县大约一分钟算完（实测）。")
 
     # 6  the scoreboard against USDA ---------------------------------------------------------------------
     s = new_slide(prs, "Nine places checked against USDA: close where silage is rare, a miss where it is everywhere")
@@ -271,8 +271,8 @@ def build(out):
         ("Green is not always silage",
          "Some grain is cut early, still green. Crop history tells them apart; the picture cannot.", False),
         ("A cloudy month can hide a whole harvest",
-         f"In the heaviest dairy county, {N.MARATHON_GAP['days']} cloudy days sat on the silage harvest. We read 4% where USDA "
-         "says 50%, and our own warning did not go off. We are repairing it now.", True),
+         f"In the heaviest dairy county, {N.MARATHON_GAP['days']} cloudy days sat on the silage harvest. We read 4% for USDA's 50%. "
+         "Now adding Landsat, a second satellite that saw into the gap.", True),
     ]
     for i, (head, line, open_) in enumerate(lessons):
         x = MX + (i % 2) * (half + 0.4)
@@ -336,7 +336,7 @@ def build(out):
          "Free public data. No US labels needed. Runs on a laptop.", size=16, color=INK, spacing=1.08)
     card(s, MX + half + 0.4, 1.5, half, 3.55)
     text(s, MX + half + 0.8, 1.7, half - 0.8, 0.5, "Next", size=24, bold=True, color=BLUE)
-    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "Radar for cloudy weeks: it sees through cloud, and the reader is built.\n\n"
+    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "A second satellite, Landsat: it saw into the cloudy spell that hid a whole harvest.\n\n"
          "Count the corn sown after a small grain, which today's state number leaves out.\n\n"
          "Report a cloudy county as a range, not as one number.", size=16, color=INK, spacing=1.08)
     card(s, MX, 5.3, FULL, 1.6, fill=BLUE, line=None)
@@ -362,19 +362,21 @@ def build(out):
     picture(s, "marathon_gap.png", MX, 1.45, cw)
     tx, tw = MX + cw + 0.35, FULL - cw - 0.35
     text(s, tx, 1.55, tw, 0.5, "What happened", size=18, bold=True, color=BLUE)
-    text(s, tx, 2.1, tw, 3.0, f"In September, Marathon's fields had one clear picture each. Racine had four.\n\n"
+    text(s, tx, 2.0, tw, 1.9, f"In September, Marathon's fields had one clear picture each. Racine had four.\n\n"
          f"{g['fields_cut_inside']}% of Marathon's fields were cut inside a {g['days']}-day cloudy gap ({g['start']} to {g['end']}). "
-         "We could not judge them.\n\n"
-         "The fields we did see clearly were the late harvest, which is grain. So we read 4% where USDA says 50%.",
-         size=14.5, color=INK, spacing=1.12)
+         "The fields we did see were the late harvest, which is grain.", size=13.5, color=INK, spacing=1.1)
+    text(s, tx, 3.95, tw, 0.4, "What sees into the gap", size=18, bold=True, color=BLUE)
+    text(s, tx, 4.4, tw, 0.9, f"Landsat, a second satellite, passed on {g['landsat_clear']} with a clear view. "
+         "We are adding it tonight: no result yet.", size=13.5, color=INK, spacing=1.1)
     sn = N.SAFETY_NET
     card(s, tx, 5.3, tw, 1.6)
     text(s, tx + 0.2, 5.4, tw - 0.4, 1.45, f"A safety net, not a test: on the {sn['counties']} counties we have seen, the satellite alone misses by "
          f"{sn['satellite']} points on average, land use alone by {sn['land_use']}, the two averaged by {sn['both']}. "
          "The land-use figure was fitted on a Census that includes these counties.", size=11.5, spacing=1.08)
     notes(s, "The classifier is not broken here. Clouds hid the silage harvest for 25 days, so we only saw the late fields, which are grain. "
-             "And our own warning for hidden harvests did not go off.",
-          "这里不是分类器坏了。云把青贮收割期挡住了 25 天，我们只看到了晚收的地，那些是籽粒。而且我们自己设的“没看到”警告也没有响。")
+             "A second satellite, Landsat, had a clear picture inside that gap, and we are adding it now.",
+          "这里不是分类器坏了。云把青贮收割期挡住了 25 天，我们只看到了晚收的地，那些是籽粒。"
+          "第二颗卫星 Landsat 在这段时间里有一张清晰的影像，我们正在把它加进来。")
 
     s = new_slide(prs, "Every place checked against USDA, with both ways of adding up")
     body_picture(s, "s05_places.png")
@@ -401,7 +403,7 @@ def build(out):
          "Dropped dates in training; tried a sequence model", "37 → 39 of 44; 0.817 against 0.765 in Europe"),
         ("A northern dairy county reads far too low: Marathon 4% for 50%. A 25-day cloudy spell lay over the silage harvest, "
          "and our \"not seen\" measure did not flag it",
-         "Repair the measure so such a county is reported as a range; add a land-use figure beside; try radar for the gap",
+         "Repair the measure so such a county is reported as a range; add a land-use figure beside; add Landsat, a second satellite with a clear picture inside the gap",
          "In progress tonight"),
     ]
     y = 1.85

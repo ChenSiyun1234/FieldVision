@@ -246,10 +246,11 @@ PLACES_HELD = ["Pennsylvania, Wisconsin 2025"]
 # 1 grain called silage, 31 grain right. So recall 11 of 12, precision 11 of 12, false positive
 # rate 1 of 32.
 CONFUSION = {"silage_found": 11, "silage_missed": 1, "grain_called_silage": 1, "grain_right": 31}
-# Response time, from the log's own times: Branch and Gratiot (3,390 + 3,463 fields) were each
-# classified and added up between 19:07 and 19:10 (log 19:07, 19:11), on a laptop, with the
-# satellite series already extracted.
-RESPONSE_TIME = {"fields": 3_390 + 3_463, "counties": 2, "minutes": 3}
+# Response time, measured by the coordinator on the laptop with other jobs running (message of 14
+# Nov, about 23:40): Gratiot County, 3,463 fields, from stored time series to a silage or grain
+# call for every field in 47 seconds (Toolbox.classify, policy module_v2), about 14 ms per field;
+# adding the county up took another 57 seconds.
+RESPONSE_TIME = {"county": "Gratiot", "fields": 3_463, "seconds": 47, "ms_per_field": 14, "adding_up_seconds": 57}
 
 # Why Marathon read low. Source: the coordinator's message of 14 Nov (after 23:15), measured by
 # the modelling work and by the coordinator, who agree; the monthly counts are those of the
@@ -261,6 +262,7 @@ RESPONSE_TIME = {"fields": 3_390 + 3_463, "counties": 2, "minutes": 3}
 # missed it because it placed fields by the first picture after the cut.
 MARATHON_GAP = {
     "days": 25, "start": "20 September", "end": "15 October", "fields_cut_inside": 39,
+    "landsat_clear": "1 October",
     "months": ["Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov"],
     "marathon": [2.1, 5.4, 6.6, 3.8, 3.8, 1.1, 2.6, 5.9],
     "racine": [1.2, 6.0, 6.2, 6.0, 5.2, 4.0, 4.6, 3.0],
@@ -268,4 +270,9 @@ MARATHON_GAP = {
 # A safety net, not a test (same message): mean miss on the eight counties already seen, against
 # the year-matched official figure. The land-use figure was fitted on the 2022 Census, which
 # includes these counties.
+# What sees into the gap (the county work's check, relayed by the coordinator, 14 Nov about 23:40):
+# Sentinel-1 radar has no scene over Marathon between 18 September and 12 October 2023, so radar
+# cannot date a harvest there; Landsat 9 passed on 1 October 2023 with 6 % cloud and Landsat 8 on
+# 9 October with 24 % (Planetary Computer, landsat-c2-l2). The Landsat extraction was being built
+# when this was written: no result yet.
 SAFETY_NET = {"counties": 8, "satellite": 8.6, "land_use": 8.2, "both": 6.8}
