@@ -63,6 +63,14 @@ def main():
             temporary = target.with_suffix(suffix + ".colab_tmp")
             temporary.write_bytes(archive.read(f"blocks/{block}{suffix}"))
             os.replace(temporary, target)
+    if not args.dry_run and laptop.get("status") == "colab_pending" and not laptop.get("started_at"):
+        # Stub folder (no laptop extraction): take the run's start time from Colab so
+        # the finalising run and the READY line report a real start. Not in the signature.
+        laptop["started_at"] = colab.get("started_at")
+        temporary = args.run_dir / "manifest.json.colab_tmp"
+        temporary.write_text(json.dumps(laptop, indent=2), encoding="utf-8")
+        os.replace(temporary, args.run_dir / "manifest.json")
+        print("stub manifest: started_at set from the Colab run:", laptop["started_at"])
     print(f"{'would copy' if args.dry_run else 'copied'} {len(copied)} blocks from Colab; kept {len(kept)} already complete here")
     for block, state, errors in copied:
         if state != "complete":
