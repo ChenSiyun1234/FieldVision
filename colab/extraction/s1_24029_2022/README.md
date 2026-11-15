@@ -13,7 +13,7 @@ token from `https://planetarycomputer.microsoft.com/api/sas/v1/token/sentinel-1-
 and appends it to each file URL (tested on the laptop at 19:00 and in the check below).
 The files end in `.tiff`; the extractor allows that extension in GDAL.
 
-Code: new package `fieldvision.s1` (commit in branch `claude/s2-timeseries-eafb89`),
+Code: new package `fieldvision.s1`,
 frozen copy `<FV_DATA>\frozen_src_s1_3fc72639`; fingerprint `3fc72639…` covers
 `s1/*.py` plus the three s2 files it reuses (`core.py`, `geometry.py`, `catalog.py`).
 The optical extractor and its frozen copy `9cd0447b` are untouched.
