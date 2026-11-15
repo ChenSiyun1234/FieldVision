@@ -65,7 +65,7 @@ def places():
     def pct(v):
         return f"{v:.2f}%" if round(v * 100) % 10 else f"{v:.1f}%"
 
-    wi, pa = N.WISCONSIN_2025, N.PENNSYLVANIA_2025
+    wi, pa, la = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023
     fig = body()
     ax = fig.add_axes([0.2, 0.262, 0.79, 0.638])
     D.clean(ax, grid=None)
@@ -110,6 +110,9 @@ def places():
             if name == "Pennsylvania 2025":
                 ax.text(beside_x, y, f"MISSED by {pa['points_low']}; {pa['single_crop']}% without double crops", fontsize=12.5,
                         color=INK, fontweight="bold", va="center")
+            if name.startswith("Lancaster"):
+                ax.text(beside_x, y, f"{la['points_low']} low: passed (within 10 of USDA's range)", fontsize=12.5,
+                        color=INK, va="center")
     ax.text(usda_x, top + 0.75, "USDA", fontsize=13, color=INK2, ha="right", va="center")
     ax.text(ours_x, top + 0.75, "Ours", fontsize=13, fontweight="bold", color=BLUE, ha="right", va="center")
     ax.text(beside_x, top + 0.75, "Beside it", fontsize=13, color=INK2, va="center")
@@ -159,12 +162,12 @@ def places():
              "Ours = the plain count of the clearly seen fields;\n"
              f"where cloud hid more than {N.NOT_SEEN_SWITCH}% of the corn (Queen Anne's, Kent), the count by harvest window. "
              "Grey band: the range USDA's own figures allow\n"
-             "(the fields we score, in Carroll and Frederick; Census 2022 to survey 2023, in Wisconsin). "
+             "(the fields we score, in Carroll and Frederick; Census to survey, in Wisconsin and Lancaster). "
              f"In Marathon {N.MARATHON_NOT_JUDGED}% of the fields could not be judged.\n"
-             f"Wisconsin 2025: {wi['fields']:,} fields in {wi['blocks']} random blocks, {wi['seen']}% of the corn seen; a warning check "
-             f"went off (two grain counties read {wi['guard']['ours']}% for USDA's {wi['guard']['census']}%).\n"
-             f"Pennsylvania 2025: {pa['fields']:,} fields in {pa['blocks']} blocks, {pa['seen']}% seen, no warning. Both states were read "
-             "with two satellites and include double-crop corn, by the rule written after Maryland.",
+             f"Wisconsin 2025: {wi['fields']:,} fields, {wi['seen']}% seen, a warning check went off (two grain counties: {wi['guard']['ours']}% "
+             f"for USDA's {wi['guard']['census']}%). Pennsylvania 2025: {pa['fields']:,} fields, {pa['seen']}% seen, no warning.\n"
+             f"Lancaster 2023: {la['fields']:,} fields, {la['seen']}% seen; USDA = Census 2022, as the 2023 survey ({la['survey_2023']}%) counts "
+             "half the acres. All three: two satellites; states with double-crop corn.",
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s05_places")
 
@@ -175,14 +178,14 @@ def scoreboard():
         return f"{v:.2f}%" if round(v * 100) % 10 else f"{v:.1f}%"
 
     zones = [("Little silage", "we are close", lambda u: u < 8),
-             ("Some silage", "off by 4 to 6 points", lambda u: 8 <= u < 30),
-             ("Much silage", "we read far too low", lambda u: u >= 30)]
+             ("Some silage", "off by 4 to 6 points", lambda u: 8 <= u < 25),
+             ("Much silage", "one hit, two misses", lambda u: u >= 25)]
     opened = [("test", name if "," in name else name + " (state)", usda, band, ours, ours, 0.0)
               for name, usda, band, ours in N.PLACES_TO_OPEN if ours is not None]
     rows = sorted(N.PLACES + opened, key=lambda r: r[2])
-    wi, pa = N.WISCONSIN_2025, N.PENNSYLVANIA_2025
+    wi, pa, la = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023
     fig = body()
-    ax = fig.add_axes([0.36, 0.2, 0.63, 0.73])
+    ax = fig.add_axes([0.36, 0.235, 0.63, 0.695])
     D.clean(ax, grid=None)
     ax.set_xlim(-0.8, 108)
     y = 0.0
@@ -241,8 +244,10 @@ def scoreboard():
              f"{wi['pass_mark']}; we had expected a low reading (we wrote \"below {wi['predicted_below']}%\"; it is {wi['ours_exact']}%).\n"
              f"A warning check went off there (two grain counties read {wi['guard']['ours']}% where USDA's Census says "
              f"{wi['guard']['census']}%); by the rule we wrote down first, that marks this figure as unreliable.\n"
-             f"Pennsylvania 2025 (same procedure, {pa['seen']}% of the corn seen, no warning): {pa['points_low']} points low, a clear miss; "
-             f"{pa['single_crop']}% without double-crop corn." + more,
+             f"Pennsylvania 2025 ({pa['seen']}% of the corn seen, no warning): {pa['points_low']} points low, a clear miss. "
+             "Why Lancaster reads right and the state does not, we do not yet know.\n"
+             f"Lancaster 2023 (two satellites, {la['seen']}% seen): USDA here is the 2022 Census. Its 2023 survey says "
+             f"{la['survey_2023']}% but counts half the corn acres (noted before the run)." + more,
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s06_scoreboard")
 
@@ -327,7 +332,7 @@ def history_update():
 
     counties, states = N.HISTORY_UPDATE, N.HISTORY_UPDATE_STATES
     fig = body()
-    ax = fig.add_axes([0.2, 0.225, 0.79, 0.65])
+    ax = fig.add_axes([0.2, 0.26, 0.79, 0.615])
     D.clean(ax, grid=None)
     ax.set_xlim(-20, 31)
     n = len(counties) + len(states) + 1  # one empty row between the two groups
@@ -370,7 +375,7 @@ def history_update():
     ]
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.19, 1.0), ncol=2, frameon=False, fontsize=13,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
-    m, wi, pa = N.HISTORY_UPDATE_MISS, N.WISCONSIN_2025, N.PENNSYLVANIA_2025
+    m, wi, pa, la = N.HISTORY_UPDATE_MISS, N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023
     fig.text(0.02, 0.02, "The eight counties had already been seen while tuning, so they are not a test. One satellite (Sentinel-2), "
              "as for Maryland 2025; the other two states were read with two.\n"
              "USDA's last figure: the 2017 Census for the 2022 counties, the 2022 survey for the Wisconsin counties, "
@@ -379,7 +384,9 @@ def history_update():
              f"{m['last_no_marathon']} and {m['updated_no_marathon']}. The satellite on its own: {m['satellite']}.\n"
              "Wisconsin and Pennsylvania 2025 were tests with the rule written first: the update had to end closer than the last figure "
              f"alone. It ended {wi['updated_off']} and {pa['updated_off']} points off, against {wi['last_official_off']} and "
-             f"{pa['last_official_off']}.",
+             f"{pa['last_official_off']}.\n"
+             f"Lancaster 2023, the third test: the last figure there is the reference itself ({la['census_2022']}%, the 2022 Census); "
+             f"the update gave {la['updated']}%, so no gain.",
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s_update")
 

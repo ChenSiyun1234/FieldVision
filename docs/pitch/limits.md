@@ -28,6 +28,23 @@ written at log 00:18; the figure is the share over all corn, double-crop corn in
   19.8 % (itself 1.8 off) to 12.9 %, Pennsylvania 31.4 % (1.4 off) to 18.7 %. The update from the
   land-use figure gave 11.6 % and 13.1 %. All four failed.
 
+**And before Lancaster County, Pennsylvania, 2023 (log 02:13), which passed.** 10,533 corn fields
+in 70 of the county's 113 blocks (64 % of its corn), Sentinel-2 plus Landsat, 60 % of the corn
+area seen, run once. The satellite alone read 26.6 % (range 18.0 to 58.1). The reference, fixed
+before the run (log 01:28), is the 2022 Census, 27.4 %: the 2023 county survey says 44.5 % but
+counts only about half the corn acres that the Census, the field boundaries and the cropland map
+show. So 0.8 points low, and 0.8 below the range of official figures (27.4 to 54.8); the pass mark
+was "within 10 points of that range". Beside it: updating from the Census figure gave 25.1 %, no
+gain; updating from the land-use figure gave 9.1 %, far off. Teammates had run the same classifier
+on 1,057 clearly seen Lancaster fields and read 35.2 %; the coordinator had seen that figure
+before this run (log 01:50) and the procedure was not changed.
+
+**What the three last tests say together.** Satellite alone: Lancaster 2023 right, Wisconsin 2025
+on its pass mark (and marked unreliable by the warning check), Pennsylvania 2025 missed. The model
+is not blind to dairy silage everywhere: in Pennsylvania's largest dairy county it is within a
+point, and across the whole state two years later it reads less than half. We do not yet know
+what separates the two (the year, or the rest of the state).
+
 "Log HH:MM" is a row of the evaluation access log (`<data>/eval/ACCESS_LOG.md`), named by its time
 on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
 

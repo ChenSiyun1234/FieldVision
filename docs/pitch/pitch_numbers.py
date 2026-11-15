@@ -321,7 +321,7 @@ HISTORY_UPDATE_STATES = [
 PLACES_TO_OPEN = [
     ("Wisconsin 2025", 21.6, None, 16.6),
     ("Pennsylvania 2025", 32.8, None, 15.2),
-    ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
+    ("Lancaster, Pa. 2023", 27.4, (27.4, 54.8), 26.6),
 ]
 
 # Sentinel-2 alone and with Landsat 8 and 9 added, in the three counties where clouds hid the
@@ -374,4 +374,24 @@ PENNSYLVANIA_2025 = {
     "last_official": 31.4, "last_official_off": 1.4, "updated": 18.7, "updated_off": 14.1,
     "land_use_updated": 13.1, "land_use_off": 19.7,
     "guard": {"counties": "Northampton and Lehigh", "ours": 4.1, "census": 3.8, "flagged": False},
+}
+
+# Lancaster County, Pennsylvania, 2023, the third: run once (log 02:11 for the command, 02:13 for
+# the result). 10,533 corn fields in 70 of the county's 113 blocks (64 % of its corn by the field
+# boundaries, log 01:28), Sentinel-2 plus Landsat, 60 % of the corn area seen, 6,404 clearly seen
+# fields, 2,249 not judged. Satellite alone 26.6 % (range 18.0 to 58.1). Reference, fixed before
+# the run (log 01:28): the 2022 Census, 27.4 %, because the 2023 county survey (44.5 %) counts
+# only about half the corn acres that the Census, the boundaries and the cropland map show. So
+# 0.8 points low, and 0.8 below the band of official figures (27.4 to 54.8); pass mark "within 10
+# points of the band": PASS. Beside it: the update from the last official share (the Census
+# itself) gives 25.1 %, no gain; the update from the land-use figure gives 9.1 %, 18.3 off.
+# Teammates' own earlier run of the same classifier on 1,057 clearly seen fields read 35.2 %; the
+# coordinator had seen that figure before this run (log 01:50) and the procedure did not change.
+LANCASTER_2023 = {
+    "fields": 10_533, "blocks": (70, 113), "share_of_county_corn": 64, "seen": 60,
+    "clear_fields": 6_404, "clear_tier_area": 63, "not_judged_fields": 2_249,
+    "ours": 26.6, "ours_range": (18.0, 58.1), "census_2022": 27.4, "survey_2023": 44.5,
+    "band": (27.4, 54.8), "points_low": 0.8,
+    "updated": 25.1, "updated_off": 2.3, "land_use_updated": 9.1, "land_use_off": 18.3,
+    "teammates_run": {"fields": 1_057, "share": 35.2},
 }

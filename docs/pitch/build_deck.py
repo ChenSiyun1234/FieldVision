@@ -124,8 +124,8 @@ ONE_MINUTE = """
 3. Our model had never seen an American field. At Beltsville it got 42 of USDA's 44 labelled fields right.
 4. In counties where silage is rare, our numbers are close to USDA's.
 5. Where clouds hid the harvest, a second satellite, Landsat, brought most of it back into view.
-6. In dairy states we read low. We tested two states we had never looked at. Wisconsin: 16.6 percent, where USDA says 21.6. Pennsylvania: 15 percent, where USDA says 33.
-7. So the next step is American labelled fields. A model taught in Europe reads American dairy silage low.
+6. In dairy country it is mixed. In Pennsylvania's largest dairy county we were within a point of USDA. Across the whole state we read less than half. In Wisconsin we were 5 points low.
+7. We do not yet know what separates them. So the next step is American labelled fields.
 
 === 一分钟版本（上面七句的中文） ===
 1. 美国农业部问：从太空看，一块玉米地是切碎做了青贮，还是收了籽粒？
@@ -133,8 +133,8 @@ ONE_MINUTE = """
 3. 我们的模型从没见过美国的地。在 Beltsville，美国农业部 44 个带标签的地块它对了 42 个。
 4. 在青贮很少的县，我们的数字和美国农业部的很接近。
 5. 云挡住收割期的地方，第二颗卫星 Landsat 把其中大部分又看回来了。
-6. 在奶牛产区的州我们读得偏低。我们测了两个从没看过的州。威斯康星：我们 16.6%，美国农业部 21.6%。宾夕法尼亚：我们 15%，美国农业部 33%。
-7. 所以下一步是美国本土带标签的地块。在欧洲学出来的模型，读美国奶牛产区的青贮会偏低。"""
+6. 在奶牛产区，结果有好有坏。在宾夕法尼亚最大的奶牛县，我们和美国农业部只差不到一个点；在整个宾州，我们读出的还不到一半；在威斯康星，我们低了 5 个点。
+7. 我们还不知道是什么造成了这个差别。所以下一步是美国本土带标签的地块。"""
 
 
 def build(out):
@@ -257,14 +257,16 @@ def build(out):
           "我们的模型从没见过美国的地。在美国农业部 44 个带标签的地块上，它对了 42 个。12 块青贮地找到了 11 块，只有一次误报。在笔记本电脑上，一个县大约一分钟算完（实测）。")
 
     # 6  the scoreboard against USDA ---------------------------------------------------------------------
-    s = new_slide(prs, "Close where silage is rare, low in dairy country: 5 points in Wisconsin, 18 in Pennsylvania")
+    s = new_slide(prs, "Close where silage is rare. In dairy country: right in Lancaster, 5 points low in Wisconsin, 18 in Pennsylvania")
     body_picture(s, "s06_scoreboard.png")
-    notes(s, "Then we tried to break it. We compared eleven places with USDA's own numbers. "
-             "We are close where silage is rare. In dairy country we read low: 5 points in Wisconsin, 18 in Pennsylvania. "
-             "Those are two whole states we had never looked at. In Pennsylvania we saw almost all the corn, so clouds are not the reason. "
+    notes(s, "Then we tried to break it. We compared twelve places with USDA's own numbers. "
+             "We are close where silage is rare. In dairy country it is mixed. "
+             "In Lancaster, Pennsylvania's largest dairy county, we are within a point of USDA. "
+             "Across all of Pennsylvania we read less than half, and Wisconsin is 5 points low. We do not yet know what separates them. "
              "In Wisconsin a warning check we had set up went off. By the rule we wrote down first, that marks the Wisconsin figure as unreliable.",
-          "然后我们想办法把它考倒：拿十一个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；在奶牛产区我们读得偏低："
-          "威斯康星低 5 个点，宾夕法尼亚低 18 个点。这两个州我们之前从没看过。在宾夕法尼亚我们几乎看到了所有玉米，所以原因不是云。"
+          "然后我们想办法把它考倒：拿十二个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；在奶牛产区，结果有好有坏。"
+          "在宾夕法尼亚最大的奶牛县 Lancaster，我们和美国农业部只差不到一个点；在整个宾州，我们读出的还不到一半；威斯康星低 5 个点。"
+          "我们还不知道是什么造成了这个差别。"
           "在威斯康星，我们事先设的一个预警触发了；按我们事先写下的规则，威斯康星这个数字要标为“不可靠”。")
 
     # 7  a second satellite for the cloudy counties --------------------------------------------------------------
@@ -289,9 +291,9 @@ def build(out):
          "A clever correction failed the test we had written for it (21% for 5.5%). We dropped it.", False),
         ("A second satellite sees past the clouds",
          "In three cloudy counties, Landsat brought the corn back into view and our figure moved towards USDA's.", False),
-        ("In dairy states we read low, even when we see the fields",
-         f"Pennsylvania 2025: {pa['seen']}% of the corn seen, and we read {pa['ours']}% where USDA has {pa['usda']}%. "
-         "So the limit is not clouds. The next step is American labelled fields.", True),
+        ("In dairy country we are right in one place and low in others",
+         "In Pennsylvania's largest dairy county we were within a point of USDA. Across the state we read less than half, "
+         f"with {pa['seen']}% of the corn in view. We do not yet know why.", True),
     ]
     for i, (head, line, open_) in enumerate(lessons):
         x = MX + (i % 2) * (half + 0.4)
@@ -301,9 +303,10 @@ def build(out):
         text(s, x + 1.2, y + 0.3, half - 1.5, 0.9, head, size=21, bold=True, color=WHITE if open_ else INK, spacing=1.05)
         text(s, x + 1.2, y + 1.2, half - 1.5, 1.2, line, size=15, color=WHITE if open_ else INK2, spacing=1.15)
     notes(s, "The data taught us four things on the way. Do not count what you cannot see. Test your own fix. "
-             "A second satellite sees past clouds. And in dairy states we read low, even when we see the fields.",
+             "A second satellite sees past clouds. And in dairy country we are right in one place and low in others: "
+             "within a point of USDA in Pennsylvania's largest dairy county, less than half across the whole state. We do not yet know why.",
           "一路上数据教了我们四件事：看不见的不要数；自己的修正也要检验；第二颗卫星能看穿云层；"
-          "还有，在奶牛产区的州，即使看清了地块，我们的读数还是偏低。")
+          "还有，在奶牛产区，我们有的地方读对了，有的地方读低了：在宾夕法尼亚最大的奶牛县只差不到一个点，在整个宾州却不到一半。原因我们还不知道。")
 
     # 8  the whole team system -------------------------------------------------------------------------------
     s = new_slide(prs, "Where our model sits in the team's system")
@@ -351,11 +354,11 @@ def build(out):
     card(s, MX, 1.5, half, 3.55)
     text(s, MX + 0.4, 1.7, half - 0.8, 0.5, "Today", size=24, bold=True, color=BLUE)
     text(s, MX + 0.4, 2.4, half - 0.8, 2.6, "A call for every corn field, with the evidence behind it: 42 of 44 right where we could check.\n\n"
-         "County totals where silage is rare. Elsewhere, a plain warning that we read low.\n\n"
+         "County totals where silage is rare. In dairy country, a plain warning: we can read low.\n\n"
          "Free public data, no US labels, about a minute per county on a laptop.", size=16, color=INK, spacing=1.08)
     card(s, MX + half + 0.4, 1.5, half, 3.55)
     text(s, MX + half + 0.8, 1.7, half - 0.8, 0.5, "Next", size=24, bold=True, color=BLUE)
-    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "American labelled fields, or training against USDA's county totals: a model taught in Europe reads dairy states low.\n\n"
+    text(s, MX + half + 0.8, 2.4, half - 0.8, 2.6, "American labelled fields, or training against USDA's county totals: in dairy country we are not yet reliable.\n\n"
          "Landsat, the second satellite, everywhere.\n\n"
          "Labelled double-crop corn fields: those calls are untested.", size=16, color=INK, spacing=1.08)
     card(s, MX, 5.3, FULL, 1.6, fill=BLUE, line=None)
@@ -364,10 +367,10 @@ def build(out):
     text(s, MX + 0.4, 6.15, FULL - 0.8, 0.65, "A preliminary baseline, checked in four states. "
          "Predictions anywhere else are examples, not verified results.", size=14, color=WHITE, anchor=MSO_ANCHOR.MIDDLE)
     notes(s, "So what does USDA get? A call for every field, with its evidence, from free data. "
-             "County totals where silage is rare. In dairy states we read low, and we say so. "
+             "County totals where silage is rare. In dairy country we are not yet reliable, and we say so. "
              "Next we need American labelled fields.",
           "那么美国农业部能得到什么？每块地一个判断，附上依据，用的是免费数据；青贮少的县，有县级总数。"
-          "在奶牛产区的州我们读得偏低，我们照实说。下一步需要美国本土带标签的地块。")
+          "在奶牛产区我们还不可靠，我们照实说。下一步需要美国本土带标签的地块。")
 
     # ===== more detail: each slide stands on its own ====================================================================
 
@@ -403,11 +406,11 @@ def build(out):
     body_picture(s, "s05_places.png")
     notes(s, "Every place we compared with USDA, with both ways of adding up the fields. "
              "The grey bands are the ranges USDA's own figures allow. "
-             "The newest rows are two whole states. Wisconsin 2025: 16.6 percent for USDA's 21.6, right on our pass mark of five points. "
-             "Pennsylvania 2025: 15.2 percent for 32.8, a clear miss.",
+             "The three newest rows were opened last, once each. Wisconsin 2025: 16.6 percent for USDA's 21.6, right on our pass mark of five points. "
+             "Pennsylvania 2025: 15.2 percent for 32.8, a clear miss. Lancaster County 2023: 26.6 percent for 27.4, within a point.",
           "所有和美国农业部对比过的地方，两种加总方式都列出来。灰色带是美国农业部自己的数字允许的范围。"
-          "最新的两行是两个州。2025 年威斯康星：我们 16.6%，美国农业部 21.6%，正好压在我们 5 个点的及格线上。"
-          "2025 年宾夕法尼亚：我们 15.2%，美国农业部 32.8%，明显读低了。")
+          "最新的三行是最后打开的三个地方，每个只跑一次。2025 年威斯康星：我们 16.6%，美国农业部 21.6%，正好压在我们 5 个点的及格线上。"
+          "2025 年宾夕法尼亚：我们 15.2%，美国农业部 32.8%，明显读低了。2023 年 Lancaster 县：我们 26.6%，美国农业部 27.4%，只差不到一个点。")
 
     s = new_slide(prs, "Starting from USDA's last figure: closer in six of eight counties we tuned on, worse in all three states")
     body_picture(s, "s_update.png")
@@ -438,8 +441,8 @@ def build(out):
          "and our \"not seen\" measure did not flag it",
          "Added Landsat, a second satellite: corn seen 29% → 83%. Repairing the measure so such a county is reported as a range",
          "4.3% → 13.8% (USDA 49.9%). The rest needs northern training fields"),
-        ("Dairy states read low even with the corn in view: Pennsylvania 15.2% for 32.8%",
-         "Measured on two state samples never looked at before", "Not solved: needs American labelled fields"),
+        ("Dairy country is mixed: Lancaster County 26.6% for 27.4%, but all of Pennsylvania 15.2% for 32.8%",
+         "Measured on three places never looked at before", "Not solved: we do not yet know what separates them"),
     ]
     y = 1.76
     for i, cells in enumerate(fixes):
@@ -449,10 +452,10 @@ def build(out):
             text(s, x + 0.2, y, w - 0.3, rh, cell, size=13.5, bold=strong, color=INK, anchor=MSO_ANCHOR.MIDDLE, spacing=1.05)
         y += rh + 0.06
     notes(s, "The tuning in one table: each row is a problem the data showed us, what we did, and what came out. "
-             "Early green grain is not solved, the cloudy dairy county is only partly fixed, and dairy states still read low.",
+             "Early green grain is not solved, the cloudy dairy county is only partly fixed, and dairy country is right in one place and low in others.",
           "一张表讲完调优过程：每一行是数据暴露出的一个问题、我们的做法和结果。"
           "趁绿早收的籽粒玉米还没解决；多云的那个奶牛县只修好了一部分。"
-          "奶牛产区的州仍然读得偏低。")
+          "奶牛产区有的地方读对了，有的地方读低了。")
 
     s = new_slide(prs, "Why we count only the fields we saw clearly")
     body_picture(s, "s09_gap_evidence.png")
@@ -507,7 +510,7 @@ def build(out):
          "Failures are shown as failures. In Wisconsin 2025 a warning check we had written first went off, so by our own rule "
          "that figure is marked unreliable.", size=15, color=INK, spacing=1.12)
     text(s, MX, 4.12, FULL, 0.35, "From the log: the rule first, then the test", size=14, bold=True, color=INK)
-    wi, pa = N.WISCONSIN_2025, N.PENNSYLVANIA_2025
+    wi, pa, la = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023
     logged = [
         ("16:12", "16:40", "Queen Anne's", "failed: 22% for USDA's 1.3%"),
         ("17:30", "18:11", "Kent", "failed: 21% for USDA's 5.5%"),
@@ -516,6 +519,7 @@ def build(out):
         ("22:55", "22:58", "Wisconsin 2023, two counties", "failed: Marathon 4.3% for USDA's 32 to 50%"),
         ("00:18", "01:43", "Wisconsin 2025", f"on the pass mark, marked unreliable: {wi['ours']}% for USDA's {wi['usda']}%"),
         ("00:18", "01:53", "Pennsylvania 2025", f"failed: {pa['ours']}% for USDA's {pa['usda']}%"),
+        ("00:18", "02:13", "Lancaster County 2023", f"passed: {la['ours']}% for USDA's {la['census_2022']}% (2022 Census)"),
     ]
     rh = 0.27
     for i, (rule_at, test_at, what, result) in enumerate(logged):
