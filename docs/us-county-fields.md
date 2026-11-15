@@ -427,3 +427,6 @@ Not finished:
   of 3,374 read blocks, 4,845 fields, 116,492 acres (4.4 % of the frame); 4 drawn blocks touch Branch and 6 touch
   Gratiot (the 2022 development counties). New York: 150 of 2,806 read blocks, 3,743 fields, 65,265 acres (5.7 %);
   the small-grain/corn double crop is 3.5 % of New York's frame.
+- 03:42 PT: Michigan 2025 sample complete: parts merged and finalised, verified, READY lines written (each with its
+  blocks touching Branch and Gratiot: 1/2, 2/1, 1/3); s2 partial from one permanent plausibility rejection. Merged
+  in `C:\t\fv\data\counties\26_2025_sample\`: 4,845 fields (corn 4,835, double crop 10) in 150 of 3,374 read blocks.
