@@ -15,7 +15,7 @@ Written on the evening of 14 November for the teammates who continue from here. 
 | What | Where |
 |---|---|
 | Code | this repository, branch `main` |
-| Slides | [`handoff/presentation/`](handoff/presentation/) (PowerPoint and PDF, with speaker notes); the pieces and scripts are in `docs/pitch/` |
+| Slides | [`handoff/presentation/`](handoff/presentation/) (PowerPoint and PDF: ten slides and three backup slides, speaker notes on each); the pieces and scripts are in `docs/pitch/` |
 | Colab notebooks | [`colab/`](colab/); to look at pictures of any field use `colab/view_field_images.ipynb`; the extraction notebooks as they were run are in `colab/extraction/` (the two for the sequence and pixel experiment in `colab/bundles/`). Open one with `https://colab.research.google.com/github/ChenSiyun1234/FieldVision/blob/main/colab/<path>.ipynb` |
 | Data (field outlines and time series per county) | `handoff/FieldVision_handoff_data.zip`; unzip it and the counties are in `3_data/counties/<fips>/<year>/` |
 | Figures and field pictures | [`handoff/figures/`](handoff/figures/) |
