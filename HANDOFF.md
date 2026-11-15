@@ -79,7 +79,7 @@ Policies: `standard` is the one the agent already uses (unchanged); `module_v2` 
 2. **Double-crop corn is not scored.** Corn sown after a small-grain forage is its own class in the boundaries. Maryland 2025: 22,700 silage acres seen plus 17,056 acres of this class is 39,756, against 40,000 from NASS. The sample already holds the time series for these fields.
 3. **Two models, one per kind of evidence.** The boosted trees trained with dates dropped may hold up better where the harvest is not clearly seen.
 4. **Radar for cloudy weeks.** A Sentinel-1 pilot for Kent is built (`colab/`, package `fieldvision.s1`); it would give a harvest date for fields the optical pictures missed.
-5. **A land-use prior.** The share of hay and alfalfa around a field lines up with the county silage share (0.20 for 19.6%, 0.12 for 8.9%, 0.024 for 5.5%, 0.013 for 1.3%). It tells how much silage to expect in a place, not which field; if used, show it beside the satellite figure, never instead of it.
+5. **A land-use prior.** The share of hay and alfalfa in the cropland lines up with the silage share. Checked against the Census with whole states held out it is 5.9 points off per county and 4.2 per state; on the 2025 state figures, compared once, 3.7 points (weighted by acres). It reads Maryland at 10.6% (NASS 8.9%) but misses the irrigated dairy states of the West badly. It tells how much silage to expect in a place, not which field; show it beside the satellite figure, never instead of it. See [`docs/landuse-prior.md`](docs/landuse-prior.md).
 
 ## What not to claim
 

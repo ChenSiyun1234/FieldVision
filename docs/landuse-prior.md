@@ -109,5 +109,5 @@ refitted afterwards.
   in small states with few corn counties.
 - The 2023 check covers only 7 states (counties that report both classes in the survey).
 
-Files: `C:\t\fv\data\us\landuse\` (county_landuse.csv, census2022_with_landuse.csv, holdout_results.csv,
+Files: `<data>\us\landuse\` (county_landuse.csv, census2022_with_landuse.csv, holdout_results.csv,
 coefficients.json, state_prediction_2025.csv). Figure: `scripts/landuse_prior_figure.py`.

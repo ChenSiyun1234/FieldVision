@@ -340,25 +340,25 @@ Anne's). Source polygons that were invalid and repaired with `make_valid`: 118 a
 
 ## State at hand-over (14 Nov, about 19:50 PT)
 
-Finished, verified and in `C:\t\fv\data\timeseries\READY.txt`, with toolbox folders under
-`C:\t\fv\data\counties\`: Frederick 24021, Queen Anne's 24035, Kent 24029, Carroll 24013 (2022; each with
+Finished, verified and in `<data>\timeseries\READY.txt`, with toolbox folders under
+`<data>\counties\`: Frederick 24021, Queen Anne's 24035, Kent 24029, Carroll 24013 (2022; each with
 fields.geojson, timeseries.parquet, fields_coverage.csv, unscored_corn.json, landscape.parquet), Branch 26023 and
 Gratiot 26057 (2022; no landscape.parquet, their state CSB is not on this laptop), the Maryland 2025 sample
 (`24_2025_sample`: fields, corn and double-crop series, draw.json, state_acres.json, sample_info.json,
 landscape.parquet). Beltsville stays as 24033 (made by the modelling session).
 
 Not finished:
-- Racine `us_55101_2023` and Marathon `us_55073_2023`: results are in `C:\t\fv\colab_results\<run>\` (field zip +
+- Racine `us_55101_2023` and Marathon `us_55073_2023`: results are in `<work>\colab_results\<run>\` (field zip +
   block parts, checksums OK) but not unpacked or merged. Next: unzip the fields zip as is to
-  `C:\t\fv\data\labels\<run>\`, create the run folder with `build_colab_run.start_fresh_run` and template
-  `C:\t\fv\colab\_templates\9cd0447b_2023` (README step 2 in `C:\t\fv\colab\<run>\`), then
+  `<data>\labels\<run>\`, create the run folder with `build_colab_run.start_fresh_run` and template
+  `<work>\colab\_templates\9cd0447b_2023` (README step 2 in `<work>\colab\<run>\`), then
   `scripts/merge_colab_blocks.py` and the finalise command. Marathon is a capped draw (sample.json in its zip).
   Lancaster `us_42071_2023` was still running on Colab. All three are untouched test counties.
-- Pennsylvania and Wisconsin 2025 frames and draws: unzipped to `C:\t\fv\data\labels\us_42_2025\` and
+- Pennsylvania and Wisconsin 2025 frames and draws: unzipped to `<data>\labels\us_42_2025\` and
   `us_55_2025\` (s1-s3 field files, draw.json, state_acres.json); no extraction bundles built. Next, per part:
-  `python scripts/build_colab_run.py --run-dir C:/t/fv/data/timeseries/us_<fips>_2025_s<k> --fields C:/t/fv/data/labels/us_<fips>_2025/s<k>/fields.geojson --code <frozen 9cd0447b> --template-run C:/t/fv/colab/_templates/9cd0447b_2025 --check-external <as for Maryland> --dest C:/t/fv/colab/us_<fips>_2025_s<k>` (script on main).
+  `python scripts/build_colab_run.py --run-dir <data>/timeseries/us_<fips>_2025_s<k> --fields <data>/labels/us_<fips>_2025/s<k>/fields.geojson --code <frozen 9cd0447b> --template-run <work>/colab/_templates/9cd0447b_2025 --check-external <as for Maryland> --dest <work>/colab/us_<fips>_2025_s<k>` (script on main).
 - Landscape files for Michigan, Pennsylvania and Wisconsin: need their state CSB on Colab
   (`scripts/forage_landscape.py`).
 - Six-state proposal (above): not started.
-- County CDL statistics (CropScape) 2019-2025: `C:\t\fv\data\us\cropscape\county\`, about 2,885 counties per year,
-  complete; county table and land-use prior results in `C:\t\fv\data\us\landuse\` (docs/landuse-prior.md).
+- County CDL statistics (CropScape) 2019-2025: `<data>\us\cropscape\county\`, about 2,885 counties per year,
+  complete; county table and land-use prior results in `<data>\us\landuse\` (docs/landuse-prior.md).
