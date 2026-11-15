@@ -102,7 +102,7 @@ def places():
             ax.scatter([ours], [y], s=150, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
             ax.text(ours_x, y, pct(ours), fontsize=14.5, fontweight="bold", color=BLUE, ha="right", va="center")
             if name == "Wisconsin 2025":
-                ax.text(beside_x, y, f"{wi['points_low']} points low; our pass mark was {wi['pass_mark']}", fontsize=12.5,
+                ax.text(beside_x, y, f"{wi['points_low']} low (pass mark {wi['pass_mark']}); unreliable by our rule", fontsize=12.5,
                         color=INK, va="center")
     ax.text(usda_x, top + 0.75, "USDA", fontsize=13, color=INK2, ha="right", va="center")
     ax.text(ours_x, top + 0.75, "Ours", fontsize=13, fontweight="bold", color=BLUE, ha="right", va="center")
@@ -225,13 +225,14 @@ def scoreboard():
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
     waiting = [p[0] for p in N.PLACES_TO_OPEN if p[3] is None]
     tests = {5: "five", 6: "six", 7: "seven", 8: "eight"}[sum(1 for r in rows if r[0] == "test")]
-    more = f"\nStill to come, once each: {'; '.join(waiting)}." if waiting else ""
+    more = f" Still to come, once each: {'; '.join(waiting)}." if waiting else ""
     fig.text(0.02, 0.02, "Share of the corn area that is silage. The four Maryland counties (2022) were used to tune the method; "
              f"the other {tests} places were tests, each run once.\n"
              "Wisconsin 2025 is a random sample of the whole state, never looked at before, read with two satellites: "
              f"{wi['points_low']} points low, where our pass mark was {wi['pass_mark']}.\n"
              "We had predicted in writing that it would read low. A warning check also went off: two grain counties there read "
-             f"{wi['guard']['ours']}% where USDA's Census says {wi['guard']['census']}%." + more,
+             f"{wi['guard']['ours']}% where USDA's Census says {wi['guard']['census']}%.\n"
+             "By the rule we wrote down first, that marks this figure as unreliable." + more,
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s06_scoreboard")
 

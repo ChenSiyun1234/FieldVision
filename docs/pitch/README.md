@@ -9,8 +9,9 @@ in. Still to come: Pennsylvania 2025 and Lancaster County 2023.
 **Newer than the rest of this page:** the Wisconsin 2023 test failed (Marathon County read 4.3 %
 where USDA has 32.1 to 49.9 %). The Wisconsin 2025 state sample, never looked at before and run
 once, read 16.5 % where USDA has 21.6 %: 5.1 points low against a pass mark of 5, as we had
-predicted in writing; a warning check on two grain counties also went off (15.0 % for 4.5 %). The
-slide deck is up to date; the figures, `script.md` and `limits.md` of the first pack were written
+predicted in writing; a warning check on two grain counties also went off (15.0 % for 4.5 %),
+which by the rule written first marks the figure as unreliable, and the deck says so. The slide
+deck is up to date; the figures, `script.md` and `limits.md` of the first pack were written
 before both.
 
 ## The three sentences the model part stands on

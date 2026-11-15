@@ -262,9 +262,11 @@ def build(out):
     notes(s, "Then we tried to break it. We compared ten places with USDA's own numbers. "
              "We are close where silage is rare. In dairy country we read low. "
              "For all of Wisconsin in 2025, a state we had never looked at, we say 16.5 percent and USDA says 21.6. "
-             "We wrote down before the test that it would read low.",
+             "We wrote down before the test that it would read low. A warning check we had set up also went off there. "
+             "By the rule we wrote down first, that marks this figure as unreliable.",
           "然后我们想办法把它考倒：拿十个地方和美国农业部自己的数字对比。青贮少的地方我们很接近；在奶牛产区我们读得偏低。"
-          "2025 年的威斯康星全州，我们之前从没看过：我们读出 16.5%，美国农业部是 21.6%。测试之前我们就写下了预测：会偏低。")
+          "2025 年的威斯康星全州，我们之前从没看过：我们读出 16.5%，美国农业部是 21.6%。测试之前我们就写下了预测：会偏低。"
+          "我们事先设的一个预警也在那里触发了；按我们事先写下的规则，这个数字要标为“不可靠”。")
 
     # 7  a second satellite for the cloudy counties --------------------------------------------------------------
     s = new_slide(prs, "A second satellite sees past the clouds: in the three cloudy counties our figure moved towards USDA's")
@@ -494,22 +496,25 @@ def build(out):
     picture(s, "s10_maryland_test.png", MX, 1.4, ph * 1920 / 972)
     text(s, MX + ph * 1920 / 972 + 0.3, 1.6, FULL - ph * 1920 / 972 - 0.3, 3.0, "Every test rule went into a log, with the time, before the "
          "test ran.\n\nThe 44 labelled fields were scored four times, each time logged, and never used for training.\n\n"
-         "Failures are shown as failures.", size=15, color=INK, spacing=1.15)
+         "Failures are shown as failures. In Wisconsin 2025 a warning check we had written first went off, so by our own rule "
+         "that figure is marked unreliable.", size=15, color=INK, spacing=1.15)
     text(s, MX, 4.8, FULL, 0.35, "From the log: the rule first, then the test", size=14, bold=True, color=INK)
     logged = [("16:12", "16:40", "Queen Anne's", "failed"), ("17:30", "18:11", "Kent", "failed"),
               ("18:25", "19:11", "Michigan", "passed"), ("18:25", "19:14", "Maryland 2025", "reads low"),
-              ("22:55", "22:58", "Wisconsin 2023", "failed"), ("00:18", "01:43", "Wisconsin 2025", "5.1 low, mark 5")]
+              ("22:55", "22:58", "Wisconsin 2023", "failed"), ("00:18", "01:43", "Wisconsin 2025", "5.1 low, mark 5,\nunreliable")]
     sw = (FULL - 5 * 0.2) / 6
     for i, (rule_at, test_at, what, result) in enumerate(logged):
         x = MX + i * (sw + 0.2)
         good = result == "passed"
         card(s, x, 5.25, sw, 1.65, fill=BLUE if good else WHITE, line=None if good else GREY)
-        text(s, x + 0.2, 5.38, sw - 0.3, 0.35, f"{rule_at}  rule written", size=12, color=WHITE if good else INK2)
-        text(s, x + 0.2, 5.68, sw - 0.3, 0.35, f"{test_at}  test run once", size=12, color=WHITE if good else INK2)
-        text(s, x + 0.2, 6.08, sw - 0.3, 0.75, f"{what}:\n{result}", size=14, bold=True, color=WHITE if good else INK)
+        text(s, x + 0.2, 5.33, sw - 0.3, 0.35, f"{rule_at}  rule written", size=12, color=WHITE if good else INK2)
+        text(s, x + 0.2, 5.6, sw - 0.3, 0.35, f"{test_at}  test run once", size=12, color=WHITE if good else INK2)
+        text(s, x + 0.2, 5.95, sw - 0.3, 0.85, f"{what}:\n{result}", size=14, bold=True, color=WHITE if good else INK)
     notes(s, "Every test rule was written in a log before the test ran. "
-             "The 44 labelled fields were scored four times, each time logged.",
-          "每条检验规则都在检验之前写进了日志。44 个带标签的地块一共打了四次分，每次都有记录。")
+             "The 44 labelled fields were scored four times, each time logged. "
+             "In Wisconsin 2025 our own warning check went off, so by our rule that figure is marked unreliable.",
+          "每条检验规则都在检验之前写进了日志。44 个带标签的地块一共打了四次分，每次都有记录。"
+          "2025 年威斯康星的测试里，我们自己设的预警触发了，所以按我们的规则，那个数字标为“不可靠”。")
 
     s = new_slide(prs, "Maryland 2025, the state USDA scores: we read low")
     body_picture(s, "state_2025.png")
