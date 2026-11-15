@@ -18,6 +18,7 @@ Written on the evening of 14 November for the teammates who continue from here. 
 | Slides | [`handoff/presentation/`](handoff/presentation/) (PowerPoint and PDF: ten slides and three backup slides, speaker notes on each); the pieces and scripts are in `docs/pitch/` |
 | Colab notebooks | [`colab/`](colab/); to look at pictures of any field use `colab/view_field_images.ipynb`; the extraction notebooks as they were run are in `colab/extraction/` (the two for the sequence and pixel experiment in `colab/bundles/`). Open one with `https://colab.research.google.com/github/ChenSiyun1234/FieldVision/blob/main/colab/<path>.ipynb` |
 | Data (field outlines and time series per county) | `handoff/FieldVision_handoff_data.zip`; unzip it and the counties are in `3_data/counties/<fips>/<year>/` |
+| Training data (labelled fields in Austria, France, the Netherlands, with their time series) | `handoff/FieldVision_training_data_europe.zip`; unzip at the repository root and the files land in `data/labels/` and `data/timeseries/`, the paths the training command expects |
 | Figures and field pictures | [`handoff/figures/`](handoff/figures/) |
 | Every result, with when it was logged | [`docs/RESULTS.md`](docs/RESULTS.md); the full record is [`handoff/results/ACCESS_LOG.md`](handoff/results/ACCESS_LOG.md) |
 | How the module works | [`docs/module.md`](docs/module.md), [`docs/model.md`](docs/model.md), [`docs/features.md`](docs/features.md) |
