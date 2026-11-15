@@ -69,7 +69,7 @@ def build_messages(before_png, after_png):
 
 
 def ask_vision(before_png, after_png, llm=None):
-    llm = llm or NemotronClient(model=VISION_MODEL, max_tokens=400)
+    llm = llm or NemotronClient(model=VISION_MODEL, max_tokens=2048)  # Super VL reasons ~570 tokens first; 400 left the reply empty
     return parse_reply(llm.chat(build_messages(before_png, after_png))["content"])
 
 
