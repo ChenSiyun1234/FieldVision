@@ -280,6 +280,21 @@ pres.addSection({ title: "Geospatial" });
     6.45, 6.03, 6.1, 0.95, { fontSize: 14 });
 }
 
+// 13b. A second state
+{
+  const s = slide("CONTENT", "Geospatial", "A second state", "Lancaster County, Pennsylvania: 35.2% silage, run once",
+    "A second state. Lancaster County, Pennsylvania, the largest dairy county in the state, 2023. The team's extraction had 3,694 corn fields; we converted it and ran it once, tuning nothing. On the 1,057 clearly seen fields the final model calls 35.2 percent silage. USDA has no 2023 county figure, so the nearest check is the 2022 Census: 27.4 percent, and 35.5 in 2017. The critic passed it against the county's own history and warned that 36 percent of the acres were not judged: the median field had only 8 clear looks from July to November, and the unjudged fields cluster in the cloudier east.");
+  pic(s, "figs/m_lancaster.png", M, 1.6, 6.4, 5.45, { panel: true, fill: C.bg });
+  card(s, 7.25, 1.6, 5.5, 5.45);
+  stat(s, 7.5, 1.75, 2.4, "35.2%", "silage on 1,057 clearly seen fields (ours, 2023)", C.silage, 40);
+  stat(s, 10.05, 1.75, 2.5, "27.4%", "USDA Census 2022, the latest county figure", C.usda, 40);
+  table(s, [["", "Silage share"], ["Census 2012", "41.8%"], ["Census 2017", "35.5%"], ["Census 2022", "27.4%"],
+    ["PA state survey 2023", "33.7%"], [{ text: "Ours 2023", options: { bold: true, color: C.silage, fill: { color: C.panel } } }, { text: "35.2%", options: { bold: true, color: C.silage, fill: { color: C.panel } } }]],
+    7.5, 3.45, 5.0, [3.0, 2.0], { rowH: 0.32 });
+  text(s, bullets(["Critic: inside the county's own history (pass); 35.7% of acres not judged (warn). Nemotron: accepted with warnings.",
+    "Median 8 clear looks per field, July–November; unjudged fields sit in the cloudier east."], { fontSize: 13 }), 7.5, 5.5, 5.05, 1.5, { color: C.muted });
+}
+
 // 14. Agent
 pres.addSection({ title: "The agent" });
 {

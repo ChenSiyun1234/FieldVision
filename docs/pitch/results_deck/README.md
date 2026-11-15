@@ -1,6 +1,6 @@
 # Results deck
 
-`handoff/presentation/FieldVision_results.pptx` (and the PDF beside it): 22 slides, the whole project
+`handoff/presentation/FieldVision_results.pptx` (and the PDF beside it): 23 slides, the whole project
 from the field signal to the app, in the same dark "harvest" theme as the app. Speaker notes on every slide.
 
 How it was made, so it can be redrawn:

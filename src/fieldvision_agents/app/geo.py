@@ -94,6 +94,14 @@ def _ours_by_state():
                 out.setdefault(ABBR[r["state"]], []).append({
                     "what": "2025 state sample (300 fields, final model)", "ours_pct": r["headline_pct"],
                     "usda_pct": r["usda_2025_silage_pct"], "ours_acres": r["model_silage_acres"], "usda_acres": r["usda_2025_silage_acres"]})
+    la = RESULTS / "agents" / "lancaster_2023_county_check.json"
+    if la.is_file():
+        l = json.loads(la.read_text())
+        out.setdefault("42", []).append({
+            "what": f"Lancaster County 2023 ({l['module_v2']['clear_tier_fields']:,} clearly seen fields; USDA: Census {l['census_year']})",
+            "ours_pct": round(100 * l["module_v2"]["silage_share_headline"], 1), "usda_pct": l["census_silage_pct"],
+            "ours_acres": round(l["acres"]["silage_acres"]),
+            "usda_acres": next((h["silage"] for h in l["census_history"] if h["year"] == l["census_year"]), None)})
     md = RESULTS / "state_estimate.json"
     if md.is_file():
         m = json.loads(md.read_text())
