@@ -414,3 +414,7 @@ Not finished:
   share (44.5 %) comes from an estimate that covers about half the corn the CDL and the Census show. Why the
   survey is low is not known here (a guess: county survey estimates are modelled from a sample, and many small
   farms there may be under-sampled).
+- 01:30 PT: Lancaster merged and finalised by the extraction session, verified (70 blocks complete, 10,533 fields
+  usable, Collection 1, no failures; 94 % of fields have at least 8 usable dates in July-November), READY line
+  written (untouched test county, seeded draw, Census total supported), toolbox folder
+  `C:\t\fv\data\counties\42071\2023\` (fields, series, coverage, unscored_corn.json, county_check.json, sample.json).
