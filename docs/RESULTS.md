@@ -21,7 +21,8 @@ so it is not a clean test. Headline = what the log named as the headline when th
 | Maryland (150 random blocks) | 2025 | 4.75 % [3.4, 6.3] counted clear (window 3.8 %) | NASS 8.9 % | no: reads low | 19:14 |
 | Maryland, double crops added | 2025 | 6.7 % [5.3, 8.2] | NASS 8.9 % | after the fact | 19:23 |
 | Land-use prior, Maryland | 2025 | 10.6 % | NASS 8.9 % | no (county work) | 19:48 |
-| Racine WI, Marathon WI | 2023 | to come | survey 2023 / Census 2022: 4.2-6.4 %, 32.1-44.9 % | no | criteria 22:52 |
+| Racine WI | 2023 | 6.4 % counted clear (window 6.3 %) | survey 2023 2.4 %; band 2.4-6.4 % | no: inside the band | 22:58 |
+| Marathon WI (drawn blocks) | 2023 | 4.3 % counted clear (window 10.0 %) | survey 2023 49.9 %; band 32.1-49.9 % | no: **fail**, 28 points low; 48 % of fields abstained (harvest bracket over 20 days) | 22:58 |
 
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
