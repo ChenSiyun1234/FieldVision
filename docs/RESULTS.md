@@ -61,8 +61,16 @@ outside the scored set; scoring it lifts the figure to 6.7 %.
    A Kent pilot is built by the extraction work.
 5. **Land-use prior, county level only.** The share of hay and alfalfa in the cropland around the
    fields orders the four Maryland counties as the Census does (0.20 / 0.12 / 0.024 / 0.013) but does
-   not separate fields within a county. On disk: `landscape.parquet` in the four county folders and
-   the 2025 sample folder; a national hold-out test is with the county work.
+   not separate fields within a county. National hold-out by the county work (silage share = a + b x
+   forage share of cropland, 1,410 counties, Census 2022): leave one state out, county error 5.9
+   points and state error 4.2 (national-share baseline 9.0 and 7.7); 2023 survey counties fitted on
+   2022, county 5.8 and state 3.6. Its 2025 prediction uses the 2019-2023 mean forage share (logged
+   19:48 by the county work). How to report it: beside the satellite figure, labelled as a land-use
+   prior (what a usual year looks like, nothing about this season or any field), never replacing it;
+   no combined figure, because the satellite figure has only two state-level checks (pseudo-state
+   2022 within 0.1 point, Maryland 2025 4.2 low) and that is too little to set weights in advance.
+   On disk: `landscape.parquet` in the four county folders and the 2025 sample folder;
+   `<data>/us/landuse/holdout_results.csv`.
 
 Not opened and not run: the Pennsylvania and Wisconsin 2025 samples and the 2023 counties. Rules for
 them were written in the log at 19:21 (double crops) and 19:33 (headline switch at 20 % blind area);
