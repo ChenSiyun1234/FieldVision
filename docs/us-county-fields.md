@@ -123,6 +123,98 @@ before any field file for it was made), applied to the Census 2022 county rows a
 `python scripts/pick_test_county.py --quickstats <csv>` applies the rule and prints the ranking.
 No model is run on a test county until the county procedure is fixed and logged.
 
+## Proposal: county checks in Iowa and five more states (not started)
+
+Without field labels outside Beltsville, the only test there is the Maryland one: run the model on
+a county's corn fields and compare the county total with the 2022 Census. Everything below comes
+from the Census table on this machine; `python scripts/scope_states.py --quickstats <csv>`
+reproduces the selections. Nothing has been downloaded or extracted for it.
+
+**States.** The file has no 2022 state rows, so state totals are sums of the county Census rows
+(withheld counties missing, so these are lower bounds). Rule: Iowa, plus the five states with the
+most silage acres among states with at least 1,000,000 grain acres, so both classes matter.
+
+| State | Grain acres | Silage acres | Silage share | Counties withheld (grain / silage) |
+|---|---:|---:|---:|---|
+| Iowa | 12,637,070 | 250,167 | 1.9 % | 0 / 3 |
+| Wisconsin | 3,065,184 | 786,353 | 20.4 % | 4 / 2 |
+| Texas | 1,626,900 | 372,510 | 18.6 % | 67 / 41 |
+| South Dakota | 4,802,732 | 313,785 | 6.1 % | 2 / 2 |
+| Minnesota | 7,732,455 | 312,984 | 3.9 % | 0 / 2 |
+| Michigan | 2,099,511 | 307,637 | 12.8 % | 8 / 8 |
+
+Next in line: Nebraska (242,277 silage), Kansas (241,676), North Dakota, Colorado, Ohio.
+
+**Counties.** Per state: grain and silage both published, grain + silage at least 10,000 acres;
+the eligible counties are split into terciles of silage share; "high" is the largest-corn county
+of the top tercile, "low" the largest of the bottom tercile.
+
+| State | | FIPS | County | Grain | Silage | Share |
+|---|---|---|---|---:|---:|---:|
+| Iowa | high | 19167 | Sioux | 221,894 | 40,668 | 15.5 % |
+| Iowa | low | 19109 | Kossuth | 304,340 | 1,311 | 0.4 % |
+| Wisconsin | high | 55073 | Marathon | 83,973 | 39,717 | 32.1 % |
+| Wisconsin | low | 55105 | Rock | 119,270 | 6,159 | 4.9 % |
+| Texas | high | 48205 | Hartley | 68,758 | 55,552 | 44.7 % |
+| Texas | low | 48421 | Sherman | 92,815 | 7,253 | 7.2 % |
+| South Dakota | high | 46059 | Hand | 184,807 | 18,937 | 9.3 % |
+| South Dakota | low | 46013 | Brown | 273,340 | 3,846 | 1.4 % |
+| Minnesota | high | 27145 | Stearns | 183,737 | 34,145 | 15.7 % |
+| Minnesota | low | 27129 | Renville | 271,325 | 1,964 | 0.7 % |
+| Michigan | high | 26057 | Gratiot | 87,321 | 27,878 | 24.2 % |
+| Michigan | low | 26023 | Branch | 89,128 | 1,653 | 1.8 % |
+
+**Cost.** These counties have 3 to 7 times Frederick's corn. Extraction cost is per read block,
+and in Maryland a block covered about 18-25 km² of county land (Frederick 1,711 km² -> 70 blocks,
+Queen Anne's 963 km² -> 52). With approximate land areas (from memory, about +/-10 %; the TIGER
+file was deleted, a Census Gazetteer table would make this exact) and Midwest fields assumed at
+about 40 acres (Maryland CSB fields average 15-36 acres; to be measured):
+
+| County | Land km² (approx.) | Read blocks (~area/25) | Corn fields (~acres/40) | Colab time at 15-70 s/block |
+|---|---:|---:|---:|---|
+| Sioux IA | 1,990 | ~80 | ~6,600 | 20-95 min |
+| Kossuth IA | 2,520 | ~100 | ~7,600 | 25-120 min |
+| Marathon WI | 4,000 | ~160 (fewer: corn is sparse) | ~3,100 | 40-185 min |
+| Rock WI | 1,860 | ~75 | ~3,100 | 20-90 min |
+| Hartley TX | 3,790 | ~150 (fewer: pivots are sparse) | ~3,100 | 40-175 min |
+| Sherman TX | 2,390 | ~95 | ~2,500 | 25-110 min |
+| Hand SD | 3,720 | ~150 | ~5,100 | 40-175 min |
+| Brown SD | 4,440 | ~180 | ~6,900 | 45-210 min |
+| Stearns MN | 3,480 | ~140 | ~5,400 | 35-165 min |
+| Renville MN | 2,550 | ~100 | ~6,800 | 25-120 min |
+| Gratiot MI | 1,470 | ~60 | ~2,900 | 15-70 min |
+| Branch MI | 1,310 | ~55 | ~2,300 | 15-65 min |
+
+About 1,350 blocks in all: roughly 6 to 26 Colab hours on one 8-CPU session, depending on how
+many scenes each block sees (one MGRS tile and orbit: ~30-60 scenes, ~15 s per block; tile and
+UTM-zone overlaps: ~120 scenes, ~70 s). Sampling fields does not help; sampling counties does.
+Imagery: Earth Search Collection 1 has 2021 and 2023-2025; for 2022 it has almost nothing in the
+growing season, so 2022 comes from Planetary Computer (original baseline 04.00 plus ESA's
+reprocessed 05.10), exactly as in Maryland. County silage numbers exist only for the Census years
+2012, 2017 and 2022; Sentinel-2 L2A outside Europe is incomplete before late 2018, so 2022 is the
+only county year we can check.
+
+**Field boundaries without the slow link.** Do it all on Colab: range-download the national CSB
+archive there (3.76 GB; the NASS server returns an empty body to a plain GET, so it needs the
+64 MB range downloader used here, to be added to `scripts/`), run `scripts/csb_subset.py --state`
+for each state, `from_file` with the same filters per county, `county_corn_check.py` against TIGER
+(downloaded there too), then extract in the same session. Only the county field files (a few MB
+each), the check JSONs and the finished blocks come back. Needed: a Colab session with this
+branch's code, the Census CSV uploaded (1 MB), and about 15 GB of Colab disk.
+
+**Caution.** What worked in Maryland may not carry over. Harvest calendars differ: Texas Panhandle
+silage is cut in July-August and southern Texas grain is harvested from July, so the April-November
+window and the model's peak window (DOY 160-280, `--peak-window`) need checking there. Irrigated
+corn (Texas, and Nebraska or Kansas next in line) stays green longer and dries down differently from
+the rain-fed Austrian training fields. Double-crop corn is not in CDL class 1 (small in the Corn
+Belt, larger in Texas and the Mid-Atlantic), sweet corn is class 12 and excluded, but seed corn is
+in class 1 and is harvested early as ears, which may look like silage; how the Census counts seed
+corn needs checking. The Census tabulates by the farm's principal county, not by field location,
+and in Maryland the CSB corn area was 0.95-1.19 times the Census total. Above all, the Maryland
+counties showed the classifier calling about a fifth of the corn area silage in both a 1 % and a
+20 % county; the low-share counties above (Kossuth 0.4 %, Renville 0.7 %) are where that would
+show first.
+
 ## Time series and the toolbox copy
 
 `<data>\timeseries\us_<fips>_2022`, extractor defaults (`--year 2022`, April 1 to
