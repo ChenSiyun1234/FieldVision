@@ -3,87 +3,46 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>FieldVision Console</title>
-  <link rel="stylesheet" href="/static/console.css">
+  <title>FieldVision</title>
+  <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
   <header class="top">
-    <div class="brand"><span class="dot silage"></span><span class="dot grain"></span>FieldVision <span class="sub">analyst console</span></div>
-    <div id="status" class="chips" aria-live="polite"></div>
+    <button class="brand" id="home" title="Choose who you are"><span class="dot silage"></span><span class="dot grain"></span>FieldVision</button>
+    <nav id="tabs" class="tabs" aria-label="Views"></nav>
+    <div class="top-right">
+      <div id="status" class="chips" aria-live="polite"></div>
+      <button id="switch-role" class="ghost small" hidden>Switch role</button>
+    </div>
   </header>
 
-  <main class="layout">
-    <aside class="side">
-      <section class="card">
-        <h2>Run a county-season</h2>
-        <label>County and season
-          <select id="county"></select>
-        </label>
-        <fieldset class="mode">
-          <legend>Agent</legend>
-          <label><input type="radio" name="mode" value="nemotron"> Nemotron</label>
-          <label><input type="radio" name="mode" value="offline"> Offline rules</label>
-        </fieldset>
-        <button id="run" class="primary">Run the agent</button>
-        <p id="say" class="say"></p>
-      </section>
-      <section class="card">
-        <h2>Past runs</h2>
-        <ul id="runs" class="runs"></ul>
-      </section>
-    </aside>
-
-    <section id="main" class="main">
-      <div class="empty card">
-        <h2>Which corn fields were chopped, and which were combined?</h2>
-        <p>Pick a county-season and run the agent. Code computes every number: field calls from the final
-        model (six-feature logistic trained on 8,000 European fields), county acres, and the critic's checks against
-        USDA Quick Stats history. The agent chooses the route, takes at most one rerun the critic asks for,
-        and explains. Every number it writes is checked against the tool results.</p>
-        <p class="muted">Acres here are model estimates, not NASS statistics.</p>
-      </div>
-    </section>
+  <!-- Who are you? -->
+  <main id="landing" class="landing">
+    <h1>Which corn was chopped for silage, and which was combined for grain?</h1>
+    <p class="lede">FieldVision reads public Sentinel-2 imagery field by field. Pick who you are.</p>
+    <div class="roles">
+      <button class="role-card" data-role="dairy">
+        <span class="role-icon" aria-hidden="true">🐄</span>
+        <span class="role-title">I run a dairy</span>
+        <span class="role-text">Find standing corn near you that you could still buy and chop: tons, haul distance and a delivered price range, on a map.</span>
+      </button>
+      <button class="role-card" data-role="usda">
+        <span class="role-icon" aria-hidden="true">📊</span>
+        <span class="role-title">I'm a USDA analyst</span>
+        <span class="role-text">Run counties through the agent, read the evidence and report, plan field visits, and see corn supply, stocks and price next to our silage estimates.</span>
+      </button>
+    </div>
+    <p class="muted small">Acres here are model estimates, not NASS statistics. Field data covers past seasons, so the dairy view replays a season as of a date.</p>
   </main>
 
-  <template id="tpl-run">
-    <article class="card summary">
-      <div class="row between">
-        <h2 class="title"></h2>
-        <span class="badge"></span>
-      </div>
-      <div class="stats">
-        <div><div class="k">Silage acres</div><div class="v silage-t" data-f="silage"></div><div class="k" data-f="range"></div></div>
-        <div><div class="k">Grain acres</div><div class="v grain-t" data-f="grain"></div></div>
-        <div><div class="k">Abstained acres</div><div class="v" data-f="abstained"></div></div>
-      </div>
-      <div class="bar" aria-hidden="true"><span class="s"></span><span class="g"></span><span class="a"></span></div>
-      <p class="line" data-f="route"></p>
-      <p class="line muted" data-f="adjust"></p>
-      <p class="muted small" data-f="meta"></p>
-    </article>
-    <article class="card">
-      <h3>What the agent did</h3>
-      <ol class="steps"></ol>
-    </article>
-    <article class="card critic-card">
-      <h3>Critic</h3>
-      <div class="critic"></div>
-    </article>
-    <article class="card">
-      <div class="row between"><h3>County report</h3><button class="report-btn">Write the report</button></div>
-      <div class="report muted">No report yet.</div>
-    </article>
-    <article class="card">
-      <h3>Ask about this run</h3>
-      <div class="row ask-row">
-        <input class="question" type="text" placeholder="How many silage acres, and how sure are we?">
-        <button class="ask-btn">Ask</button>
-      </div>
-      <div class="chips samples"></div>
-      <div class="answers"></div>
-    </article>
-  </template>
+  <div id="workspace" class="workspace" hidden>
+    <aside id="side" class="side"></aside>
+    <section id="view" class="view"></section>
+  </div>
 
-  <script type="module" src="/static/console.js"></script>
+  <div id="tip" class="tip" role="tooltip" hidden></div>
+  <script src="/vendor/leaflet/leaflet.js"></script>
+  <script type="module" src="/static/app.js"></script>
 </body>
 </html>

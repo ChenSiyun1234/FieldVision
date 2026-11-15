@@ -74,6 +74,61 @@ def test_recommender_reads_the_final_module_predictions():
         silage_match.recommend, silage_match.save = real
 
 
+def test_dashboard_numbers_come_from_usda_history():
+    from . import dashboard
+    tiles = {t["id"]: t for t in dashboard.supply()["tiles"]}
+    assert tiles["production"]["change_pct"] == -6.3 and tiles["stocks"]["change_pct"] == 35.1
+    w = dashboard.what_if(1.0)
+    assert w["acres"] > 0 and w["range_pct"][0] <= w["range_pct"][1] and "not a forecast" in w["note"]
+    assert any(r["model"].startswith("no change") for r in dashboard.price_models())
+
+
+class _OneToolLLM:
+    """Calls silage_what_if once, then answers with the given text."""
+
+    def __init__(self, answers):
+        self.answers, self.n = list(answers), 0
+
+    def chat(self, messages, tools=None):
+        self.n += 1
+        if self.n == 1:
+            return {"content": "", "tool_calls": [{"id": "c1", "name": "silage_what_if", "arguments": '{"points": 1}'}]}
+        return {"content": self.answers.pop(0), "tool_calls": []}
+
+
+def test_chat_checks_every_number_and_retries_once():
+    from . import chat
+    w = __import__("fieldvision_agents.app.dashboard", fromlist=["what_if"]).what_if(1.0)
+    good = f"About {w['acres']:,} acres would move to silage."
+    r = chat.chat("usda", [{"role": "user", "content": "what if"}], {"offline": False}, llm=_OneToolLLM([good]))
+    assert r["grounded"] and r["cards"][0]["type"] == "whatif" and r["tools"] == ["silage_what_if"]
+    r = chat.chat("usda", [{"role": "user", "content": "what if"}], {"offline": False},
+                  llm=_OneToolLLM(["Price rises 98765 percent.", "Still 98765."]))
+    assert not r["grounded"] and "[unverified]" in r["reply"]
+
+
+def test_offline_chat_routes_questions_to_tools():
+    from . import chat
+    ctx = {"offline": True}
+    r = chat.chat("usda", [{"role": "user", "content": "What's the corn supply and price picture?"}], ctx)
+    assert r["tools"] == ["supply_outlook"] and r["cards"][0]["type"] == "supply"
+    r = chat.chat("usda", [{"role": "user", "content": "What if silage were 0.5 points lower?"}], ctx)
+    assert r["tools"] == ["silage_what_if"] and r["cards"][0]["data"]["points"] == -0.5
+    r = chat.chat("usda", [{"role": "user", "content": "How well has the agent tested?"}], ctx)
+    assert r["tools"] == ["agent_quality"]
+
+
+def test_dairy_finder_on_local_data():
+    """Runs only where the Frederick 2022 county data is on disk (it is not in git)."""
+    from ..settings import COUNTY_DATA
+    if not (COUNTY_DATA / "24021" / "2022" / "timeseries.parquet").is_file():
+        return
+    from . import dairy
+    r = dairy.find_silage("24021", 2022, "2022-09-15", lat=39.45, lon=-77.4, head=400, tons=1000, max_miles=15)
+    assert r["dairy"]["matched_tons"] <= 1000 and all(f["road_miles"] <= 15 for f in r["fields"])
+    assert len(r["map"]["features"]) == len(r["fields"])
+
+
 def test_web_api_serves_the_page_and_status():
     try:
         from fastapi.testclient import TestClient

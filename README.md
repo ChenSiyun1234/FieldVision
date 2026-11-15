@@ -43,7 +43,7 @@ docs/, handoff/           notes, decisions, results and the hand-over
 uv venv && uv pip install -e ".[agents]"
 fieldvision doctor                   # what this machine can run
 fieldvision run 24033 2022 --report  # one county-season through the agent
-fieldvision serve                    # web console at http://127.0.0.1:8765
+fieldvision serve                    # the app at http://127.0.0.1:8765: dairy owner or USDA analyst
 ```
 
 County data goes in `data/counties/<fips>/<year>/` (not in git). Without `NVIDIA_API_KEY` in `.env` the
