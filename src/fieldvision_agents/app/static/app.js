@@ -52,15 +52,16 @@ async function loadStatus() {
   if (!s.nemotron.ok) app.mode = "offline";
 }
 
-function chooseRole(role) {
-  app.role = role; app.tab = "chat"; store.set("fv.role", role);
-  $("#landing").hidden = true; $("#workspace").hidden = false; $("#switch-role").hidden = false;
+function chooseRole(role, tab = "chat") {
+  app.role = role; app.tab = ROLES[role].tabs.some(([id]) => id === tab) ? tab : "chat"; store.set("fv.role", role);
+  $("#landing").hidden = true; $("#workspace").hidden = false; $("#switch-role").hidden = false; $("#tabs").hidden = false;
   app.renderTabs(); app.refreshSide(); showTab();
 }
 
 function goHome() {
   app.role = null; store.set("fv.role", null);
-  $("#landing").hidden = false; $("#workspace").hidden = true; $("#switch-role").hidden = true; $("#tabs").replaceChildren();
+  $("#landing").hidden = false; $("#workspace").hidden = true; $("#switch-role").hidden = true;
+  $("#tabs").replaceChildren(); $("#tabs").hidden = true;
 }
 
 app.renderTabs = () => {
@@ -131,11 +132,15 @@ app.refreshSide = async () => {
 
 function messageNode(m) {
   if (m.role === "user") return el("div", { class: "msg user" }, m.content);
-  const node = el("div", { class: "msg assistant" });
-  if (m.pending) { node.append(el("div", { class: "thinking" }, m.pending)); return node; }
-  node.append(mdEl(m.content, "text md"));
-  if (m.cards?.length) node.append(el("div", { class: "cards" }, m.cards.map((c) => renderCard(c, { openRun: (id) => app.openRun(id), openMap: (r) => app.openMap(r) }))));
-  if (m.meta) node.append(el("div", { class: "meta" }, m.meta));
+  const body = el("div");
+  const avatar = el("div", { class: "avatar", "aria-hidden": "true" });
+  avatar.innerHTML = '<svg><use href="#logo"/></svg>';
+  const node = el("div", { class: "msg assistant" }, avatar, body);
+  if (m.pending) { body.append(el("div", { class: "thinking" }, m.pending)); return node; }
+  body.append(mdEl(m.content, "text md"));
+  if (m.cards?.length) body.append(el("div", { class: "cards" }, m.cards.map((c) => renderCard(c, { openRun: (id) => app.openRun(id), openMap: (r) => app.openMap(r) }))));
+  if (m.meta) body.append(el("div", { class: "meta" }, el("span", {}, m.meta.mode), ...(m.meta.tools || []).map((t) => el("span", { class: "tool" }, t)),
+    el("span", {}, m.meta.grounded ? "· every number checked" : "· contains [unverified] numbers")));
   return node;
 }
 
@@ -160,7 +165,7 @@ function chatView() {
       if (r.context?.run_id && r.context.run_id !== app.ctx.run_id) { app.ctx.run_id = r.context.run_id; app.refreshSide(); }
       const silage = r.cards.find((c) => c.type === "silage"); if (silage) app.lastSilage = silage.data;
       Object.assign(pending, { pending: null, content: r.reply, cards: r.cards,
-        meta: `${r.mode === "offline" ? "Offline rules" : "Nemotron"}${r.tools.length ? ` · tools: ${[...new Set(r.tools)].join(", ")}` : ""} · ${r.grounded ? "every number checked" : "contains [unverified] numbers"}` });
+        meta: { mode: r.mode === "offline" ? "Offline rules" : "Nemotron", tools: [...new Set(r.tools)], grounded: r.grounded } });
     } catch (e) { Object.assign(pending, { pending: null, content: `Something went wrong: ${e.message}` }); }
     draw();
   };
@@ -168,6 +173,7 @@ function chatView() {
   input.addEventListener("input", () => { input.style.height = "auto"; input.style.height = `${Math.min(input.scrollHeight, 160)}px`; });
   const suggest = el("div", { class: "suggest" }, (app.suggestions[role] || []).map((s) => el("button", { class: "chip", onclick: () => send(s) }, s)));
   draw();
+  if (app.pendingAsk) { const q = app.pendingAsk; app.pendingAsk = null; setTimeout(() => send(q), 0); }
   return el("div", { class: "chat" }, thread, el("div", { class: "composer" }, suggest,
     el("form", { onsubmit: (e) => { e.preventDefault(); send(); } }, input, el("button", { class: "primary", type: "submit" }, "Send")),
     el("div", { class: "hint" }, "Enter to send, Shift+Enter for a new line. Answers use the season and settings on the left. Acres are model estimates, not NASS statistics.")));
@@ -184,8 +190,13 @@ $("#switch-role").addEventListener("click", goHome);
     await loadStatus();
     [app.seasons, app.dairies, app.suggestions.dairy, app.suggestions.usda] = await Promise.all([
       api("/api/counties"), api("/api/dairies").catch(() => []), api("/api/suggestions/dairy"), api("/api/suggestions/usda")]);
-    const saved = store.get("fv.role", null);
-    if (saved && ROLES[saved]) chooseRole(saved);
+    // A link can open a role, tab and season directly: ?role=usda&tab=dashboard&fips=24021&year=2022
+    const q = new URLSearchParams(location.search);
+    if (q.get("fips")) { app.ctx.fips = q.get("fips"); app.ctx.year = Number(q.get("year") || app.ctx.year); }
+    else if (q.has("fips")) app.ctx.fips = null;                         // ?fips= opens the US map on the whole country
+    const saved = q.get("role") || store.get("fv.role", null);
+    if (q.get("ask")) app.pendingAsk = q.get("ask");                  // a demo link can open with a question asked
+    if (saved && ROLES[saved]) chooseRole(saved, q.get("tab") || "chat");
   } catch (e) {
     $("#landing").append(el("p", { class: "err" }, `Could not reach the server: ${e.message}`));
   }

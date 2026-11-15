@@ -4,13 +4,22 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FieldVision</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2313201a'/%3E%3Cpath d='M6 22 L16 8 L26 22' fill='none' stroke='%2314a37f' stroke-width='3'/%3E%3Cpath d='M10 26 L16 17 L22 26' fill='none' stroke='%23c98500' stroke-width='3'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
   <link rel="stylesheet" href="/static/app.css">
 </head>
 <body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="logo" viewBox="0 0 32 32">
+      <rect width="32" height="32" rx="8" fill="var(--panel-3)"/>
+      <path d="M5 21 L16 7 L27 21" fill="none" stroke="var(--silage)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+      <path d="M10 26 L16 17.5 L22 26" fill="none" stroke="var(--grain)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+    </symbol>
+  </svg>
+
   <header class="top">
-    <button class="brand" id="home" title="Choose who you are"><span class="dot silage"></span><span class="dot grain"></span>FieldVision</button>
-    <nav id="tabs" class="tabs" aria-label="Views"></nav>
+    <button class="brand" id="home" title="Choose who you are"><svg class="logo"><use href="#logo"/></svg>FieldVision</button>
+    <nav id="tabs" class="tabs" aria-label="Views" hidden></nav>
     <div class="top-right">
       <div id="status" class="chips" aria-live="polite"></div>
       <button id="switch-role" class="ghost small" hidden>Switch role</button>
@@ -19,18 +28,38 @@
 
   <!-- Who are you? -->
   <main id="landing" class="landing">
-    <h1>Which corn was chopped for silage, and which was combined for grain?</h1>
-    <p class="lede">FieldVision reads public Sentinel-2 imagery field by field. Pick who you are.</p>
+    <section class="hero">
+      <img src="/static/img/hero_fields.jpg" alt="Two corn fields in Frederick County, Maryland, July to October 2022, seen by Sentinel-2. Top: cut green in early September (silage). Bottom: browned first, cut in October (grain).">
+      <div class="copy">
+        <div class="eyebrow">Hack the Harvest · USDA NASS challenge</div>
+        <h1>Chopped for silage, or combined for grain?</h1>
+        <p>FieldVision reads every corn field from free satellite images, explains each call, and adds them up for the people who need the answer.</p>
+        <div class="tags">
+          <span class="tag"><i style="background:var(--silage)"></i>Silage: cut green, within days</span>
+          <span class="tag"><i style="background:var(--grain)"></i>Grain: dries down first</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="stats" aria-label="Headline numbers">
+      <div class="stat"><b class="silage-t">42 of 44</b><span>labelled US fields right, trained only on Europe (always-grain gets 32)</span></div>
+      <div class="stat"><b>8,000</b><span>labelled European fields to learn from</span></div>
+      <div class="stat"><b class="usda-t">6.19 M</b><span>US acres cut for silage in 2025 (USDA)</span></div>
+      <div class="stat"><b class="grain-t">3,231</b><span>counties on the map, with USDA's silage share</span></div>
+    </section>
+
     <div class="roles">
       <button class="role-card" data-role="dairy">
         <span class="role-icon" aria-hidden="true">🐄</span>
         <span class="role-title">I run a dairy</span>
         <span class="role-text">Find standing corn near you that you could still buy and chop: tons, haul distance and a delivered price range, on a map.</span>
+        <span class="role-go">Find silage →</span>
       </button>
       <button class="role-card" data-role="usda">
         <span class="role-icon" aria-hidden="true">📊</span>
         <span class="role-title">I'm a USDA analyst</span>
-        <span class="role-text">Run counties through the agent, read the evidence and report, plan field visits, and see corn supply, stocks and price next to our silage estimates.</span>
+        <span class="role-text">Run counties through the agent, read its evidence and report, plan field visits, and see supply, stocks and price beside our silage estimates.</span>
+        <span class="role-go">Open the analyst desk →</span>
       </button>
     </div>
     <p class="muted small">Acres here are model estimates, not NASS statistics. Field data covers past seasons, so the dairy view replays a season as of a date.</p>
