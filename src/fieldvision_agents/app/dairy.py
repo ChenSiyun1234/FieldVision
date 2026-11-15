@@ -12,11 +12,10 @@ Field data exists for past seasons only, so a run is a replay of that season "as
 import json
 import sys
 from functools import lru_cache
-from pathlib import Path
 
 import pandas as pd
 
-from ..settings import COUNTY_DATA, RECOMMENDER, REPO
+from ..settings import COUNTY_DATA, RECOMMENDER
 from . import service
 
 

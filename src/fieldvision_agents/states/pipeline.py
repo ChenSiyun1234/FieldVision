@@ -31,7 +31,6 @@ import sys
 import time
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
-from pathlib import Path
 
 from ..settings import DATA, FIELDVISION, FIELDVISION_DEPS, FIELDVISION_FINAL, QUICKSTATS_CSV, WORKSPACE
 

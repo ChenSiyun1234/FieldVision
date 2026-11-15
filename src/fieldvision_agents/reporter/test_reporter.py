@@ -3,7 +3,6 @@
 Run in the workspace terminal:  python -m fieldvision_agents.reporter.test_reporter
 """
 
-import json
 import tempfile
 
 from .reporter import ask, build_evidence, write_report

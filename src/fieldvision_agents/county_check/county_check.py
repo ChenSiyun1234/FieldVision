@@ -10,7 +10,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 
 from ..settings import COUNTY_DATA, FIELDVISION, FIELDVISION_DEPS, FIELDVISION_FINAL, QUICKSTATS_CSV as QUICKSTATS, RUNS, WORKSPACE

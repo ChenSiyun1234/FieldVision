@@ -18,7 +18,6 @@ from pathlib import Path
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import Ridge
-from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 from ..settings import QUICKSTATS_CSV
