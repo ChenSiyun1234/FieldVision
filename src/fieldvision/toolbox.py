@@ -271,7 +271,56 @@ class Toolbox:
                "n_fields": int(len(df)), "models_used": {df["model"].iloc[0]: int(len(df))}}
         called = (df["label"].to_numpy() == "silage")
         out.update(self._adjusted(df["model"].iloc[0], a, called, ok, silage))
+        # headline rule, fixed before any full-county total (see docs/toolbox.md)
+        out["silage_share_headline"] = out["silage_share_counted"]
+        out["headline_method"] = "counted share of the non-abstained area"
+        ps = self._prior_shift(p, a, ok)
+        out.update(ps)
+        if out.get("notes"):
+            out["notes"] += (f" Headline: counted share {out['silage_share_counted']:.1%}. Prior-shift "
+                             f"(EM) re-estimate from the county's own probabilities: "
+                             + (f"{ps['silage_share_prior_shift']:.1%}" if ps["prior_shift_converged"]
+                                else "did not converge") + ".")
         return out
+
+    def _prior_shift(self, p, a, ok, train_prior=0.5, tol=1e-6, max_iter=500):
+        """Re-estimate the silage share from the probabilities alone (EM prior shift).
+
+        Probabilities calibrated at `train_prior` are moved to a new prior, the new prior is
+        the area-weighted mean of the moved probabilities, and so on until it settles.
+        Started from 0.5. Needs no error rates; reported beside the headline, not instead of it.
+        """
+        def em(pp, aa):
+            pi = 0.5
+            for it in range(1, max_iter + 1):
+                num = pp * pi / train_prior
+                den = num + (1 - pp) * (1 - pi) / (1 - train_prior)
+                q = num / den
+                new = float(np.sum(aa * q) / np.sum(aa))
+                if abs(new - pi) < tol:
+                    return new, True, it
+                pi = new
+            return pi, False, max_iter
+
+        pp = np.clip(p[ok], 1e-6, 1 - 1e-6)
+        aa = a[ok]
+        if len(pp) == 0:
+            return {"silage_share_prior_shift": None, "silage_share_prior_shift_low": None,
+                    "silage_share_prior_shift_high": None, "prior_shift_converged": False,
+                    "prior_shift_iterations": 0}
+        share, conv, it = em(pp, aa)
+        rng = np.random.default_rng(self.seed + 2)
+        boots = []
+        for _ in range(max(self.n_resample // 10, 50)):
+            idx = rng.integers(0, len(pp), len(pp))
+            s, c, _ = em(pp[idx], aa[idx])
+            if c:
+                boots.append(s)
+        lo, hi = (np.percentile(boots, [5, 95]) if boots else (np.nan, np.nan))
+        return {"silage_share_prior_shift": round(share, 4),
+                "silage_share_prior_shift_low": None if not boots else round(float(lo), 4),
+                "silage_share_prior_shift_high": None if not boots else round(float(hi), 4),
+                "prior_shift_converged": bool(conv), "prior_shift_iterations": int(it)}
 
     def _adjusted(self, model_name, a, called, ok, raw_silage):
         """Counted silage area corrected with the model's European held-out error rates.

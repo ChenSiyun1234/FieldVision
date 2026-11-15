@@ -134,7 +134,23 @@ The stub's `run_critic` is not here; it belongs to the agent.
 
 ## Reading the county total
 
-`aggregate` keeps the stub's keys with their meaning and adds an adjusted total beside them.
+**Headline rule (fixed at 16:12 on 14 Nov, before any full-county total existed, and logged in
+the evaluation access log):** the headline county estimate is the **counted share**,
+`silage_share_headline` = the share of the non-abstained corn area that the policy's model calls
+silage. Beside it, with their ranges: the adjusted share and its spread across European
+validation designs, the raw sum of probabilities, and the prior-shift (EM) re-estimate. A wide
+spread of the adjusted share is itself the warning that error rates measured in Europe do not
+carry over to the county.
+
+Why the counted share: it needs no error rates from Europe, which did not hold on the partial
+Frederick snapshot, and it does not assume half the fields are silage. Its known bias, stated in
+advance: in expectation it equals TPR x true share + FPR x (1 - true share), so it reads high
+where the true silage share is below the model's false-positive rate (about 0.16 in Europe) and
+low where silage is common. The rule was chosen after seeing the partial Frederick snapshot, so
+Frederick is no longer a clean test of it; Queen Anne's County (24035, Census silage share 1.3 %)
+was declared the untouched check and is run only after the rule was logged.
+
+`aggregate` keeps the stub's keys with their meaning and adds these estimates beside them.
 
 - `silage_acres` (and its range) sums area x `p_silage`. The probabilities are calibrated for the
   training data, which is half silage, so this sum assumes half the fields are silage and reads
@@ -148,6 +164,10 @@ The stub's `run_critic` is not here; it belongs to the agent.
   design (spatial CV, each Austrian year held out) so the spread is visible. Rates measured in
   Austria may not hold in a US county; when they differ a lot, the total is not trustworthy.
 - A share that would fall below 0 or above 1 is clipped and `adjustment_clipped` says so.
+- `silage_share_prior_shift` (with `_low`, `_high`, `prior_shift_converged`,
+  `prior_shift_iterations`) re-estimates the share from the county's own probabilities by the
+  expectation-maximisation prior-shift correction, started from 0.5. It needs no error rates,
+  but it trusts the probabilities to be calibrated; where they are not, it runs to 0 or 1.
 - Abstained acres are in neither total. `notes` says all of this in one paragraph.
 
 Example, Frederick County MD (24021), 2022, **partial snapshot: 248 of 2,233 fields, 11 % of the
@@ -156,7 +176,8 @@ area, 7 neighbouring extraction blocks**, `standard` policy (composite_v1):
 | | silage share | silage acres |
 |---|---|---|
 | raw sum of p (assumes half silage) | 33 % | 1,397 [1,136, 1,661] |
-| counted (area called silage) | 18.9 % | |
+| **counted (area called silage): headline** | 18.9 % | |
+| prior-shift (EM) re-estimate | 0 % (converged at the boundary) | |
 | adjusted with European rates (TPR 0.70, FPR 0.16) | 4.9 % | 205 [0, 642] |
 | adjusted, other European designs | 0 % (clipped) to 5.3 % | |
 | USDA Census 2022, whole county | 19.6 % | 7,748 of 39,500 |

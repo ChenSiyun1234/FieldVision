@@ -388,7 +388,10 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     assert STUB_KEYS["aggregate"] <= set(a1) and a1 == a2
     extra = {"silage_acres_adjusted", "silage_acres_adjusted_low", "silage_acres_adjusted_high",
              "grain_acres_adjusted", "silage_share_counted", "silage_share_adjusted",
-             "adjustment_method", "adjustment_clipped", "adjusted_share_by_rates", "notes"}
+             "adjustment_method", "adjustment_clipped", "adjusted_share_by_rates", "notes",
+             "silage_share_headline", "headline_method", "silage_share_prior_shift",
+             "silage_share_prior_shift_low", "silage_share_prior_shift_high",
+             "prior_shift_converged", "prior_shift_iterations"}
     assert set(a1) == STUB_KEYS["aggregate"] | extra
     total = gj and sum(f["properties"]["area_ha"] for f in gj["features"]) * 2.47105
     assert abs(a1["silage_acres"] + a1["grain_acres"] + a1["abstained_acres"] - total) < 1.0
@@ -500,3 +503,21 @@ def test_in_site_cross_validation_and_policy_scope(tmp_path):
     tb = Toolbox(data_root=tmp_path, registry=tmp_path / "noreg", out_root=tmp_path / "o")
     with pytest.raises(ValueError, match="only for FIPS"):
         tb._policy_predictions("24021", 2022, "in_site")
+
+
+def test_prior_shift_recovers_a_known_share(tmp_path):
+    import numpy as np
+    from fieldvision.toolbox import Toolbox
+    rng = np.random.default_rng(0)
+    n, true_share = 4000, 0.1
+    y = rng.random(n) < true_share
+    # a score drawn per class, turned into the probability that is calibrated for 50/50
+    from scipy.stats import beta
+    s = np.where(y, rng.beta(8, 2, n), rng.beta(2, 8, n))
+    f1, f0 = beta.pdf(s, 8, 2), beta.pdf(s, 2, 8)
+    p = f1 / (f1 + f0)
+    tb = Toolbox(data_root=tmp_path, registry=tmp_path, out_root=tmp_path / "o", n_resample=200)
+    r = tb._prior_shift(p, np.ones(n), np.ones(n, bool))
+    assert r["prior_shift_converged"]
+    assert abs(r["silage_share_prior_shift"] - true_share) < 0.05
+    assert r["silage_share_prior_shift_low"] <= r["silage_share_prior_shift"] <= r["silage_share_prior_shift_high"]
