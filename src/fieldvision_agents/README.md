@@ -38,7 +38,7 @@ Then:
 fieldvision doctor                    # what this machine can run
 fieldvision test                      # every offline test, no key, no network
 fieldvision run 24033 2022 --report   # Beltsville 2022 through the agent, with the county report
-fieldvision serve                     # the console at http://127.0.0.1:8765
+fieldvision serve                     # the app at http://127.0.0.1:8765: dairy owner or USDA analyst
 ```
 
 Without `NVIDIA_API_KEY` (environment or `.env` at the repository root) everything runs offline: a
@@ -62,7 +62,7 @@ otherwise.
 | `react/` | Nemotron supervisor: a ReAct loop over the county tools, with rules enforced in code (step order, one rerun, critic before accept/abstain, every number grounded), an audit log, and the optional `recommend_sources` step | `07_supervisor_demo` |
 | `fieldvision_bridge/` | The tools the agent calls: loads the FieldVision toolbox, puts the final module (`module_v2`, `eu2_logistic_v1`) behind "standard", county totals, field evidence, the RAG critic and NASS report search, field Q&A | `15_fieldvision_bridge`, `16_rag_critic` |
 | `reporter/` | County report from the audit log (Ultra writes, Ultra edits, code checks the numbers) and evidence Q&A | `08_reporter_demo` |
-| `app/` | The analyst app: `fieldvision` command line, web console (`server.py`, `static/`), offline agent, report and answers | — |
+| `app/` | The app: `fieldvision` command line and a web page with two roles. **Dairy owner**: chat with the silage finder (`dairy.py`, over `recommender/`) and a map of standing corn they could buy. **USDA analyst**: chat with every tool here (`chat.py`), the run console, and a dashboard of USDA supply, stocks and price beside our silage estimates and the price what-if (`dashboard.py`). Offline agent and router when there is no key (`offline.py`) | — |
 | `analyst_screen/` | The same flow as ipywidgets, for notebooks | `09_analyst_screen` |
 | `evaluation/` | Scenario and Q&A checks of the agent | `10_evaluation` |
 | `benchmark/` | Nemotron models compared on the agent tasks, with the limitations found | `14_benchmark` |
