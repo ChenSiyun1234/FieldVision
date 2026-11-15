@@ -72,9 +72,15 @@ read low), and the label-free checks did not catch that failure.**
   own clear-tier share, blind windows count as zero). The variant read 2.0 / 5.1 / 15.1 / 6.2 % on the
   four seen counties but 10.7 / 10.7 / 17.1 / 15.8 % when windows are set by the bracket midpoint
   instead, so it is shown beside the headline, not used as it.
-- **Michigan 2022** (Gratiot 24.2 %, Branch 1.8 %) is the one clean test left of whether the counted
-  clear share follows the silage share: pass only if Gratiot reads at least 10 points above Branch
-  and neither is more than 10 points off (logged before opening).
+- **Michigan 2022, the clean tracking test: passed.** Run once each under criteria logged before
+  opening (Gratiot at least 10 points above Branch, neither more than 10 off its Census share):
+  Branch 2.1 % (Census 1.8 %), Gratiot 30.0 % (24.2 %), gap 28 points. Both clear tiers were large
+  (64 % and 83 % of corn area) and there was no blind fortnight. Where early green grain is not
+  common, the counted clear share follows the silage share from 2 % to 24 %, reading about 6 points
+  high in the dairy county.
+- **Beltsville, a third and last scoring** (approved by the coordinator for a candidate the user
+  asked for): the date-thinned LightGBM `eu2_gbm_thin_v1` got 39 of 44 (unaugmented LightGBM 37);
+  the Evaluation 2 primary stays the logistic (42). The set is closed.
 
 ## The 2025 state figure
 
@@ -99,6 +105,16 @@ Maryland target (8.9 %) already known to us (`fieldvision.model.state_estimate`)
 
 A dry run on the four seen 2022 counties pooled as a pseudo-state gave 8.2 % [5.9, 10.7] against
 their pooled Census 8.1 %; it is seen data, not evidence.
+
+**Result (run once, 19:12; NASS shown once).** Maryland 2025: 4.75 % of class-1 corn area silage
+[3.4, 6.3], so 22,700 silage acres [16,200-29,900] and 455,200 grain acres of 477,891; with the
+17,056 acres of double-crop corn the all-corn share is 4.6-8.0 %. Shift guard 5.4 % (not flagged);
+clear tier 62 % of the drawn corn area. By region: Eastern Shore 2.9 %, Central and Southern 5.8 %,
+Western 7.4 %. **NASS 2025: 40,000 silage and 410,000 grain acres (8.9 %).** We read 4.2 points
+low, outside our sampling range and below even the all-silage double-crop bound. In 2025 the
+Eastern Shore did not over-read (no blind fortnight), so nothing cancelled the low reading that the
+dairy counties already showed in 2022 (Carroll, Frederick); the wide tier, called silage at 38 %
+against 4.7 % in the clear tier, is where the missing silage most likely sits, as in Frederick.
 
 ## The layers (module_v2)
 
