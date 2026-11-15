@@ -144,6 +144,16 @@ def test_us_map_data_for_states_and_counties():
     assert dashboard.silage()["lancaster_2023"]["census_year"] == 2022
 
 
+def test_gap_checks_from_saved_results():
+    from ..validation import gap_checks as gc
+    assert gc.wilson(42, 44) == [84.9, 98.7]
+    cb = gc.corn_belt()
+    assert {r["state"] for r in cb["states"] if r["corn_belt"]} == {"WI", "IA", "NE"}
+    bt = gc.blind_test()
+    assert bt["blind_n"] >= 6 and all(r["hidden"].startswith(("yes", "no")) for r in bt["rows"])
+    assert "not a forecast" in gc.price()["finding"]
+
+
 def test_web_api_serves_the_page_and_status():
     try:
         from fastapi.testclient import TestClient
