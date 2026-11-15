@@ -400,3 +400,8 @@ Not finished:
 - Land-use prior with each county's own state left out (for the modelling session's per-field check): files
   `C:\t\fv\data\us\landuse\prior_state_left_out_counties.csv` and `prior_state_left_out_states_2025.csv`;
   leaving a state out moves every county prior by at most one point.
+- 01:17 PT: Pennsylvania 2025 sample complete. Parts `us_42_2025_s1`-`s3` merged and finalised, verified, READY
+  lines written, no scene errors. Merged in `C:\t\fv\data\counties\42_2025_sample\`: 4,527 fields (corn 3,931,
+  small-grain/corn double crop 596) in the 150 drawn read blocks of 3,106. The double crop is 13 % of the frame's
+  corn-containing area in Pennsylvania (142,288 of 1,095,462 acres). Median usable dates 25 (s1, s2) and 39 (s3).
+  All three 2025 state samples (Maryland, Wisconsin, Pennsylvania) are now on disk.
