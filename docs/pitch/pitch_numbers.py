@@ -123,6 +123,14 @@ STATE_2025 = {
         "points_low": 4.2,
         "corn_acres_boundaries": 477_891, "corn_acres_nass": 450_000,
         "source": "log 19:14",
+        # Shown beside, never instead. Harvest-window variant of the same count, computed in the
+        # same run: log 19:18 (Michigan under it: Branch 3.6 %, Gratiot 29.8 %, still a pass).
+        "window_variant_share": 3.8, "window_variant_range": (2.6, 4.9),
+        # Double-crop corn scored with the same model, AFTER the headline was reported, by a rule
+        # written for the states not yet opened: log 19:21, corrected 19:23. No labelled
+        # double-crop field exists, so these calls are untested.
+        "with_double_crop_silage_acres": 33_135, "with_double_crop_share": 6.7,
+        "with_double_crop_range": (5.3, 8.2), "all_corn_acres": 494_947,
     },
     "Pennsylvania": {"our_silage_share": None, "source": "to come"},
     "Wisconsin": {"our_silage_share": None, "source": "to come"},

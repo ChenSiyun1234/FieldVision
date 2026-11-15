@@ -12,9 +12,13 @@ on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
 - **Why it reads low is not diagnosed.** What we know: on the Maryland counties seen in 2022,
   silage is cut early and lands more often among the partly seen fields, which the count leaves
   out. In the 2025 sample 37.9 % of the partly seen area is called silage, against 4.75 % of the
-  clearly seen. Double-crop corn is not scored either, but even if all of it were silage the
-  share would be 8.0 %, still under 8.9 %. Cloud hiding whole harvest weeks is not the reason in
-  2025 (0.6 % of the corn area).
+  clearly seen. Cloud hiding whole harvest weeks is not the reason in 2025 (0.6 % of the corn
+  area).
+- **Double-crop corn closes part of the gap, after the fact.** Corn planted after a small grain
+  (17,056 acres) was outside the reported figure. Scored afterwards with the same model, it
+  brings the total to 33,135 acres of silage, 6.7 % (range 5.3 to 8.2); USDA is still above that
+  range. This was done after the result was seen, and no labelled double-crop field exists
+  anywhere, so those calls are untested. The reported figure stays 22,700.
 - **The first county method failed.** On the Maryland test whose limits were written down before
   it ran, Kent County read 21.0 % silage where the Census has 5.5 % (fail line 20.5 %), and
   Carroll read 0.0 % where the Census has 8.9 % (weak). Two causes are suspected, neither
@@ -28,9 +32,13 @@ on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
   points high), and among the four Maryland counties, where the differences are smaller, it
   misses by up to 7.4 points and its order does not follow the Census (Kent reads 12.9 % at
   5.5 %, Carroll 3.6 % at 8.9 %).
-- **A harvest-window variant was tried and withdrawn.** It looked better on the four Maryland
-  counties (worst miss 3.8 points), but its result flips with how the harvest date is defined,
-  and four counties cannot settle that. It is shown beside the count, never as the headline.
+- **Two ways of counting were run together; which one is "the headline" was argued after the
+  results.** The plain count and a variant weighted by harvest window were both fixed as outputs
+  before Michigan and Maryland 2025 were opened, and the runs were made with the plain count as
+  the headline. The variant looked better on the four Maryland counties, but its result there
+  flips with how the harvest date is defined. Both give the same Michigan verdict (pass: 2.1 and
+  30.0 %, or 3.6 and 29.8 %) and both read low for Maryland 2025 (4.75 %, or 3.8 %). This pack
+  shows the plain count and puts the variant beside it.
 - **42 of 44 is a small test, not an accuracy figure.** One site, three seasons, 44 field-years;
   one field is 2.3 points. The set was scored three times, each under a rule written beforehand,
   and is now closed. The small model was named as the main model on European data, but after
@@ -43,9 +51,8 @@ on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
 - **Dropping dates in training helps the big model, and it is still behind.** It was picked
   after seeing six arms, then passed its one confirmation: 39 of 44 on the labelled fields,
   against 37 without it. The small model has 42.
-- **Not all corn is in the total.** Corn planted after a small grain is outside the scored field
-  set (17,056 acres in Maryland 2025) and is shown beside the total. Fields whose harvest was
-  not seen are not judged.
+- **Not every field gets a say.** Fields whose harvest was not seen are not judged, and the
+  silage share comes from the clearly seen fields only (62 % of the corn area in Maryland 2025).
 - **The Maryland 2025 figure was not blind to its target.** The USDA figure was already known to
   us when the steps were written; no 2025 field had been scored then.
 
@@ -77,7 +84,9 @@ a model that also reads the pixels around the field (no result in this pack).
 | Range for the scored fields | Frederick 11.2 to 19.9 %; Carroll 4.8 to 7.5 % | Log 18:09; log 19:05 |
 | Corn in harvest windows with too few clearly seen fields | Queen Anne's 57.2 %, Kent 54.4 % | Log 19:05 |
 | Early windows: clearly seen fields called silage | 26 to 55 % | Log 18:49 |
-| Harvest-window variant, tried and withdrawn | worst miss 3.8 or 10.3, by date convention | Log 18:54, 19:05 |
+| Harvest-window variant on the four Maryland counties | worst miss 3.8 or 10.3, by date convention | Log 18:54, 19:05 |
+| Harvest-window variant, Michigan and Maryland 2025; how the headline was argued | 3.6 / 29.8 %, pass; 3.8 % [2.6, 4.9] | Log 19:05, 19:18 |
+| Double-crop corn scored after the fact | 33,135 silage acres of 494,947, 6.7 % [5.3, 8.2]; about 10,430 of them double-crop; no labelled double-crop field | Log 19:21, 19:23 |
 | Classifiers that saw the labelled Maryland fields | Queen Anne's 10.2 % against 4.0 % | Log 18:33 |
 | Michigan test: rule | 10 points apart, no miss above 10 points | Log 18:25, 18:37 |
 | Michigan test: result | Branch 2.1 % (Census 1.8 %), Gratiot 30.0 % (24.2 %), 27.9 points apart: pass | Log 19:11 |

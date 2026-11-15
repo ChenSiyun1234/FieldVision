@@ -12,7 +12,8 @@ come: Pennsylvania and Wisconsin 2025 (a dashed "to come" mark in `state_2025.pn
    organisers' 44 labelled field-years right; always saying grain gets 32.
 2. Adding up is not solved: the first county method failed its test in Maryland; a plain count
    then passed a test on two Michigan counties.
-3. The state figure reads low: Maryland 2025, 22,700 acres of silage against USDA's 40,000. We
+3. The state figure reads low: Maryland 2025, 22,700 acres of silage against USDA's 40,000
+   (33,135 once double-crop corn is scored too, which was done after the result was seen). We
    show that next to the number.
 
 ## What is here

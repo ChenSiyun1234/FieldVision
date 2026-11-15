@@ -108,7 +108,7 @@ def module_diagram():
     # what is shown beside every total
     arrow(13.7, top - 0.06, 13.7, 3.88, color=INK2)
     box(10.6, 0.95, 4.9, 2.85, "Shown beside every total",
-        "- Corn not clearly seen\n   (share of the corn area)\n- Double-crop corn\n   (acres; not scored)",
+        "- Corn not clearly seen\n   (share of the corn area)\n- Double-crop corn\n   (acres, kept separate)",
         dashed=True, edge=INK2)
 
     ax.text(0.5, 0.42, "The classifier is a logistic regression trained on 8,000 labelled fields in Austria, France "
@@ -395,22 +395,25 @@ def state_2025():
                         ha="center", va="center")
         ax.text(cols[1], y, nass, fontsize=22, color=INK, ha="center", va="center")
 
-    ax.text(0.6, 3.3, "Shown beside it", fontsize=14.5, color=INK, fontweight="bold", va="center")
+    ax.text(0.6, 3.38, "Shown beside it", fontsize=14.5, color=INK, fontweight="bold", va="center")
+    with_dc = None
+    if md.get("with_double_crop_silage_acres"):
+        with_dc = (md["with_double_crop_silage_acres"], md["with_double_crop_share"], md["with_double_crop_range"])
+    window = (md["window_variant_share"], md["window_variant_range"]) if md.get("window_variant_share") else None
     beside = [
         ("Corn area clearly seen at harvest (the share is measured there)", md.get("clearly_seen_share_of_area"), lambda v: f"{v}%"),
-        ("Double-crop corn, not scored", md["double_crop_acres_not_scored"], lambda v: f"{v:,} acres"),
-        ("Silage share of all corn if every double-crop acre were silage", md.get("share_if_all_double_crop_is_silage"), lambda v: f"{v:.1f}%"),
-        ("Corn acres: ours from field boundaries, USDA's from its survey",
-         (md.get("corn_acres_boundaries"), md.get("corn_acres_nass")) if md.get("corn_acres_boundaries") else None,
-         lambda v: f"{v[0]:,} and {v[1]:,}"),
+        ("The same count weighted by harvest window", window, lambda v: f"{v[0]:g}%  (range {v[1][0]:g} to {v[1][1]:g}%)"),
+        ("Double-crop corn, outside the figure above", md["double_crop_acres_not_scored"], lambda v: f"{v:,} acres"),
+        ("With double-crop corn scored too (added after the result was seen)", with_dc,
+         lambda v: f"{v[0]:,} acres, {v[1]:g}%  (range {v[2][0]:g} to {v[2][1]:g}%)"),
     ]
     for i, (label, value, fmt) in enumerate(beside):
-        y = 2.78 - i * 0.5
+        y = 2.88 - i * 0.48
         ax.text(0.6, y, label, fontsize=13.5, color=INK2, va="center")
         if value is None:
-            to_come(ax, 8.9, 10.9, y, "to come", half=0.19, size=12)
+            to_come(ax, 9.15, 11.15, y, "to come", half=0.19, size=12)
         else:
-            ax.text(8.9, y, fmt(value), fontsize=13.5, color=INK, va="center", fontweight="bold")
+            ax.text(9.15, y, fmt(value), fontsize=13.5, color=INK, va="center", fontweight="bold")
 
     ax.add_patch(FancyBboxPatch((12.1, 4.0), 3.35, 3.35, boxstyle="round,pad=0,rounding_size=0.16", fc=BG, ec=INK2,
                                 lw=1.4, ls=(0, (4, 3))))
