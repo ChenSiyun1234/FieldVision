@@ -65,7 +65,7 @@ def places():
     def pct(v):
         return f"{v:.2f}%" if round(v * 100) % 10 else f"{v:.1f}%"
 
-    wi, pa = N.WISCONSIN_2025, N.PENNSYLVANIA_2025
+    wi, pa, la, mi, ny = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023, N.MICHIGAN_2025, N.NEW_YORK_2025
     fig = body()
     ax = fig.add_axes([0.2, 0.262, 0.79, 0.638])
     D.clean(ax, grid=None)
@@ -89,27 +89,36 @@ def places():
         y_of[row[1]] = y
     lowest = y
     y -= 0.95
-    ax.text(0, y, "Opened last, once each. Our prediction, written first: the satellite alone reads low in dairy states",
+    ax.text(0, y, "Opened last, once each, with a pass mark and our own prediction written first",
             fontsize=13.5, fontweight="bold", color=INK, va="center")
     for name, usda, band, ours in N.PLACES_TO_OPEN:
         y -= step
-        ax.text(-1.6, y, name, ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
+        ax.text(-1.6, y, name, ha="right", va="center", fontsize=13.5, fontweight="bold", color=INK)
         if band:
             ax.plot(band, [y, y], color=INK, lw=8, alpha=0.16, solid_capstyle="round", zorder=1)
         ax.scatter([usda], [y], s=125, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
-        ax.text(usda_x, y, pct(usda), fontsize=14, color=INK, ha="right", va="center")
+        ax.text(usda_x, y, pct(usda), fontsize=13, color=INK, ha="right", va="center")
         if ours is None:
             ax.text(ours_x, y, "to come", fontsize=12.5, color=INK2, ha="right", va="center", style="italic")
         else:
             ax.plot([min(usda, ours), max(usda, ours)], [y, y], color=GREY, lw=2.2, zorder=2)
             ax.scatter([ours], [y], s=150, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
-            ax.text(ours_x, y, pct(ours), fontsize=14.5, fontweight="bold", color=BLUE, ha="right", va="center")
+            ax.text(ours_x, y, pct(ours), fontsize=13.5, fontweight="bold", color=BLUE, ha="right", va="center")
             if name == "Wisconsin 2025":
                 ax.text(beside_x, y, f"{wi['points_low']:.1f} low (pass mark {wi['pass_mark']}); unreliable by our rule",
                         fontsize=12.5, color=INK, va="center")
             if name == "Pennsylvania 2025":
                 ax.text(beside_x, y, f"MISSED by {pa['points_low']}; {pa['single_crop']}% without double crops", fontsize=12.5,
                         color=INK, fontweight="bold", va="center")
+            if name == "Michigan 2025":
+                ax.text(beside_x, y, f"{mi['points_low']} low: passed; we had predicted low", fontsize=12.5,
+                        color=INK, va="center")
+            if name == "New York 2025":
+                ax.text(beside_x, y, f"{ny['points_low']} low: passed; we had predicted a fail", fontsize=12.5,
+                        color=INK, va="center")
+            if name.startswith("Lancaster"):
+                ax.text(beside_x, y, f"{la['points_low']} low: passed (within 10 of USDA's range)", fontsize=12.5,
+                        color=INK, va="center")
     ax.text(usda_x, top + 0.75, "USDA", fontsize=13, color=INK2, ha="right", va="center")
     ax.text(ours_x, top + 0.75, "Ours", fontsize=13, fontweight="bold", color=BLUE, ha="right", va="center")
     ax.text(beside_x, top + 0.75, "Beside it", fontsize=13, color=INK2, va="center")
@@ -118,15 +127,15 @@ def places():
         by_window = unseen > N.NOT_SEEN_SWITCH
         ours, other = (window, plain) if by_window else (plain, window)
         missed = N.PLACE_MISSES.get(name)
-        ax.text(-1.6, y, name, ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
+        ax.text(-1.6, y, name, ha="right", va="center", fontsize=13.5, fontweight="bold", color=INK)
         if band:
             ax.plot(band, [y, y], color=INK, lw=8, alpha=0.16, solid_capstyle="round", zorder=1)
         ax.plot([min(usda, ours), max(usda, ours)], [y, y], color=GREY, lw=2.2, zorder=2)
         ax.scatter([other], [y], s=95, facecolors=BG, edgecolors=GREY, linewidths=2.2, zorder=3)
         ax.scatter([ours], [y], s=150, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
         ax.scatter([usda], [y], s=125, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
-        ax.text(usda_x, y, pct(usda), fontsize=14, color=INK, ha="right", va="center")
-        ax.text(ours_x, y, pct(ours), fontsize=14.5, fontweight="bold", color=BLUE, ha="right", va="center")
+        ax.text(usda_x, y, pct(usda), fontsize=13, color=INK, ha="right", va="center")
+        ax.text(ours_x, y, pct(ours), fontsize=13.5, fontweight="bold", color=BLUE, ha="right", va="center")
         if by_window:
             beside = f"plain count {pct(plain)}; {unseen:.0f}% not seen"
         else:
@@ -155,16 +164,17 @@ def places():
     ]
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.02, 1.0), ncol=4, frameon=False, fontsize=12.5,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.5)
+    md = N.STATE_2025["Maryland"]
     fig.text(0.025, 0.02, "Share of the corn area that is silage. USDA: Census 2022; Wisconsin counties, the 2023 survey; states, NASS 2025. "
-             "Ours = the plain count of the clearly seen fields;\n"
-             f"where cloud hid more than {N.NOT_SEEN_SWITCH}% of the corn (Queen Anne's, Kent), the count by harvest window. "
-             "Grey band: the range USDA's own figures allow\n"
-             "(the fields we score, in Carroll and Frederick; Census 2022 to survey 2023, in Wisconsin). "
-             f"In Marathon {N.MARATHON_NOT_JUDGED}% of the fields could not be judged.\n"
-             f"Wisconsin 2025: {wi['fields']:,} fields in {wi['blocks']} random blocks, {wi['seen']}% of the corn seen; a warning check "
-             f"went off (two grain counties read {wi['guard']['ours']}% for USDA's {wi['guard']['census']}%).\n"
-             f"Pennsylvania 2025: {pa['fields']:,} fields in {pa['blocks']} blocks, {pa['seen']}% seen, no warning. Both states were read "
-             "with two satellites and include double-crop corn, by the rule written after Maryland.",
+             "Grey band: the range USDA's own figures allow.\n"
+             f"Ours = the plain count of the clearly seen fields; where cloud hid more than {N.NOT_SEEN_SWITCH}% of the corn "
+             "(Queen Anne's, Kent), the count by harvest window.\n"
+             f"Wisconsin 2025: {wi['fields']:,} fields, {wi['seen']}% seen, a warning check went off (two grain counties: {wi['guard']['ours']}% "
+             f"for USDA's {wi['guard']['census']}%). No warning in the other three states:\n"
+             f"Pennsylvania {pa['fields']:,} fields, {pa['seen']}% seen; Michigan {mi['fields']:,}, {mi['seen']}%; New York {ny['fields']:,}, {ny['seen']}%. "
+             f"Lancaster 2023: {la['fields']:,} fields, {la['seen']}% seen; USDA = Census 2022, as the 2023 survey ({la['survey_2023']}%)\n"
+             "counts half the acres. All five: two satellites; the states include double-crop corn. Maryland 2025 with two, after the fact: "
+             f"{md['two_satellites_seen']}% seen, {md['two_satellites_after_the_fact'][0]}% with double crops, still low.",
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s05_places")
 
@@ -174,55 +184,62 @@ def scoreboard():
     def pct(v):
         return f"{v:.2f}%" if round(v * 100) % 10 else f"{v:.1f}%"
 
-    zones = [("Little silage", "we are close", lambda u: u < 8),
-             ("Some silage", "off by 4 to 6 points", lambda u: 8 <= u < 30),
-             ("Much silage", "we read far too low", lambda u: u >= 30)]
-    opened = [("test", name if "," in name else name + " (state)", usda, band, ours, ours, 0.0)
-              for name, usda, band, ours in N.PLACES_TO_OPEN if ours is not None]
-    rows = sorted(N.PLACES + opened, key=lambda r: r[2])
-    wi, pa = N.WISCONSIN_2025, N.PENNSYLVANIA_2025
+    # (state, what its rows show, in ink when the state holds a low reading)
+    groups = [("Michigan", "passed in 2022\nand in 2025", False),
+              ("New York", "passed", False),
+              ("Pennsylvania", "one hit, one miss", True),
+              ("Wisconsin", "one right, one low,\none missed", True),
+              ("Maryland", "counties tuned here;\nthe state 4 low", True)]
+    opened = [("test", name, usda, band, ours, ours, 0.0) for name, usda, band, ours in N.PLACES_TO_OPEN if ours is not None]
+    rows = N.PLACES + opened
+    wi, pa, la, mi, ny = N.WISCONSIN_2025, N.PENNSYLVANIA_2025, N.LANCASTER_2023, N.MICHIGAN_2025, N.NEW_YORK_2025
     fig = body()
-    ax = fig.add_axes([0.36, 0.2, 0.63, 0.73])
+    ax = fig.add_axes([0.36, 0.235, 0.63, 0.695])
     D.clean(ax, grid=None)
     ax.set_xlim(-0.8, 108)
     y = 0.0
     placed, spans = [], []
-    for zone_name, verdict, inside in zones:
-        members = [r for r in rows if inside(r[2])]
+    for state, verdict, ink in groups:
+        members = sorted((r for r in rows if N.SCOREBOARD_PLACE[r[1]][0] == state), key=lambda r: r[2])
         first = y
         for r in members:
             placed.append((y, r))
             y -= 1.0
-        spans.append((zone_name, verdict, first, y + 1.0))
-        y -= 0.55
-    bottom = y + 0.55
-    ax.set_ylim(bottom - 0.75, 0.9)
+        spans.append((state, verdict, ink, first, y + 1.0))
+        y -= 0.6
+    bottom = y + 0.6
+    ax.set_ylim(bottom - 0.7, 0.8)
     for yy, (group, name, usda, band, plain, window, unseen) in placed:
+        state, label = N.SCOREBOARD_PLACE[name]
         ours = window if unseen > N.NOT_SEEN_SWITCH else plain
         missed = name.replace(" (state)", "") in N.PLACE_MISSES
-        ax.text(-1.6, yy, name.replace(" (state)", ""), ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
-        ax.plot([min(usda, ours), max(usda, ours)], [yy, yy], color=GREY, lw=2.4, zorder=2)
-        ax.scatter([ours], [yy], s=170, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
-        ax.scatter([usda], [yy], s=140, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
-        ax.text(57, yy, f"USDA {pct(usda)}", fontsize=13.5, color=INK2, va="center")
-        ax.text(74.5, yy, f"we say {pct(ours)}", fontsize=14.5, fontweight="bold", color=INK if missed else BLUE, va="center")
-        ax.text(94.5, yy, "tuned here" if group == "tuning" else "test", fontsize=12, color=INK2, va="center",
-                style="italic" if group == "tuning" else "normal")
-        if name.endswith("(state)"):
+        if label.split()[0] == state:  # a whole state
             ax.axhspan(yy - 0.5, yy + 0.5, color=STATE_BAND, lw=0, zorder=0)
+        ax.text(-1.6, yy, label, ha="right", va="center", fontsize=13.5, fontweight="bold", color=INK)
+        ax.plot([min(usda, ours), max(usda, ours)], [yy, yy], color=GREY, lw=2.4, zorder=2)
+        ax.scatter([ours], [yy], s=150, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
+        ax.scatter([usda], [yy], s=125, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
+        ax.text(59.5, yy, f"USDA {pct(usda)}", fontsize=13, color=INK2, va="center")
+        ax.text(76.5, yy, f"we say {pct(ours)}", fontsize=13.5, fontweight="bold", color=INK if missed else BLUE, va="center")
+        ax.text(96, yy, "tuned here" if group == "tuning" else "test", fontsize=12, color=INK2, va="center",
+                style="italic" if group == "tuning" else "normal")
     for x in (0, 10, 20, 30, 40, 50):
         ax.plot([x, x], [bottom - 0.6, 0.6], color=GRID, lw=1, zorder=0)
     ax.set_yticks([])
     ax.set_xticks([0, 10, 20, 30, 40, 50])
     ax.set_xticklabels(["0%", "10%", "20%", "30%", "40%", "50%"])
-    # the three zones, named down the left edge of the figure
+    # the states, named down the left edge of the figure
     to_fig = lambda yy: fig.transFigure.inverted().transform(ax.transData.transform((0, yy)))[1]  # noqa: E731
-    for zone_name, verdict, y_top, y_low in spans:
-        mid = (to_fig(y_top) + to_fig(y_low)) / 2
-        last = zone_name.startswith("Much")
-        fig.text(0.02, mid + 0.028, zone_name, fontsize=17, fontweight="bold", color=INK, va="center")
-        fig.text(0.02, mid - 0.028, verdict, fontsize=14, color=INK if last else BLUE, fontweight="bold", va="center")
-        fig.add_artist(plt.Line2D([0.172, 0.172], [to_fig(y_low) - 0.03, to_fig(y_top) + 0.03], color=GREY, lw=2,
+    for state, verdict, ink, y_top, y_low in spans:
+        mid = (to_fig(y_top) + to_fig(y_low)) / 2 + 0.014 * verdict.count("\n")
+        if abs(y_top - y_low) < 1e-6:  # a single row: the name and what it shows side by side
+            fig.text(0.02, mid, state, fontsize=16, fontweight="bold", color=INK, va="center")
+            fig.text(0.03 + 0.0095 * len(state), mid - 0.002, verdict, fontsize=12.5, color=INK if ink else BLUE, fontweight="bold",
+                     va="center")
+            continue
+        fig.text(0.02, mid + 0.004, state, fontsize=16, fontweight="bold", color=INK, va="bottom")
+        fig.text(0.02, mid - 0.006, verdict, fontsize=12.5, color=INK if ink else BLUE, fontweight="bold", va="top", linespacing=1.15)
+        fig.add_artist(plt.Line2D([0.198, 0.198], [to_fig(y_low) - 0.025, to_fig(y_top) + 0.025], color=GREY, lw=2,
                                   transform=fig.transFigure))
     handles = [
         plt.Line2D([], [], marker="D", ls="", markersize=11, markerfacecolor=INK, markeredgecolor=BG, label="what USDA reports"),
@@ -232,17 +249,17 @@ def scoreboard():
     ]
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.19, 1.0), ncol=3, frameon=False, fontsize=13,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
-    waiting = [p[0] for p in N.PLACES_TO_OPEN if p[3] is None]
-    tests = {5: "five", 6: "six", 7: "seven", 8: "eight"}[sum(1 for r in rows if r[0] == "test")]
-    more = f" Still to come: {'; '.join(waiting)}." if waiting else ""
+    tests = {5: "five", 6: "six", 7: "seven", 8: "eight", 9: "nine", 10: "ten"}[sum(1 for r in rows if r[0] == "test")]
     fig.text(0.02, 0.02, "Share of the corn area that is silage. The four Maryland counties (2022) were used to tune the method; "
              f"the other {tests} places were tests, each run once.\n"
-             f"Wisconsin 2025 (random state sample, two satellites): {wi['points_low']:.1f} points low, right on our pass mark of "
-             f"{wi['pass_mark']}; we had expected a low reading (we wrote \"below {wi['predicted_below']}%\"; it is {wi['ours_exact']}%).\n"
-             f"A warning check went off there (two grain counties read {wi['guard']['ours']}% where USDA's Census says "
-             f"{wi['guard']['census']}%); by the rule we wrote down first, that marks this figure as unreliable.\n"
-             f"Pennsylvania 2025 (same procedure, {pa['seen']}% of the corn seen, no warning): {pa['points_low']} points low, a clear miss; "
-             f"{pa['single_crop']}% without double-crop corn." + more,
+             f"Michigan 2025: {mi['seen']}% of the corn seen, {mi['points_low']} points low. New York 2025: {ny['seen']}% seen, {ny['points_low']} low. "
+             "No warning in either. We had predicted in writing that both would read low\n"
+             f"(below {mi['predicted_below']}% and below {ny['predicted_below']}%): wrong twice. A right Michigan, we had written, means the place, "
+             f"not the year, is the difference. Pennsylvania 2025: {pa['seen']}% seen, {pa['points_low']} low.\n"
+             f"Wisconsin 2025: {wi['points_low']:.1f} points low, right on our pass mark of {wi['pass_mark']}; we had expected a low reading. "
+             f"A warning check went off there (two grain counties: {wi['guard']['ours']}% for USDA's {wi['guard']['census']}%).\n"
+             "By the rule we wrote down first, that marks this figure as unreliable. Lancaster 2023: USDA is the 2022 Census; its 2023 survey "
+             f"({la['survey_2023']}%) counts half the corn acres.",
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s06_scoreboard")
 
@@ -327,7 +344,7 @@ def history_update():
 
     counties, states = N.HISTORY_UPDATE, N.HISTORY_UPDATE_STATES
     fig = body()
-    ax = fig.add_axes([0.2, 0.225, 0.79, 0.65])
+    ax = fig.add_axes([0.2, 0.26, 0.79, 0.615])
     D.clean(ax, grid=None)
     ax.set_xlim(-20, 31)
     n = len(counties) + len(states) + 1  # one empty row between the two groups
@@ -353,9 +370,9 @@ def history_update():
                     arrowprops=dict(arrowstyle="-|>", color=BLUE if good else INK, lw=2.6, mutation_scale=20, shrinkA=6, shrinkB=6))
         ax.scatter([a], [y], s=110, facecolors=BG, edgecolors=GREY, linewidths=2.4, zorder=4)
         ax.scatter([b], [y], s=150, color=BLUE if good else INK, edgecolors=BG, linewidths=1.5, zorder=5)
-        ax.text(-20.6, y, name, ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
-        ax.text(9, y, f"{pct(last)}  →  {pct(updated)}", fontsize=14, color=INK, va="center")
-        ax.text(25.5, y, pct(true), fontsize=14, color=INK, va="center", fontweight="bold")
+        ax.text(-20.6, y, name, ha="right", va="center", fontsize=13.5, fontweight="bold", color=INK)
+        ax.text(9, y, f"{pct(last)}  →  {pct(updated)}", fontsize=13, color=INK, va="center")
+        ax.text(25.5, y, pct(true), fontsize=13, color=INK, va="center", fontweight="bold")
         word = "closer" if closer else ("into USDA's range" if inside else "further away")
         ax.text(17.5, y, word, fontsize=11.5, color=BLUE if good else INK, va="center",
                 fontweight="normal" if good else "bold")
@@ -370,16 +387,17 @@ def history_update():
     ]
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.19, 1.0), ncol=2, frameon=False, fontsize=13,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
-    m, wi, pa = N.HISTORY_UPDATE_MISS, N.WISCONSIN_2025, N.PENNSYLVANIA_2025
-    fig.text(0.02, 0.02, "The eight counties had already been seen while tuning, so they are not a test. One satellite (Sentinel-2), "
-             "as for Maryland 2025; the other two states were read with two.\n"
+    m, la, ny = N.HISTORY_UPDATE_MISS, N.LANCASTER_2023, N.NEW_YORK_2025
+    fig.text(0.02, 0.02, "The eight counties had already been seen while tuning, so they are not a test; one satellite (Sentinel-2), "
+             "as for Maryland 2025. The other four states were read with two.\n"
              "USDA's last figure: the 2017 Census for the 2022 counties, the 2022 survey for the Wisconsin counties, "
-             "the 2024 survey for the three states.\n"
+             "the 2024 survey for the five states.\n"
              f"Mean miss on the eight counties: last figure alone {m['last']} points, updated {m['updated']}; without Marathon "
-             f"{m['last_no_marathon']} and {m['updated_no_marathon']}. The satellite on its own: {m['satellite']}.\n"
-             "Wisconsin and Pennsylvania 2025 were tests with the rule written first: the update had to end closer than the last figure "
-             f"alone. It ended {wi['updated_off']} and {pa['updated_off']} points off, against {wi['last_official_off']} and "
-             f"{pa['last_official_off']}.",
+             f"{m['last_no_marathon']} and {m['updated_no_marathon']}. The four states after Maryland were tests, rule written first:\n"
+             "end closer than the last figure alone, and within 3 points. All four failed: Wisconsin, Pennsylvania and Michigan ended "
+             f"further away; New York closer ({ny['updated_off']} off against {ny['last_official_off']}),\n"
+             f"but not within 3. Lancaster 2023, also a test: the last figure there is the reference itself ({la['census_2022']}%, the 2022 Census); "
+             f"the update gave {la['updated']}%, so no gain.",
              fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s_update")
 

@@ -28,6 +28,60 @@ written at log 00:18; the figure is the share over all corn, double-crop corn in
   19.8 % (itself 1.8 off) to 12.9 %, Pennsylvania 31.4 % (1.4 off) to 18.7 %. The update from the
   land-use figure gave 11.6 % and 13.1 %. All four failed.
 
+**And before Lancaster County, Pennsylvania, 2023 (log 02:13), which passed.** 10,533 corn fields
+in 70 of the county's 113 blocks (64 % of its corn), Sentinel-2 plus Landsat, 60 % of the corn
+area seen, run once. The satellite alone read 26.6 % (range 18.0 to 58.1). The reference, fixed
+before the run (log 01:28), is the 2022 Census, 27.4 %: the 2023 county survey says 44.5 % but
+counts only about half the corn acres that the Census, the field boundaries and the cropland map
+show. So 0.8 points low, and 0.8 below the range of official figures (27.4 to 54.8); the pass mark
+was "within 10 points of that range". Beside it: updating from the Census figure gave 25.1 %, no
+gain; updating from the land-use figure gave 9.1 %, far off. Teammates had run the same classifier
+on 1,057 clearly seen Lancaster fields and read 35.2 %; the coordinator had seen that figure
+before this run (log 01:50) and the procedure was not changed.
+
+**And before Michigan 2025 (log 04:42), which passed.** A fourth clean test, added at log 02:22
+with its procedure, pass marks and prediction, run once: 4,835 corn fields in 150 blocks,
+Sentinel-2 plus Landsat, 98 % of the corn area seen. 14.4 % (10.8 to 18.0) where USDA has 14.7 %:
+0.3 points low. The warning check is clean (3.1 % in two grain counties). Our own prediction was
+wrong: we had written that it would read below 11.7 %, expecting the year 2025 to be what made
+Maryland, Wisconsin and Pennsylvania read low. Updating from USDA's last figure (14.3 %, itself
+0.4 off) gave 9.9 %, worse, as in every other state. Ten of the 150 blocks touch Branch and
+Gratiot, the two Michigan counties tested for 2022: another year and an independent draw.
+
+**After the fact, not tests.** Maryland 2025 with the second satellite added sees 99 % of the
+corn and reads 6.2 % with double crops (4.7 to 7.7), still below 8.9 % (log 02:47); the reported
+figure stays 4.75 %. Three replacements for the timing measurement were tried against the low
+readings, with the rule for choosing written first (log 02:18); none closed the gap by the third
+the rule asked for, so the module is unchanged (log 02:20). A look inside the Pennsylvania 2025
+sample (log 02:16) found Lancaster County's own fields reading 15.7 % there (488 fields) against
+26.6 % in the 2023 run, so within that county the two years do differ.
+
+**And before New York 2025 (log 04:55), which passed.** The fifth clean test, logged with
+Michigan's at 02:22 and run once: 3,624 corn fields in 150 blocks, Sentinel-2 plus Landsat, 88 %
+of the corn area seen. 48.7 % (43.3 to 54.2) where USDA has 53.2 %: 4.5 points low, inside the
+pass mark of 5. The warning check is clean (3.1 % in two low-silage counties). Our own prediction
+was wrong again: we had written "below 40 %, a fail". Updating from USDA's last figure (45.0 %,
+itself 8.2 off) gave 46.5 %, 6.7 off: closer than the last figure, the only state where it was,
+but not within the 3 points its own mark asks for. The land-use update gave 36.5 %.
+
+**A teammate's lead, tried and not taken up (log 04:46, 04:52).** Counting a field that could not
+be judged as silage when it is green again in November was tried on the thirteen places opened by
+then, with the rule fixed before computing. It helped Carroll, Frederick, Marathon and the 2025
+states a little (Pennsylvania 9.5 to 11.3 % of 32.8), moved five counties slightly away, and
+pushed Lancaster from 26.6 to 40.1 % (Census 27.4). It is not in the module, and New York was run
+without it.
+
+**What the five last tests say together.** Satellite alone, each run once with the rule written
+first: Michigan 2025 14.4 for 14.7; New York 2025 48.7 for 53.2; Lancaster 2023 26.6 for 27.4;
+Wisconsin 2025 16.6 for 21.6 (5.0 low, on its pass mark, and marked unreliable by the warning
+check); Pennsylvania 2025 15.2 for 32.8 (missed). Four of five within 5 points. Before them:
+Branch, Gratiot and Racine right, Marathon missed, Maryland 2025 low. Two of our own written
+predictions were wrong (Michigan and New York would read low). By the reading written before
+Michigan was opened, a Michigan that reads right says the place, not the year, makes the
+difference; the Lancaster look above shows the year is not nothing either. Clouds are not the
+reason for Pennsylvania (98 % of the corn seen). Why Pennsylvania as a whole reads less than half
+is still open.
+
 "Log HH:MM" is a row of the evaluation access log (`<data>/eval/ACCESS_LOG.md`), named by its time
 on 14 Nov 2026 (Pacific). Everything else is a file in this repository.
 

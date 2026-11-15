@@ -133,7 +133,12 @@ STATE_2025 = {
         "with_double_crop_range": (5.3, 8.2), "all_corn_acres": 494_947,
         # Upper bound: every double-crop acre counted as silage, 22,700 + 17,056 (8.0 %, log 19:14).
         "upper_bound_silage_acres": 39_756,
+        # After the fact, with Landsat added (log 02:47): 99 % of the corn seen; single-crop 4.2 %
+        # [2.9, 5.8]; with double crops 6.2 % [4.7, 7.7]; still below 8.9 %. The reported figure stays.
+        "two_satellites_after_the_fact": (6.2, (4.7, 7.7)), "two_satellites_seen": 99,
     },
+    "Michigan": {"our_silage_share": 14.4, "nass_silage_share": 14.7, "source": "log 04:42"},
+    "New York": {"our_silage_share": 48.7, "nass_silage_share": 53.2, "source": "log 04:55"},
     "Pennsylvania": {"our_silage_share": 15.2, "nass_silage_share": 32.8, "source": "log 01:53"},
     "Wisconsin": {"our_silage_share": 16.6, "nass_silage_share": 21.6, "source": "log 01:43, corrected 01:53"},
 }
@@ -313,6 +318,8 @@ HISTORY_UPDATE_STATES = [
     ("Maryland 2025", 9.5, 6.8, 8.9, None),
     ("Wisconsin 2025", 19.8, 12.9, 21.6, None),
     ("Pennsylvania 2025", 31.4, 18.7, 32.8, None),
+    ("Michigan 2025", 14.3, 9.9, 14.7, None),  # log 04:42; rule written at 02:22; failed
+    ("New York 2025", 45.0, 46.5, 53.2, None),  # log 04:55; closer than the last figure, but not within 3: failed
 ]
 
 # The three places opened last, once each, with the procedure, the pass marks and our own
@@ -321,7 +328,9 @@ HISTORY_UPDATE_STATES = [
 PLACES_TO_OPEN = [
     ("Wisconsin 2025", 21.6, None, 16.6),
     ("Pennsylvania 2025", 32.8, None, 15.2),
-    ("Lancaster, Pa. 2023", 44.5, (27.4, 54.8), None),
+    ("Lancaster, Pa. 2023", 27.4, (27.4, 54.8), 26.6),
+    ("Michigan 2025", 14.7, None, 14.4),  # a fourth, added at log 02:22 and run at 04:40
+    ("New York 2025", 53.2, None, 48.7),  # a fifth, logged with Michigan at 02:22 and run at 04:53
 ]
 
 # Sentinel-2 alone and with Landsat 8 and 9 added, in the three counties where clouds hid the
@@ -375,3 +384,87 @@ PENNSYLVANIA_2025 = {
     "land_use_updated": 13.1, "land_use_off": 19.7,
     "guard": {"counties": "Northampton and Lehigh", "ours": 4.1, "census": 3.8, "flagged": False},
 }
+
+# Lancaster County, Pennsylvania, 2023, the third: run once (log 02:11 for the command, 02:13 for
+# the result). 10,533 corn fields in 70 of the county's 113 blocks (64 % of its corn by the field
+# boundaries, log 01:28), Sentinel-2 plus Landsat, 60 % of the corn area seen, 6,404 clearly seen
+# fields, 2,249 not judged. Satellite alone 26.6 % (range 18.0 to 58.1). Reference, fixed before
+# the run (log 01:28): the 2022 Census, 27.4 %, because the 2023 county survey (44.5 %) counts
+# only about half the corn acres that the Census, the boundaries and the cropland map show. So
+# 0.8 points low, and 0.8 below the band of official figures (27.4 to 54.8); pass mark "within 10
+# points of the band": PASS. Beside it: the update from the last official share (the Census
+# itself) gives 25.1 %, no gain; the update from the land-use figure gives 9.1 %, 18.3 off.
+# Teammates' own earlier run of the same classifier on 1,057 clearly seen fields read 35.2 %; the
+# coordinator had seen that figure before this run (log 01:50) and the procedure did not change.
+LANCASTER_2023 = {
+    "fields": 10_533, "blocks": (70, 113), "share_of_county_corn": 64, "seen": 60,
+    "clear_fields": 6_404, "clear_tier_area": 63, "not_judged_fields": 2_249,
+    "ours": 26.6, "ours_range": (18.0, 58.1), "census_2022": 27.4, "survey_2023": 44.5,
+    "band": (27.4, 54.8), "points_low": 0.8,
+    "updated": 25.1, "updated_off": 2.3, "land_use_updated": 9.1, "land_use_off": 18.3,
+    "teammates_run": {"fields": 1_057, "share": 35.2},
+}
+
+# Michigan 2025, a fourth clean test of the same module: procedure, pass marks and prediction
+# logged at 02:22, run once (log 04:40 for the command, 04:42 for the result). 4,835 corn fields
+# in 150 blocks, Sentinel-2 plus Landsat, 98 % of the corn area seen. Headline with double-crop
+# corn 14.4 % [10.8, 18.0] for NASS 14.7 %: 0.3 points low, a PASS (mark: within 5). The warning
+# check is clean (Monroe and Bay read 3.1 %, limit 8.4 %). OUR OWN PREDICTION WAS WRONG: we had
+# written that Michigan would read below 11.7 %, expecting 2025 itself to be the cause of the low
+# readings; by the reading written with it, a Michigan that reads right says the place, not the
+# year, is the difference. Beside it, both failing: the update from the last official share
+# (14.3 %, itself 0.4 off) gives 9.9 %, 4.8 off; the update from the land-use figure gives 8.7 %,
+# 6.0 off. Ten of the 150 blocks touch Branch and Gratiot, the two counties tested in 2022: a
+# different year and an independent draw.
+MICHIGAN_2025 = {
+    "blocks": 150, "fields": 4_835, "seen": 98, "clear_tier_area": 92,
+    "ours": 14.4, "ours_range": (10.8, 18.0), "single_crop": 14.2,
+    "usda": 14.7, "points_low": 0.3, "pass_mark": 5, "predicted_below": 11.7,
+    "last_official": 14.3, "last_official_off": 0.4, "updated": 9.9, "updated_off": 4.8,
+    "land_use_updated": 8.7, "land_use_off": 6.0,
+    "guard": {"counties": "Monroe and Bay", "ours": 3.1, "limit": 8.4, "flagged": False},
+    "blocks_touching_2022_counties": 10,
+}
+
+# Tried for the low readings, with the rule for choosing written first (log 02:18; result 02:20,
+# re-checked 02:47): three replacements for the timing measurement, each refitted on the same
+# 8,000 European fields. None closed the gap between years by the third the rule asked for, so
+# the module stays as it is.
+TIMING_CANDIDATES = {"tried": 3, "kept": 0}
+
+# Where each place on the scoreboard lies, and its name there (county and year).
+SCOREBOARD_PLACE = {
+    "Queen Anne's": ("Maryland", "Queen Anne's 2022"), "Kent": ("Maryland", "Kent 2022"),
+    "Carroll": ("Maryland", "Carroll 2022"), "Frederick": ("Maryland", "Frederick 2022"),
+    "Maryland 2025 (state)": ("Maryland", "Maryland 2025"),
+    "Branch, Michigan": ("Michigan", "Branch 2022"), "Gratiot, Michigan": ("Michigan", "Gratiot 2022"),
+    "Michigan 2025": ("Michigan", "Michigan 2025"), "New York 2025": ("New York", "New York 2025"),
+    "Racine, Wisconsin": ("Wisconsin", "Racine 2023"), "Marathon, Wisconsin": ("Wisconsin", "Marathon 2023"),
+    "Wisconsin 2025": ("Wisconsin", "Wisconsin 2025"),
+    "Lancaster, Pa. 2023": ("Pennsylvania", "Lancaster 2023"), "Pennsylvania 2025": ("Pennsylvania", "Pennsylvania 2025"),
+}
+
+# New York 2025, the fifth clean test: procedure, pass marks and prediction logged with
+# Michigan's at 02:22, run once (log 04:53 for the command, 04:55 for the result). 3,624 corn
+# fields in 150 blocks, Sentinel-2 plus Landsat, 88 % of the corn area seen. Headline with
+# double-crop corn 48.7 % [43.3, 54.2] for NASS 53.2 %: 4.5 points low, a PASS (mark: within 5).
+# The warning check is clean (Orleans and Chemung read 3.1 %, limit 13.1 %). OUR OWN PREDICTION
+# WAS WRONG AGAIN: we had written "below 40 %, a fail". Beside it, both failing: the update from
+# the last official share (45.0 %, itself 8.2 off) gives 46.5 %, 6.7 off: closer than the last
+# figure for once, but not within the 3 points its mark asks for; the update from the land-use
+# figure gives 36.5 %, 16.7 off.
+NEW_YORK_2025 = {
+    "blocks": 150, "fields": 3_624, "seen": 88, "clear_tier_area": 87,
+    "ours": 48.7, "ours_range": (43.3, 54.2), "single_crop": 47.8,
+    "usda": 53.2, "points_low": 4.5, "pass_mark": 5, "predicted_below": 40,
+    "last_official": 45.0, "last_official_off": 8.2, "updated": 46.5, "updated_off": 6.7,
+    "land_use_updated": 36.5, "land_use_off": 16.7,
+    "guard": {"counties": "Orleans and Chemung", "ours": 3.1, "limit": 13.1, "flagged": False},
+}
+
+# A teammate's lead, tried on the thirteen places opened by then, report only (rule fixed before
+# computing: log 04:46; result 04:52): a field that could not be judged and is green again in
+# November counts as silage. It helped Carroll, Frederick, Marathon and the 2025 states a little
+# (Pennsylvania 9.5 -> 11.3 of 32.8), moved five counties slightly away, and pushed Lancaster
+# from 26.6 % to 40.1 % (Census 27.4 %). Not in the module; New York was run without it.
+NOVEMBER_GREEN = {"places": 13, "lancaster": (26.6, 40.1), "pennsylvania_single_crop": (9.5, 11.3)}
