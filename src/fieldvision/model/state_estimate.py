@@ -211,6 +211,50 @@ def combined_bootstrap(table, dc, class1_acres, class_acres, n_boot=2000, seed=0
             "range_5_95": [float(np.nanpercentile(sims, 5)), float(np.nanpercentile(sims, 95))]}
 
 
+def prior_updates(table, prior_landuse=None, prior_official=None, n_boot=2000, seed=0):
+    """Version A of the field-level prior update (fieldvision.model.windows), with the seen
+    fields found within regions; point and 5-95 % range over whole-block resamples."""
+    from .windows import prior_updated_share, seen_field_mask
+    priors = {}
+    if prior_landuse:
+        pt = pd.read_csv(prior_landuse, dtype={"fips": str})
+        pt["fips"] = pt["fips"].str.zfill(5)
+        col = "prior_share" if "prior_share" in pt else "prior_silage_share"
+        pm = pt.set_index("fips")[col].astype(float)
+        pr = table["county_fips"].astype(str).str.zfill(5).map(pm).to_numpy(float)
+        priors["landuse"] = np.where(np.isfinite(pr), pr, np.nanmedian(pr))
+    if prior_official is not None:
+        priors["official"] = np.full(len(table), float(prior_official))
+    if not priors:
+        return None
+    reg = table["region"].to_numpy() if "region" in table else np.full(len(table), "all")
+    clear = (table["tier"] == "clear").to_numpy()
+    a, mid, p = table["acres"].to_numpy(float), table["mid_doy"].to_numpy(float), table["p"].to_numpy(float)
+
+    def seen_of(idx):
+        s = np.zeros(len(idx), bool)
+        r = reg[idx]
+        for g in np.unique(r):
+            m = r == g
+            s[m] = seen_field_mask(mid[idx][m], clear[idx][m], a[idx][m])
+        return s
+    allidx = np.arange(len(table))
+    out = {}
+    seen = seen_of(allidx)
+    blocks = table["block_id"].to_numpy()
+    uniq = np.unique(blocks)
+    by = {b: np.flatnonzero(blocks == b) for b in uniq}
+    rng = np.random.default_rng(seed)
+    picks = [np.concatenate([by[b] for b in rng.choice(uniq, len(uniq), replace=True)]) for _ in range(n_boot)]
+    for name, pr in priors.items():
+        point = prior_updated_share(p, pr, seen, a)
+        sims = [prior_updated_share(p[i], pr[i], seen_of(i), a[i]) for i in picks]
+        out[name] = {"prior_mean": float(np.sum(a * pr) / np.sum(a)), "share": point,
+                     "range_5_95": [float(np.nanpercentile(sims, 5)), float(np.nanpercentile(sims, 95))]}
+    out["seen_fields_area_share"] = float(np.sum(a[seen]) / np.sum(a))
+    return out
+
+
 def to_acres(share, lo, hi, class1_acres, double_crop_acres=0.0):
     """Silage and grain acres of class-1 corn, and the range when the double-crop corn outside
     the scored set is counted as none or all silage."""
@@ -250,7 +294,7 @@ def double_crop_table(sample, registry, model_name):
                          "tier": [evidence_tier(x) for x in rows]})
 
 
-def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 237, 241)):
+def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 237, 241), landsat=False):
     """Per-field table for a sample folder: block, county, acres, score, call, evidence tier."""
     from ..features.loading import load_fields, load_timeseries
     from ..toolbox import evidence_tier
@@ -269,6 +313,12 @@ def field_table(sample, registry, model_name, double_crop_codes=(225, 226, 228, 
         dc = np.zeros(len(fields), bool)
     scored = fields[~np.asarray(dc)].reset_index(drop=True)
     ts, _ = load_timeseries(d / "timeseries.parquet", field_ids=scored["field_id"])
+    if landsat and (d / "timeseries_landsat.parquet").exists():
+        # union with Landsat, per-band line fitted on this sample's own same-field pairs (no labels)
+        from ..features.landsat import fit_adjustment, merge, pair_check
+        ls, _ = load_timeseries(d / "timeseries_landsat.parquet", field_ids=scored["field_id"])
+        _, prs = pair_check(ts, ls, max_days=2)
+        ts = merge(ts, ls, fit_adjustment(prs) if len(prs) >= 30 else None)
     model, mj, cfg = load_model(registry, model_name)
     rows, _ = classify_rows(scored, ts, model, model_name, cfg, mj["threshold"])
     r = pd.DataFrame(rows)
@@ -316,12 +366,18 @@ def main(argv=None):
                          "stratum and adds its silage acres (rule logged 19:21)")
     ap.add_argument("--min-seen", type=float, default=0.50,
                     help="below this seen share of corn area the headline is the range (23:17)")
+    ap.add_argument("--landsat", action="store_true",
+                    help="union with timeseries_landsat.parquet in the sample folder")
+    ap.add_argument("--prior-landuse", default=None,
+                    help="county prior table (fips, prior_share) for the prior-updated figure")
+    ap.add_argument("--prior-official", type=float, default=None,
+                    help="last official state share before the test year, for the second prior-updated figure")
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    table, sample_dc_acres = field_table(a.sample, a.registry, a.model)
+    table, sample_dc_acres = field_table(a.sample, a.registry, a.model, landsat=a.landsat)
     table.to_parquet(out / "fields.parquet", index=False)
     rates = json.loads((Path(a.registry) / a.model / "rates.json").read_text(encoding="utf-8"))
     tpr_clear = rates["sets"][rates["primary_clear"]]["tpr"]
@@ -374,6 +430,7 @@ def main(argv=None):
             ca = {k.split()[0]: v["acres"] for k, v in ca["by_class"].items() if not k.startswith("1 ")}
         dc = double_crop_table(a.sample, a.registry, a.model)
         report["with_double_crops"] = combined_bootstrap(table, dc, a.class1_acres, ca, n_boot=a.n_boot)
+    report["prior_updated"] = prior_updates(table, a.prior_landuse, a.prior_official, a.n_boot)
     write_json(out / "state_estimate.json", report)
     print(json.dumps(report, indent=1, default=float))
     return report

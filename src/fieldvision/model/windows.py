@@ -94,3 +94,35 @@ def seen_bounds(mid_doy, clear, call, acres, min_clear_area=0.3, min_clear_field
     out["upper"] = out["lower"] + (1 - out["seen_share"]) if total else np.nan
     out["seen_window_share"] = silage / seen_acres if seen_acres else np.nan
     return out, pd.DataFrame(rows)
+
+
+def seen_field_mask(mid_doy, clear, acres, min_clear_area=0.5, min_clear_fields=10, width=WIDTH):
+    """Fields seen clearly: clear tier and in a seen window of the bracket midpoint (23:17)."""
+    mid = np.asarray(mid_doy, float)
+    clear, acres = np.asarray(clear, bool), np.asarray(acres, float)
+    w = np.full(len(mid), np.nan)
+    ok = np.isfinite(mid)
+    w[ok] = np.floor(mid[ok] / width)
+    seen = np.zeros(len(mid), bool)
+    for win in np.unique(w[ok]):
+        m = w == win
+        mc = m & clear
+        if acres[m].sum() > 0 and acres[mc].sum() / acres[m].sum() >= min_clear_area \
+                and mc.sum() >= min_clear_fields:
+            seen |= m
+    return seen & clear
+
+
+def prior_updated_share(p, prior, seen, acres, pi_train=0.5):
+    """Version A of the field-level prior update: seen fields take
+    sigmoid(logit p + logit prior - logit pi_train), unseen fields take the prior; area mean.
+    pi_train = 0.5 for eu2_logistic_v1 (balanced training, Platt-calibrated on that balance)."""
+    def logit(x):
+        x = np.clip(np.asarray(x, float), 1e-6, 1 - 1e-6)
+        return np.log(x / (1 - x))
+    p, prior = np.asarray(p, float), np.broadcast_to(np.asarray(prior, float), np.shape(p))
+    seen, acres = np.asarray(seen, bool), np.asarray(acres, float)
+    pp = 1 / (1 + np.exp(-(logit(p) + logit(prior) - logit(pi_train))))
+    val = np.where(seen, pp, prior)
+    ok = np.isfinite(val) & np.isfinite(acres)
+    return float(np.sum(acres[ok] * val[ok]) / np.sum(acres[ok])) if ok.any() else float("nan")

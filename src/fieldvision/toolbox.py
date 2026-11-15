@@ -97,7 +97,7 @@ class Toolbox:
 
     def __init__(self, data_root="data/counties", registry="registry", out_root="results",
                  standard_model=MODULE_V1_MODEL, module_model=MODULE_V2_MODEL, landsat=False,
-                 landsat_adjust=None,
+                 landsat_adjust=None, prior_table=None, prior_official=None,
                  rule_model="eu_timing_rule_v1", n_resample=2000, seed=0):
         """Relative paths are taken from the repo root, so Toolbox() works from anywhere."""
         _require_parquet_engine()
@@ -109,6 +109,10 @@ class Toolbox:
         # union with timeseries_landsat.parquet when present (off by default; fieldvision.features.landsat)
         self.landsat = landsat
         self.landsat_adjust = landsat_adjust
+        # priors for the field-level update shown beside the headline: a county table (default the
+        # land-use table in the registry) and, optionally, {fips: last official share}
+        self.prior_table = prior_table
+        self.prior_official = dict(prior_official or {})
         self.rule_model = rule_model
         self.n_resample = n_resample
         self.seed = seed
@@ -483,6 +487,16 @@ class Toolbox:
         out["seen_share_of_area"] = round(sb["seen_share"], 4) if np.isfinite(sb["seen_share"]) else None
         out["silage_share_lower"] = round(sb["lower"], 4) if np.isfinite(sb["lower"]) else None
         out["silage_share_upper"] = round(sb["upper"], 4) if np.isfinite(sb["upper"]) else None
+        from .model.windows import prior_updated_share, seen_field_mask
+        seen_f = seen_field_mask(np.where(fin, mid_doy, np.nan), clear, np.where(fin, a, 0.0),
+                                 min_clear_area=SEEN_WINDOW_CLEAR_AREA)
+        lu = self._prior_value(fips)
+        off = self.prior_official.get(str(fips).zfill(5), self.prior_official.get(str(fips)))
+        out["prior_updated_landuse"] = (round(prior_updated_share(p, lu, seen_f, np.where(fin, a, np.nan)), 4)
+                                        if lu is not None else None)
+        out["prior_official_share"] = off
+        out["prior_updated_official"] = (round(prior_updated_share(p, off, seen_f, np.where(fin, a, np.nan)), 4)
+                                         if off is not None else None)
         key = {"window_zero": "window_weighted_share",
                "local_threshold": "clear_silage_share_local_threshold",
                "reference": "clear_silage_share_reference_calibrated",
@@ -522,19 +536,27 @@ class Toolbox:
         out.update(self._landuse_prior(fips, out["silage_share_headline"]))
         return out
 
+    def _prior_value(self, fips):
+        f = Path(self.prior_table) if self.prior_table else self.registry / "landuse_prior" / "county_prior.csv"
+        if not f.exists():
+            return None
+        key = ("prior_table", str(f))
+        if key not in self._cache:
+            t = pd.read_csv(f, dtype={"fips": str})
+            t["fips"] = t["fips"].str.zfill(5)
+            col = "prior_share" if "prior_share" in t else "prior_silage_share"
+            self._cache[key] = t.set_index("fips")[col].astype(float).to_dict()
+        v = self._cache[key].get(str(fips).zfill(5))
+        return None if v is None or not np.isfinite(v) else float(v)
+
     def _landuse_prior(self, fips, headline):
         """Land-use prior (registry/landuse_prior) and its mean with the satellite figure: shown
         beside, labelled, never the headline; its fit includes the 2022 Census counties."""
         out = {"landuse_prior_share": None, "prior_satellite_mean": None,
                "landuse_prior_note": "proxy from hay and alfalfa in the county's cropland, 2019-2023; "
                                      "fitted on 2022 Census county shares including this county"}
-        f = self.registry / "landuse_prior" / "county_prior.csv"
-        if not f.exists():
-            return out
-        t = pd.read_csv(f, dtype={"fips": str}).set_index("fips")
-        k = str(fips).zfill(5)
-        if k in t.index:
-            pr = float(t.loc[k, "prior_share"])
+        pr = self._prior_value(fips)
+        if pr is not None:
             out["landuse_prior_share"] = round(pr, 4)
             if headline is not None:
                 out["prior_satellite_mean"] = round((pr + headline) / 2, 4)
