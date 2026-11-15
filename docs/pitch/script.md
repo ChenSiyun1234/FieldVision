@@ -1,8 +1,8 @@
 # What to say: the model part
 
-About 190 words with both slots filled: close to 90 seconds at a calm pace (130 words a minute).
-Leaving out the parts marked (can cut) brings it to about 80 seconds. Each English line is one
-breath. The Chinese line under it says the same thing.
+About 185 words: close to 85 seconds at a calm pace (130 words a minute). Leaving out the parts
+marked (can cut) brings it to about 75 seconds. Each English line is one breath. The Chinese line
+under it says the same thing.
 
 Numbers are said as "42 of 44", never as a percentage.
 
@@ -33,8 +33,8 @@ Numbers are said as "42 of 44", never as a percentage.
 7. Then we tested it on the organisers' labelled fields. It got 42 of 44 right.
    > 然后我们在主办方带标签的地块上测试。44 个里对了 42 个。
 
-8. A much bigger model got 37. Always saying "grain" gets 32. (first sentence can cut)
-   > 一个大得多的模型对了 37 个。全部猜"籽粒"能对 32 个。（第一句可删）
+8. Always saying "grain" gets 32. A much bigger model got 37. (second sentence can cut)
+   > 全部猜"籽粒"能对 32 个。一个大得多的模型对了 37 个。（第二句可删）
 
 **Slide: counties and the state (fig5, state_2025)**
 
@@ -44,25 +44,22 @@ Numbers are said as "42 of 44", never as a percentage.
 10. Here we must be honest. Our first county method failed its test in Maryland.
     > 这里必须说实话：我们第一种县级方法在马里兰没有通过检验。
 
-11. One cause is cloud at harvest time. Now we count silage only where we saw the harvest, and we report the corn we could not see.
-    > 原因之一是收割期有云。现在我们只在看到了收割的地方才计青贮，并且报告没看到的玉米有多少。
+11. So we went back to a plain count of the clearly seen fields.
+    > 所以我们退回到最简单的办法：只数那些看清了收割的地块。
 
-12. **SLOT A, Michigan (to come).** Say the one that matches the logged result:
-    - passed: "On two new counties in Michigan, this method passed its test."
-      > 在密歇根两个新的县上，这个方法通过了检验。
-    - failed: "On two new counties in Michigan it failed again. So today our county numbers are only a rough guide."
-      > 在密歇根两个新的县上它又没通过。所以目前我们的县级数字只能作粗略参考。
-    - not testable: "In Michigan the clouds hid too much of the harvest, so we could not test it there."
-      > 在密歇根，云挡住了太多收割期，所以没法在那里检验。
+12. On two new counties in Michigan, the plain count passed its test.
+    > 在密歇根两个新的县上，这个简单计数通过了检验。
 
-13. **SLOT B, Maryland 2025 (to come).** Say the one that matches:
-    - a number is reported: "For Maryland in 2025 we estimate ______ acres of silage. USDA reports 40,000."
-      > 对 2025 年的马里兰，我们估计青贮面积是 ______ 英亩。美国农业部的数字是 4 万。
-    - no number is reported: "For Maryland in 2025 the images do not support a state number, and we say so."
-      > 对 2025 年的马里兰，影像不足以支持一个州级数字，我们如实说明。
+13. But for Maryland in 2025 we read low: 22,700 acres of silage. USDA reports 40,000.
+    > 但是对 2025 年的马里兰，我们的数偏低：青贮 22,700 英亩，而美国农业部的数字是 4 万。
 
-14. We wrote down every test rule before we saw the answer. (can cut)
-    > 每一条检验规则，我们都是在看到答案之前写下来的。（可删）
+14. We show every miss next to our numbers. (can cut)
+    > 每一处偏差，我们都写在数字旁边。（可删）
+
+How to say the numbers: 22,700 is "twenty-two thousand seven hundred"; 40,000 is "forty thousand".
+
+**Still to come:** Pennsylvania and Wisconsin 2025. If they are logged in time, one more line
+goes after line 13, in the same form.
 
 ## Five likely questions
 
@@ -73,20 +70,20 @@ It looks at how wet the crop is when it is cut, not at the calendar date, and th
 > 它看的是收割时作物有多湿，而不是日历上的日期，这一点欧洲和这里是一样的。在主办方带标签的地块上，它没有用任何美国数据训练，44 个对了 42 个。
 
 **2. Why such a small model? Did you try deep learning or a pretrained model?**
-Yes, we tried bigger models and a pretrained satellite model. In a new country they lose more accuracy than the small one, and on the labelled fields the big model got 37 of 44 against 42.
-> 试过，更大的模型和预训练的卫星模型都试了。换一个国家时，它们掉的精度比小模型多；在带标签的地块上，大模型是 44 对 37，小模型是 42。
+Yes, we tried bigger models and a pretrained satellite model. In a new country they lose more accuracy than the small one, and on the labelled fields the best big model got 39 of 44 against 42.
+> 试过，更大的模型和预训练的卫星模型都试了。换一个国家时，它们掉的精度比小模型多；在带标签的地块上，最好的大模型是 44 对 39，小模型是 42。
 
 **3. How accurate are your county and state acres?**
-Not proven yet: our first county method failed its test in Kent County, where it said 21 percent silage and the Census says 5.5. The second method misses by at most 3.8 points on the four Maryland counties, but it was built on those same counties, so that is not a test. *(Add the Michigan sentence from slot A when it is logged.)*
-> 还没有得到证实：第一种县级方法在 Kent 县没通过检验，它算出青贮占 21%，而普查是 5.5%。第二种方法在马里兰四个县上最多差 3.8 个百分点，但它就是在这四个县上做出来的，所以这不算检验。（密歇根结果出来后，加上 A 处那一句。）
+Not good enough yet: the plain count passed its test on two Michigan counties, but for Maryland in 2025 it gives 22,700 acres of silage where USDA reports 40,000. Treat our acres as a first estimate that reads low on silage, not as a checked number.
+> 还不够好：简单计数在密歇根两个县通过了检验，但对 2025 年的马里兰，它给出青贮 22,700 英亩，而美国农业部是 4 万。请把我们的面积看作一个青贮偏低的初步估计，而不是已经核实的数字。
 
 **4. What do you do about clouds?**
-If the last image before the cut and the first image after it are more than 20 days apart, the field is not judged. We count silage only where the harvest was seen, and next to every total we show the share of corn we could not see.
-> 如果收割前最后一张影像和收割后第一张影像相隔超过 20 天，这块地就不判断。我们只在看到了收割的地方计青贮，并在每个总数旁边报告没看到的玉米占多少。
+If the last image before the cut and the first image after it are more than 20 days apart, the field is not judged. The silage share is measured only on the clearly seen fields, and we show how much of the corn that is: 62 percent in Maryland 2025.
+> 如果收割前最后一张影像和收割后第一张影像相隔超过 20 天，这块地就不判断。青贮比例只在看清了的地块上计算，并且我们报告这些地块占玉米面积的多少：2025 年马里兰是 62%。
 
 **5. Did you tune the model on the 44 labelled fields? Is 44 enough?**
-No: the model was frozen on European data first, the set was scored twice by a plan written before the first run, and every look at it is in a log. 44 is a small test, one field is 2.3 points, so 42 and 43 would mean the same.
-> 没有：模型先在欧洲数据上定型；这组地块按事先写好的计划打了两次分；每一次查看都记在日志里。44 个是个小测试，一块地就是 2.3 个百分点，所以 42 和 43 没有实质区别。
+No: the model was frozen on European data first, and every look at those fields is in a log. The set was scored three times, each time under a rule written beforehand, and 44 is small: one field is 2.3 points, so 42 and 43 would mean the same.
+> 没有：模型先在欧洲数据上定型，对这些地块的每一次查看都记在日志里。这组地块一共打了三次分，每次都按事先写好的规则；44 个很少，一块地就是 2.3 个百分点，所以 42 和 43 没有实质区别。
 
 ## Words to keep the same everywhere
 
@@ -95,6 +92,7 @@ No: the model was frozen on European data first, the set was scored twice by a p
 | clearly seen / partly seen / not judged | clear tier, wide tier, abstain | 看清了 / 部分看到 / 不判断 |
 | the small model | logistic regression, eu2_logistic_v1 | 小模型（六个特征的逻辑回归） |
 | the big model | LightGBM, GBM | 大模型（135 个特征的提升树） |
-| first method / second method (for county totals) | local threshold, window weighting | 第一种 / 第二种县级加总方法 |
-| corn we could not see | blind windows | 没看到的玉米 |
+| the first method (for county totals) | local threshold | 第一种县级方法（本地阈值） |
+| the plain count | counted clear share | 简单计数（看清地块中判为青贮的面积比例） |
 | 42 of 44 | 95 percent | 44 个里对 42 个 |
+| reads low | is wrong, is validated | 偏低 |

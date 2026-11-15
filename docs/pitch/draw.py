@@ -85,8 +85,8 @@ def module_diagram():
     box(3.85, top, 3.4, h, "1  Evidence check", "Did the satellite see\nthe harvest?\n\nIf not, the field is\nnot judged.")
     box(7.85, top, 3.45, h, "2  Classifier", "Six measurements of the\ncrop at harvest\n\nSilage or grain, with\na probability",
         fill=BLUE, edge=BLUE, head_color="#ffffff", text_color="#ffffff")
-    box(11.9, top, 3.6, h, "3  Add up", "Silage and grain acres,\nby county and by state\n\nSilage is counted only\n"
-        "where the harvest was\nclearly seen.")
+    box(11.9, top, 3.6, h, "3  Add up", "Silage and grain acres,\nby county and by state\n\nThe silage share is\n"
+        "measured on the clearly\nseen fields.")
     mid = top + h / 2
     for x0, x1 in ((3.25, 3.85), (7.25, 7.85), (11.3, 11.9)):
         arrow(x0 + 0.06, mid, x1 - 0.06, mid)
@@ -108,7 +108,7 @@ def module_diagram():
     # what is shown beside every total
     arrow(13.7, top - 0.06, 13.7, 3.88, color=INK2)
     box(10.6, 0.95, 4.9, 2.85, "Shown beside every total",
-        "- Corn we could not see\n   (share of the corn area)\n- Double-crop corn\n   (acres; not scored)",
+        "- Corn not clearly seen\n   (share of the corn area)\n- Double-crop corn\n   (acres; not scored)",
         dashed=True, edge=INK2)
 
     ax.text(0.5, 0.42, "The classifier is a logistic regression trained on 8,000 labelled fields in Austria, France "
@@ -190,10 +190,15 @@ def new_country():
 # --- 3. the organisers' labelled fields --------------------------------------------------------------
 def labelled_fields():
     best = N.LABELLED[0][2]
+    thinned = N.THINNED_BIG_MODEL_CORRECT
     fig = new_fig(f"On the organisers' labelled fields the small model gets {best} of {N.LABELLED_TOTAL}",
                   "44 field-years at Beltsville, Maryland, 2021-2023. Every model was trained on European fields only and frozen before the test.")
     ax = fig.add_axes([0.385, 0.2, 0.545, 0.55])
-    rows = list(N.LABELLED) + [("Big model, dates dropped in training", "one test, set in advance", N.THINNED_BIG_MODEL_CORRECT, "extra")]
+    if thinned is None:
+        extra_sub = "one more test, set in advance"
+    else:
+        extra_sub = "scored later, once: " + ("passed its line of 37" if thinned > 37 else "did not pass its line of 37")
+    rows = list(N.LABELLED) + [("Big model, dates dropped in training", extra_sub, thinned, "other")]
     n = len(rows)
     ax.set_xlim(0, 46)
     ax.set_ylim(-0.6, n - 0.4)
@@ -217,8 +222,9 @@ def labelled_fields():
     ax.set_xticks([0, 11, 22, 33, 44])
     ax.set_xlabel("field-years called correctly, out of 44", fontsize=12.5, color=INK2, labelpad=10)
     first = N.LABELLED_FIRST_RUN
+    times = "twice" if thinned is None else "three times"
     foot(fig, f"44 field-years is a small test: one field is 2.3 points. The small model's two misses: one silage field missed, one grain field called silage.\n"
-              f"The set was scored twice, by a plan written before the first run. First run (models trained on Austria only): "
+              f"The set was scored {times}, each time under a rule written beforehand. First run (models trained on Austria only): "
               f"small model {first['small']}, big model {first['big']}.")
     save(fig, "fig3_labelled_fields")
 
@@ -257,7 +263,7 @@ def date_dropping():
     else:
         verdict = "passed" if N.THINNED_BIG_MODEL_CORRECT > 37 else "did not pass"
         check = (f"One confirmation was set in advance, on the 44 labelled US field-years (passes above 37 of 44): "
-                 f"{N.THINNED_BIG_MODEL_CORRECT} of 44, {verdict}.")
+                 f"{N.THINNED_BIG_MODEL_CORRECT} of 44, {verdict}. The small model has 42.")
     foot(fig, f"135-feature boosted trees, 8,000 labelled fields in Austria, France and the Netherlands; changes made to training fields only.\n"
               f"It still loses {loss['big_dates_dropped']:.3f} out of country (before: {loss['big']:.3f}; small model: {loss['small']:.3f}). "
               f"This arm was picked after seeing six.\n{check}")
@@ -266,19 +272,25 @@ def date_dropping():
 
 # --- 5. county totals against the Census -------------------------------------------------------------
 def counties():
-    tested = N.MICHIGAN_VERDICT is not None
-    title = "County totals: our first method failed its test in Maryland"
-    sub = ("Second method: count silage only where the harvest was seen. It was built on these four counties after the failure,\n"
-           "so they do not test it. Its clean test is two Michigan counties"
-           + (f": {N.MICHIGAN_VERDICT}." if tested else ", still to come."))
-    fig = new_fig(title, sub)
+    verdict = N.MICHIGAN_VERDICT
+    if verdict == "passed":
+        title = "County totals: a failure in Maryland, then a pass in Michigan"
+        second = "then passed a test on two Michigan counties it had never seen. "
+    elif verdict is None:
+        title = "County totals: our first method failed its test in Maryland"
+        second = "gets its clean test on two Michigan counties: still to come. "
+    else:
+        title = "County totals: our first method failed its test in Maryland"
+        second = f"had its test on two Michigan counties it had never seen: {verdict}. "
+    fig = new_fig(title, "The first method failed its test on Kent County. The plain count (share of the clearly seen corn called silage)\n"
+                  + second + f"In Maryland it misses single counties by up to {N.PLAIN_COUNT_WORST_MISS_MD} points.")
     ax = fig.add_axes([0.16, 0.2, 0.8, 0.5])
-    ax.set_xlim(-1.6, 50.4)
+    ax.set_xlim(-1.6, 61.4)
     rows = [("md", r) for r in N.MARYLAND_2022] + [("mi", r) for r in N.MICHIGAN_2022]
     ys = [6.3, 5.3, 4.3, 3.3, 1.4, 0.4]
     ax.set_ylim(-0.3, 7.4)
     clean(ax)
-    name_x, note_x = -2.4, 28.5
+    name_x, note_x = -2.6, 35.5
 
     def note(y, line1, line2=""):
         ax.text(note_x, y + (0.17 if line2 else 0), line1, ha="left", va="center", fontsize=13, color=INK)
@@ -287,55 +299,54 @@ def counties():
 
     for (group, row), y in zip(rows, ys):
         name, census = row[0], row[1]
-        ax.text(name_x, y, name, ha="right", va="center", fontsize=14.5, color=INK, fontweight="bold")
         if group == "md":
-            _, _, first, verdict, second, unseen = row
-            if name == "Frederick":
-                ax.plot(N.FREDERICK_SCORED_RANGE, [y, y], color=INK, lw=8, alpha=0.16, solid_capstyle="round", zorder=1)
-            ax.plot([min(census, second), max(census, second)], [y, y], color=GREY, lw=2.2, zorder=2)
-            if first is not None:
-                ax.scatter([first], [y], s=150, marker="X", color=INK2, edgecolors=BG, linewidths=1.2, zorder=4)
-                ax.text(first, y + 0.36, f"first method {first:.1f}%: {verdict}", ha="center" if first > 5 else "left",
-                        va="center", fontsize=12, color=INK2)
-            ax.scatter([second], [y], s=135, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
-            line2 = f"{unseen}% of the corn area not seen at harvest" if unseen else ""
-            if name == "Frederick":
-                lo_r, hi_r = N.FREDERICK_SCORED_RANGE
-                line2 = f"grey band: Census range for scored fields, {lo_r}-{hi_r}%"
-            note(y, f"Census {census:.1f}%,  second method {second:.1f}%", line2)
+            _, _, band, first, count = row
         else:
-            _, _, ours, unseen = row
-            if ours is None:
-                to_come(ax, note_x, 49.5, y, "to come: clean test, run once")
-            else:
-                ax.plot([min(census, ours), max(census, ours)], [y, y], color=GREY, lw=2.2, zorder=2)
-                ax.scatter([ours], [y], s=135, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
-                note(y, f"Census {census:.1f}%,  second method {ours:.1f}%",
-                     f"{unseen}% of the corn area not seen at harvest" if unseen is not None else "")
+            _, _, count, _seen = row
+            band, first = None, None
+        ax.text(name_x, y, name, ha="right", va="center", fontsize=14.5, color=INK, fontweight="bold")
+        if band:
+            ax.plot(band, [y, y], color=INK, lw=8, alpha=0.16, solid_capstyle="round", zorder=1)
+        if first:
+            ax.scatter([first[0]], [y], s=150, marker="X", color=INK2, edgecolors=BG, linewidths=1.2, zorder=4)
+            ax.text(first[0], y + 0.36, f"first method {first[0]:.1f}%: {first[1]}", ha="center" if first[0] > 5 else "left",
+                    va="center", fontsize=12, color=INK2)
+        if count is None:
+            to_come(ax, note_x, 60, y, "to come: clean test, run once")
+        else:
+            ax.plot([min(census, count), max(census, count)], [y, y], color=GREY, lw=2.2, zorder=2)
+            ax.scatter([count], [y], s=135, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
+            line2 = (f"grey band: Census range for scored fields, {band[0]}-{band[1]}%" if band
+                     else f"miss {count - census:+.1f} points")
+            note(y, f"Census {census:.1f}%,  plain count {count:.1f}%", line2)
         ax.scatter([census], [y], s=120, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
     ax.text(name_x, 7.05, "Maryland 2022", ha="right", va="center", fontsize=12.5, color=INK2)
     ax.text(0.3, 7.05, "seen while the method was built", ha="left", va="center", fontsize=12.5, color=INK2)
     ax.text(name_x, 2.15, "Michigan 2022", ha="right", va="center", fontsize=12.5, color=INK2)
-    ax.text(0.3, 2.15, "the clean test: one county with much silage, one with little", ha="left", va="center",
-            fontsize=12.5, color=INK2)
+    ax.text(0.3, 2.15, "the clean test, each county run once" + (f": {verdict}" if verdict else ""), ha="left",
+            va="center", fontsize=12.5, color=INK2)
     ax.set_yticks([])
-    ax.set_xticks([0, 5, 10, 15, 20, 25])
-    ax.set_xticklabels(["0%", "5%", "10%", "15%", "20%", "25%"])
+    ticks = [0, 5, 10, 15, 20, 25, 30]
+    ax.set_xticks(ticks)
+    ax.set_xticklabels([f"{t}%" for t in ticks])
     ax.grid(False)
-    for x in (0, 5, 10, 15, 20, 25):
+    for x in ticks:
         ax.plot([x, x], [-0.3, 6.8], color=GRID, lw=1, zorder=0)
     ax.set_xlabel("share of the county's corn area that is silage", fontsize=12.5, color=INK2, labelpad=10, loc="left")
     handles = [
         plt.Line2D([], [], marker="D", ls="", markersize=10, markerfacecolor=INK, markeredgecolor=BG, label="USDA Census 2022"),
         plt.Line2D([], [], marker="X", ls="", markersize=12, markerfacecolor=INK2, markeredgecolor=BG,
-                   label="first method, tested once on Kent and Carroll"),
+                   label="first method (a local cut-off), tested on Kent and Carroll"),
         plt.Line2D([], [], marker="o", ls="", markersize=11, markerfacecolor=BLUE, markeredgecolor=BG,
-                   label="second method (not yet confirmed)" if not tested else "second method"),
+                   label="plain count of the clearly seen fields"),
     ]
     fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.025, 0.775), ncol=3, frameon=False, fontsize=12.5,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.8)
-    foot(fig, f"Kent was a test with limits written down first: the first method said 21.0% where the Census has 5.5% (fail line {N.KENT_FAIL_LINE}%).\n"
-              f"Second method on the four seen counties: worst miss {N.SECOND_METHOD_WORST_MISS} points. Field classifier trained on European fields only.")
+    rule = "Michigan rule, written first: Gratiot at least 10 points above Branch, neither more than 10 points off the Census."
+    if verdict:
+        rule += f" Result: {N.MICHIGAN_GAP} points apart."
+    foot(fig, rule + f"\nKent: the first method read 21.0% against 5.5% (fail line {N.KENT_FAIL_LINE}%). "
+              "The field classifier was trained on European fields only.")
     save(fig, "fig5_counties")
 
 
@@ -343,62 +354,79 @@ def counties():
 def state_2025():
     md = N.STATE_2025["Maryland"]
     have = md["our_silage_acres"] is not None
-    fig = new_fig("Maryland 2025: our state acres beside the USDA figure" if have
-                  else "Maryland 2025 state acres: our number is still to come",
-                  f"Random sample: {md['blocks_drawn']} of {md['blocks_total']} image blocks, {md['fields_drawn']:,} fields drawn. "
+    low = have and md["our_silage_share_range"][1] < md["nass_silage_share"]
+    if not have:
+        title = "Maryland 2025 state acres: our number is still to come"
+    elif low:
+        title = "Maryland 2025: our silage estimate reads low"
+    else:
+        title = "Maryland 2025: our state acres beside the USDA figure"
+    fig = new_fig(title, f"Random sample: {md['blocks_drawn']} of {md['blocks_total']} image blocks, {md['fields_scored']:,} corn fields scored. "
                   "Steps written down before any 2025 image was opened.")
     ax = fig.add_axes([0, 0, 1, 1])
     ax.set_xlim(0, 16)
     ax.set_ylim(0, 9)
     ax.axis("off")
     cols = (5.6, 9.6)
-    ax.text(cols[0], 6.95, "Ours, from satellite", fontsize=14.5, color=BLUE, fontweight="bold", ha="center", va="center")
-    ax.text(cols[1], 6.95, "USDA NASS 2025", fontsize=14.5, color=INK, fontweight="bold", ha="center", va="center")
+    ax.text(cols[0], 7.0, "Ours, from satellite", fontsize=14.5, color=BLUE, fontweight="bold", ha="center", va="center")
+    ax.text(cols[1], 7.0, "USDA NASS 2025", fontsize=14.5, color=INK, fontweight="bold", ha="center", va="center")
 
-    def fmt_acres(v):
+    def acres(v):
         return f"{v:,.0f}"
 
+    def share(v):
+        return f"{v:g}%"
+
     table = [
-        ("Silage acres", md["our_silage_acres"], fmt_acres, fmt_acres(md["nass_silage_acres"])),
-        ("Grain acres", md["our_grain_acres"], fmt_acres, fmt_acres(md["nass_grain_acres"])),
-        ("Silage share of corn", md["our_silage_share"], lambda v: f"{v:.1f}%", f"{md['nass_silage_share']:.1f}%"),
+        ("Silage acres", md["our_silage_acres"], md.get("our_silage_acres_range"), acres, acres(md["nass_silage_acres"])),
+        ("Grain acres", md["our_grain_acres"], None, acres, acres(md["nass_grain_acres"])),
+        ("Silage share of corn", md["our_silage_share"], md.get("our_silage_share_range"), share, share(md["nass_silage_share"])),
     ]
-    for i, (label, ours, fmt, nass) in enumerate(table):
-        y = 6.15 - i * 0.85
-        ax.plot([0.6, 11.4], [y - 0.425, y - 0.425], color=GRID, lw=1)
+    for i, (label, ours, rng, fmt, nass) in enumerate(table):
+        y = 6.15 - i * 0.95
+        ax.plot([0.6, 11.4], [y - 0.5, y - 0.5], color=GRID, lw=1)
         ax.text(0.6, y, label, fontsize=16, color=INK, fontweight="bold", va="center")
         if ours is None:
             to_come(ax, cols[0] - 1.35, cols[0] + 1.35, y, "to come", half=0.3, size=14)
         else:
-            ax.text(cols[0], y, fmt(ours), fontsize=22, color=BLUE, fontweight="bold", ha="center", va="center")
+            ax.text(cols[0], y + (0.1 if rng else 0), fmt(ours), fontsize=22, color=BLUE, fontweight="bold", ha="center", va="center")
+            if rng:
+                ax.text(cols[0], y - 0.3, f"range {fmt(rng[0]).rstrip('%')} to {fmt(rng[1])}", fontsize=11.5, color=INK2,
+                        ha="center", va="center")
         ax.text(cols[1], y, nass, fontsize=22, color=INK, ha="center", va="center")
 
-    ax.text(0.6, 3.55, "Shown beside it", fontsize=14.5, color=INK, fontweight="bold", va="center")
+    ax.text(0.6, 3.3, "Shown beside it", fontsize=14.5, color=INK, fontweight="bold", va="center")
     beside = [
-        ("Range of the silage share, from resampling the blocks", md["our_range_share"], lambda v: f"{v[0]:.1f}% to {v[1]:.1f}%"),
-        ("Corn area in harvest windows we could not see", md["unseen_share"], lambda v: f"{v:.0f}%"),
-        ("Upper figure: unseen windows filled from the window before", md["upper_share"], lambda v: f"{v:.1f}%"),
+        ("Corn area clearly seen at harvest (the share is measured there)", md.get("clearly_seen_share_of_area"), lambda v: f"{v}%"),
         ("Double-crop corn, not scored", md["double_crop_acres_not_scored"], lambda v: f"{v:,} acres"),
+        ("Silage share of all corn if every double-crop acre were silage", md.get("share_if_all_double_crop_is_silage"), lambda v: f"{v:.1f}%"),
+        ("Corn acres: ours from field boundaries, USDA's from its survey",
+         (md.get("corn_acres_boundaries"), md.get("corn_acres_nass")) if md.get("corn_acres_boundaries") else None,
+         lambda v: f"{v[0]:,} and {v[1]:,}"),
     ]
     for i, (label, value, fmt) in enumerate(beside):
-        y = 3.0 - i * 0.52
+        y = 2.78 - i * 0.5
         ax.text(0.6, y, label, fontsize=13.5, color=INK2, va="center")
         if value is None:
-            to_come(ax, 8.6, 10.6, y, "to come", half=0.19, size=12)
+            to_come(ax, 8.9, 10.9, y, "to come", half=0.19, size=12)
         else:
-            ax.text(8.6, y, fmt(value), fontsize=13.5, color=INK, va="center", fontweight="bold")
+            ax.text(8.9, y, fmt(value), fontsize=13.5, color=INK, va="center", fontweight="bold")
 
-    ax.add_patch(FancyBboxPatch((12.1, 4.02), 3.35, 3.3, boxstyle="round,pad=0,rounding_size=0.16", fc=BG, ec=INK2,
+    ax.add_patch(FancyBboxPatch((12.1, 4.0), 3.35, 3.35, boxstyle="round,pad=0,rounding_size=0.16", fc=BG, ec=INK2,
                                 lw=1.4, ls=(0, (4, 3))))
-    ax.text(12.4, 6.95, "Other states, 2025", fontsize=14.5, color=INK, fontweight="bold", va="center")
+    ax.text(12.4, 7.0, "Other states, 2025", fontsize=14.5, color=INK, fontweight="bold", va="center")
     for i, state in enumerate(("Pennsylvania", "Wisconsin")):
         y = 6.15 - i * 1.1
-        share = N.STATE_2025[state]["our_silage_share"]
+        s = N.STATE_2025[state]["our_silage_share"]
         ax.text(12.4, y, state, fontsize=14, color=INK, va="center")
-        ax.text(12.4, y - 0.42, "to come" if share is None else f"{share:.1f}% silage", fontsize=13, color=INK2,
-                va="center", style="italic" if share is None else "normal")
-    foot(fig, "The 2025 USDA figure was already known to us when the steps were written; no 2025 field had been scored.\n"
-              "Corn in harvest windows we could not see is counted as grain, so the silage figure can read low; the upper figure shows by how much.")
+        ax.text(12.4, y - 0.42, "to come" if s is None else f"{s:g}% silage", fontsize=13, color=INK2,
+                va="center", style="italic" if s is None else "normal")
+    if low:
+        first = ("USDA's figure lies outside our range. The range covers sampling only, not the method's own miss "
+                 "(about 7 points on single counties in 2022).")
+    else:
+        first = "The range covers sampling only, not the method's own miss (about 7 points on single counties in 2022)."
+    foot(fig, first + "\nThe 2025 USDA figure was already known to us when the steps were written; no 2025 field had been scored.")
     save(fig, "state_2025")
 
 

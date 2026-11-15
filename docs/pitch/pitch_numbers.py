@@ -53,10 +53,11 @@ LABELLED = [
 ]
 # log 13:53 and 14:07 (first scoring, models trained on Austria 2024 only), docs/module.md table.
 LABELLED_FIRST_RUN = {"small": 42, "big": 30, "always_grain": 32}
-# log 18:50: one more scoring of the big model trained with dates dropped (eu2_gbm_thin_v1),
-# approved beforehand; it passes if it scores more than 37.
-THINNED_BIG_MODEL_CORRECT = None
-THINNED_BIG_MODEL_SOURCE = "to come: its own row in the access log"
+# log 18:50 (conditions, written before it ran) and 19:16 (result): one more scoring, of the big
+# model trained with dates dropped (eu2_gbm_thin_v1). It passes if it scores more than 37.
+# Result: 39 of 44, ROC-AUC .932. After it the set is closed.
+THINNED_BIG_MODEL_CORRECT = 39
+THINNED_BIG_MODEL_SOURCE = "log 19:16"
 
 # --- 4. Dropping observation dates in training ---------------------------------------------------
 # docs/foundation-models.md, table under "Can augmentation stop the big model memorising?":
@@ -74,45 +75,54 @@ AUGMENT_SMALL_MODEL = 0.765  # same table, row "logistic (6 features), base"
 AUGMENT_LOSS = {"big": 0.047, "big_dates_dropped": 0.035, "small": 0.005}  # same table, "mean loss"
 
 # --- 5. County totals against the 2022 Census ----------------------------------------------------
-# Census 2022 silage share of harvested corn, and the range for the scored field set in Frederick
-# (part of its silage sits in double-crop fields that are not scored): log 18:09, 18:16, 18:54.
-# "first": the county step fixed before the test counties were opened (local threshold on the
+# Census 2022 silage share of harvested corn. For Frederick and Carroll part of the silage sits in
+# double-crop fields that are not scored, so the comparison is a range for the scored fields:
+# Frederick log 18:09, Carroll log 19:05.
+# "first": the county step fixed before the test counties were opened (a local cut-off on the
 #          clearly seen fields, log 18:09). Kent and Carroll were each run once: log 18:11, 18:16.
-# "second": harvest-window weighting, weeks without a clear view counted as zero. Found on these
-#          four counties after Kent failed: log 18:54. "unseen" = share of corn area in weeks
-#          without a clear view (same row; Carroll and Frederick are "under 1 %").
+# "count": the plain count = share of the clearly seen corn area that the small model calls
+#          silage ("counted clear share"). Maryland values: log 18:33; it is the headline again
+#          since log 19:05 (a harvest-window variant was tried at 18:54 and withdrawn at 19:05
+#          because its result flips with the date convention).
 MARYLAND_2022 = [
-    # county, Census %, first method % (None = not a test county), verdict, second method %, unseen %
-    ("Queen Anne's", 1.3, None, "", 2.0, 57),
-    ("Kent", 5.5, 21.0, "failed", 6.2, 54),
-    ("Carroll", 8.9, 0.0, "weak", 5.1, 0),
-    ("Frederick", 19.6, None, "", 15.1, 0),
+    # county, Census %, range for the scored fields, first method (%, verdict) or None, plain count %
+    ("Queen Anne's", 1.3, None, None, 4.0),
+    ("Kent", 5.5, None, (21.0, "failed"), 12.9),
+    ("Carroll", 8.9, (4.8, 7.5), (0.0, "weak"), 3.6),
+    ("Frederick", 19.6, (11.2, 19.9), None, 13.2),
 ]
-FREDERICK_SCORED_RANGE = (11.2, 19.9)
 KENT_FAIL_LINE = 20.5  # log 17:30: fail above 20.5 %
-SECOND_METHOD_WORST_MISS = 3.8  # log 18:54 (Carroll); the plain share of clear fields: 7.4
+PLAIN_COUNT_WORST_MISS_MD = 7.4  # log 18:37 (Kent)
 
-# Michigan 2022, the clean test of the second method: log 18:25 (criteria), 18:37 and 18:54
-# (when it is "not testable"). Census shares from the 18:25 row. Results: None until logged.
+# Michigan 2022, the clean test of the plain count. Rule written first (log 18:25): Gratiot at
+# least 10 points above Branch, neither more than 10 points off its Census share; minimum of
+# clearly seen fields (log 18:37). Each county run once: log 19:07. Result: log 19:11.
 MICHIGAN_2022 = [
-    # county, Census %, our headline %, unseen %
-    ("Gratiot", 24.2, None, None),
-    ("Branch", 1.8, None, None),
+    # county, Census %, plain count %, clearly seen share of corn area %
+    ("Branch", 1.8, 2.1, 64),
+    ("Gratiot", 24.2, 30.0, 83),
 ]
-MICHIGAN_VERDICT = None  # "pass", "fail" or "not testable"
-MICHIGAN_SOURCE = "to come: its own row in the access log"
+MICHIGAN_VERDICT = "passed"  # log 19:11: 27.9 points apart; off by +0.3 and +5.8
+MICHIGAN_GAP = 27.9
+MICHIGAN_SOURCE = "log 19:11"
 
 # --- State acres, 2025 (what the organisers score) -----------------------------------------------
-# USDA NASS 2025 for Maryland: log, section "State targets for 2025". Sample and double-crop acres:
-# log 18:25 and docs/us-county-fields.md, "2025 statewide samples".
+# USDA NASS 2025 for Maryland: log, section "State targets for 2025". Procedure: log 18:25, 18:37,
+# 18:55, 19:05. Run once: log 19:11. Result: log 19:14 (silage share 4.75 % [3.4, 6.3] of the
+# clearly seen corn; acres = share x 477,891 corn acres from field boundaries).
 STATE_2025 = {
     "Maryland": {
         "nass_silage_acres": 40_000, "nass_grain_acres": 410_000, "nass_silage_share": 8.9,
-        "blocks_drawn": 150, "blocks_total": 838, "fields_drawn": 3_929,
+        "blocks_drawn": 150, "blocks_total": 838, "fields_scored": 3_611,
         "double_crop_acres_not_scored": 17_056,
-        "our_silage_acres": None, "our_grain_acres": None, "our_silage_share": None,
-        "our_range_share": None, "unseen_share": None, "upper_share": None,
-        "source": "to come: its own row in the access log",
+        "our_silage_acres": 22_700, "our_silage_acres_range": (16_200, 29_900),
+        "our_grain_acres": 455_200,
+        "our_silage_share": 4.75, "our_silage_share_range": (3.4, 6.3),
+        "clearly_seen_share_of_area": 62,
+        "share_if_all_double_crop_is_silage": 8.0,
+        "points_low": 4.2,
+        "corn_acres_boundaries": 477_891, "corn_acres_nass": 450_000,
+        "source": "log 19:14",
     },
     "Pennsylvania": {"our_silage_share": None, "source": "to come"},
     "Wisconsin": {"our_silage_share": None, "source": "to come"},
