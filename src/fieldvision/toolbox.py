@@ -96,7 +96,8 @@ class Toolbox:
     """Same interface as the team's StubToolbox; numbers from fieldvision code only."""
 
     def __init__(self, data_root="data/counties", registry="registry", out_root="results",
-                 standard_model=MODULE_V1_MODEL, module_model=MODULE_V2_MODEL,
+                 standard_model=MODULE_V1_MODEL, module_model=MODULE_V2_MODEL, landsat=False,
+                 landsat_adjust=None,
                  rule_model="eu_timing_rule_v1", n_resample=2000, seed=0):
         """Relative paths are taken from the repo root, so Toolbox() works from anywhere."""
         _require_parquet_engine()
@@ -105,6 +106,9 @@ class Toolbox:
         self.out_root = _from_repo(out_root)
         self.standard_model = standard_model
         self.module_model = module_model
+        # union with timeseries_landsat.parquet when present (off by default; fieldvision.features.landsat)
+        self.landsat = landsat
+        self.landsat_adjust = landsat_adjust
         self.rule_model = rule_model
         self.n_resample = n_resample
         self.seed = seed
@@ -138,6 +142,10 @@ class Toolbox:
             fields = fields.drop(columns=[c for c in ("label", "y") if c in fields], errors="ignore")
             fields["year"] = int(year)
             ts, _ = load_timeseries(d / "timeseries.parquet", field_ids=fields["field_id"])
+            if self.landsat and (d / "timeseries_landsat.parquet").exists():
+                from .features.landsat import merge
+                ls, _ = load_timeseries(d / "timeseries_landsat.parquet", field_ids=fields["field_id"])
+                ts = merge(ts, ls, self.landsat_adjust)
             cfg_model = (self.standard_model if (self.registry / self.standard_model).exists()
                          else MODULE_V1_MODEL)
             _, _, cfg = load_model(self.registry, cfg_model)
