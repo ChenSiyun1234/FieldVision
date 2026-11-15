@@ -11,7 +11,7 @@ from functools import lru_cache
 
 import pandas as pd
 
-from ..settings import QUICKSTATS_CSV, REPO
+from ..settings import COUNTY_DATA, QUICKSTATS_CSV, REPO
 from . import service
 
 RESULTS = REPO / "handoff" / "results"
@@ -120,6 +120,54 @@ def state_summary(state):
             "with_runs": sorted(f for f in with_runs if f.startswith(state)),
             "history": _round(_records(hist, ["year", "source", "grain", "silage", "silage_share_pct"])),
             "nass_2025": _nass_2025().get(state), "ours": _ours_by_state().get(state, [])}
+
+
+def states():
+    """Every state's 2025 silage share from NASS, for shading the national map."""
+    on_disk = {c["fips"][:2] for c in service.counties()}
+    return {s: {**v, "name": STATE_NAMES[s], "fields_on_disk": s in on_disk} for s, v in _nass_2025().items()}
+
+
+def _round_coords(geom, nd=5):
+    def r(c):
+        return [round(c[0], nd), round(c[1], nd)] if isinstance(c[0], (int, float)) else [r(x) for x in c]
+    return {"type": geom["type"], "coordinates": r(geom["coordinates"])}
+
+
+@lru_cache(maxsize=8)
+def field_calls(fips, year):
+    """Every field of a county-season with the final module's call: silage, grain or not judged.
+    Classifies once if the season has no saved predictions yet."""
+    from . import dairy
+    fips, year = str(fips), int(year)
+    policy = dairy._ensure_predictions(fips, year)
+    sm = dairy._silage_match()
+    preds = pd.read_parquet(sm.prediction_path(fips, year, policy)).set_index("field_id")
+    g = json.loads((COUNTY_DATA / fips / str(year) / "fields.geojson").read_text())
+    feats, counts = [], {"silage": 0, "grain": 0, "not judged": 0}
+    for f in g["features"]:
+        fid = str(f["properties"]["field_id"])
+        if fid not in preds.index:
+            continue
+        p = preds.loc[fid]
+        ev = p["evidence"] if isinstance(p["evidence"], dict) else json.loads(p["evidence"] or "{}")
+        call = "not judged" if bool(p["abstain"]) else str(p["label"])
+        counts[call] = counts.get(call, 0) + 1
+        props = f["properties"]
+        feats.append({"type": "Feature", "geometry": _round_coords(f["geometry"]), "properties": {
+            "field_id": fid, "call": call, "p_silage": round(float(p["p_silage"]), 3),
+            "acres": round(float(props.get("acres_reported") or (props.get("area_ha") or 0) * 2.47105), 1),
+            "drop_date": ev.get("drop_date"), "reason": ev.get("abstain_reason"),
+            "gap_days": ev.get("days_to_drop") or ev.get("largest_gap_days")}})
+    return {"type": "FeatureCollection", "features": feats, "counts": counts, "model": str(preds["model"].iloc[0]),
+            "fips": fips, "year": year}
+
+
+def dairy_points():
+    from . import dairy
+    return {"type": "FeatureCollection", "features": [
+        {"type": "Feature", "geometry": {"type": "Point", "coordinates": [d["lon"], d["lat"]]},
+         "properties": {k: d.get(k) for k in ("dairy_id", "county", "state", "head")}} for d in dairy.dairies()]}
 
 
 def county_detail(fips):

@@ -10,6 +10,7 @@ Calls are synchronous: offline answers take seconds, Nemotron runs up to a minut
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -21,6 +22,16 @@ from . import dairy, dashboard, geo, service
 STATIC = Path(__file__).with_name("static")
 VENDOR = REPO / "app" / "vendor"                     # Leaflet, shared with the field map demo
 app = FastAPI(title="FieldVision")
+app.add_middleware(GZipMiddleware, minimum_size=2000)          # field outlines and county shapes are large
+
+
+@app.middleware("http")
+async def revalidate_static(request, call_next):
+    """Browsers keep ES modules a long time; make them check, so an edited page shows on reload."""
+    response = await call_next(request)
+    if request.url.path.startswith("/static/") or request.url.path == "/":
+        response.headers["Cache-Control"] = "no-cache"
+    return response
 
 
 class RunRequest(BaseModel):
@@ -89,6 +100,21 @@ def counties():
 
 
 # --- US map: states, their counties, one county's data -------------------------------
+
+@app.get("/api/geo/states")
+def geo_states():
+    return _guard(geo.states)
+
+
+@app.get("/api/geo/fields/{fips}/{year}")
+def geo_fields(fips: str, year: int):
+    return _guard(geo.field_calls, fips, year)
+
+
+@app.get("/api/geo/dairies")
+def geo_dairies():
+    return _guard(geo.dairy_points)
+
 
 @app.get("/api/geo/state/{state}")
 def geo_state(state: str):

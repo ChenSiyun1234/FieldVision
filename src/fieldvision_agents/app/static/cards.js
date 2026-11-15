@@ -9,7 +9,11 @@ export function silageMap(node, r, { onPick } = {}) {
   if (!window.L) { node.append(el("p", { class: "muted small" }, "Map library did not load.")); return null; }
   const css = getComputedStyle(document.documentElement);
   const map = L.map(node, { scrollWheelZoom: false, attributionControl: true });
-  L.tileLayer(ESRI, { maxZoom: 18, attribution: "Imagery © Esri" }).addTo(map);
+  const satellite = L.tileLayer(ESRI, { maxZoom: 18, attribution: "Imagery © Esri" }).addTo(map);
+  const tone = matchMedia("(prefers-color-scheme: light)").matches ? "Light" : "Dark";
+  const street = L.tileLayer(`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_${tone}_Gray_Base/MapServer/tile/{z}/{y}/{x}`,
+    { maxZoom: 16, attribution: "Basemap © Esri" });
+  L.control.layers({ "Satellite": satellite, "Map": street }, null, { position: "topright" }).addTo(map);
   const grain = css.getPropertyValue("--grain").trim(), silage = css.getPropertyValue("--silage").trim();
   const d = r.dairy;
   const layer = L.geoJSON(r.map, {
