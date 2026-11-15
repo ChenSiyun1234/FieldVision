@@ -278,6 +278,9 @@ def main(argv=None):
     ap.add_argument("--double-crop-class-acres", default=None,
                     help="JSON {crop_code: acres} (state_acres.json by_class); scores the double-crop "
                          "stratum and adds its silage acres (rule logged 19:21)")
+    ap.add_argument("--blind-switch", type=float, default=0.20,
+                    help="above this blind share the window-weighted share is the headline (19:33)")
+    ap.add_argument("--max-blind", type=float, default=0.60)
     ap.add_argument("--n-boot", type=int, default=2000)
     ap.add_argument("--out", required=True)
     a = ap.parse_args(argv)
@@ -297,10 +300,16 @@ def main(argv=None):
                                               n_boot=a.n_boot)
     n_clear = int((table["tier"] == "clear").sum())
     enough = n_clear >= a.min_clear_fields and point["clear_share_of_area"] >= a.min_clear_area
-    head = point[a.headline] if enough else float("nan")
-    lo, hi = ranges[a.headline] if enough else (float("nan"), float("nan"))
+    blind = point.get("blind_share", 0.0)
+    headline = a.headline
+    if a.blind_switch is not None and np.isfinite(blind) and blind > a.blind_switch:
+        headline = "window_zero"            # logged 19:33: the clear tier stands for visible weeks only
+    if np.isfinite(blind) and blind > a.max_blind:
+        enough = False
+    head = point[headline] if enough else float("nan")
+    lo, hi = ranges[headline] if enough else (float("nan"), float("nan"))
     report = {
-        "headline_estimate": a.headline, "headline_share": head, "headline_range_5_95": [lo, hi],
+        "headline_estimate": headline, "blind_share": blind, "headline_share": head, "headline_range_5_95": [lo, hi],
         "clear_tier_fields": n_clear, "headline_reported": bool(enough),
         "minimum": {"clear_fields": a.min_clear_fields, "clear_share_of_area": a.min_clear_area},
         "shift_guard": {"reference_counted_clear": point["reference_counted_clear"],

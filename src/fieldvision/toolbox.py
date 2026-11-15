@@ -51,7 +51,9 @@ MODULE_V1_MODEL = "composite_v1"
 MODULE_V2_MODEL = "eu2_logistic_v1"
 CLEAR_BRACKET_DAYS = 12.0
 # module_v2's county step on the clear tier: "local_threshold", "reference", "europe" or "counted"
-MODULE_V2_COUNTY_STEP = "counted"      # counted clear share (logged 18:25, restored 19:05)
+MODULE_V2_COUNTY_STEP = "counted"      # counted clear share; window share above 20 % blind (logged 19:33)
+BLIND_SWITCH = 0.20
+MAX_BLIND_SHARE = 0.60
 MIN_CLEAR_FIELDS = 100                # no headline below this clear tier (logged 18:37)
 MIN_CLEAR_AREA_SHARE = 0.15
 
@@ -475,6 +477,14 @@ class Toolbox:
                                       f"{(ac / total if total else 0):.0%} of area, below the minimum of "
                                       f"{MIN_CLEAR_FIELDS} fields and {MIN_CLEAR_AREA_SHARE:.0%}; the clear + wide "
                                       "counted share is context only")
+        elif (out.get("blind_window_share_of_area") or 0) > MAX_BLIND_SHARE:
+            out["silage_share_headline"] = None
+            out["headline_method"] = (f"NOT TESTABLE: {out['blind_window_share_of_area']:.0%} of the corn "
+                                      "area was cut in windows with no clear harvest seen")
+        elif (out.get("blind_window_share_of_area") or 0) > BLIND_SWITCH:
+            out["silage_share_headline"] = out["window_weighted_share"]
+            out["headline_method"] = (f"harvest-window weighted share, blind windows at zero "
+                                      f"({out['blind_window_share_of_area']:.0%} of the area blind)")
         elif key and out.get(key) is not None:
             out["silage_share_headline"] = out[key]
             out["headline_method"] = (
