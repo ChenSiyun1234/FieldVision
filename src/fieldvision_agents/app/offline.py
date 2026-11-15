@@ -75,6 +75,8 @@ class RuleAgent:
             return self._call("run_critic", "Check the county result.")
         if last_name == "abstain_region" and "error" not in last:
             return self._finish("abstained", classified, history)
+        if last_name == "finish" and "error" in last:          # the loop refused the finish (e.g. nothing judged)
+            return self._call("abstain_region", "The loop refused the finish.", reason=last["error"])
 
         critic = next((r for n, _, r in reversed(history) if n == "run_critic" and "error" not in r), None)
         if critic is None:

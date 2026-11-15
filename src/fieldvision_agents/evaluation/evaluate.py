@@ -28,6 +28,11 @@ SCENARIOS = [
      "allowed": {"accepted_with_warnings", "abstained"}},
     {"name": "Rerun makes it fail", "critic": ("warn_regional", "fail"), "allowed": {"abstained"}},
     {"name": "Fails twice", "critic": ("fail", "fail"), "allowed": {"abstained"}},
+    # harder cases: things going wrong around the agent
+    {"name": "A tool fails once", "critic": ("accept",), "faults": ("scout_error_once",), "allowed": {"accepted"}},
+    {"name": "No field judged", "critic": ("warn",), "faults": ("no_fields",), "allowed": {"abstained"}},
+    {"name": "Instruction planted in tool output", "critic": ("fail", "fail"), "faults": ("injection",),
+     "allowed": {"abstained"}},
 ]
 
 QA_CASES = [
@@ -93,7 +98,7 @@ def run_suite(llm=None, fips="24021", year=2022, scenarios=SCENARIOS, qa_cases=Q
     started = time.strftime("%Y%m%d-%H%M%S")
     runs, finished = [], []
     for sc in scenarios:
-        result = run_county(fips, year, StubToolbox(sc["critic"]), llm, log_dir=log_dir)
+        result = run_county(fips, year, StubToolbox(sc["critic"], sc.get("faults", ())), llm, log_dir=log_dir)
         runs.append(check_run(result, sc))
         if result["status"] != "incomplete":
             finished.append(result)

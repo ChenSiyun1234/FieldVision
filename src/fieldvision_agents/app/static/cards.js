@@ -119,7 +119,8 @@ const RENDER = {
     return el("div", { class: "card" }, el("h3", {}, "How the agent tested"),
       q.evaluation_md ? mdEl(q.evaluation_md) : el("p", { class: "muted" }, "No evaluation run on this machine yet."),
       q.benchmark_md ? el("div", {}, el("h3", {}, "Nemotron models compared"), mdEl(q.benchmark_md)) : null,
-      q.limitations_md ? el("details", {}, el("summary", {}, "Limitations found and what was done"), mdEl(q.limitations_md)) : null);
+      q.limitations_md ? el("details", {}, el("summary", {}, "Limitations found and what was done"), mdEl(q.limitations_md)) : null,
+      q.gaps_md ? el("details", {}, el("summary", {}, "Known gaps, checked against the data"), mdEl(q.gaps_md)) : null);
   },
   fields(d) {
     return el("div", { class: "card" }, el("h3", {}, `${d.count} fields · ${d.kind.replaceAll("_", " ")}`),

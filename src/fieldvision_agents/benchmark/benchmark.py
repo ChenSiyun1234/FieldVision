@@ -144,7 +144,7 @@ def run_model(model, fips="24021", year=2022, log_dir=BENCHMARK / "logs", llm=No
     for sc in SCENARIOS:
         try:
             t0 = time.perf_counter()
-            result = run_county(fips, year, StubToolbox(sc["critic"]), llm, log_dir=log_dir)
+            result = run_county(fips, year, StubToolbox(sc["critic"], sc.get("faults", ())), llm, log_dir=log_dir)
             seconds.append(time.perf_counter() - t0)
             tokens.append(result.get("tokens") or 0)
             row["runs"].append(check_run(result, sc))

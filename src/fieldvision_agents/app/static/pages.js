@@ -129,7 +129,8 @@ export async function dashboardPage(app) {
     el("div", {}, el("h2", {}, "Can the price models be trusted?"), priceModelTable(d.price_models)),
     el("div", {}, el("h2", {}, "Recent agent runs"), el("div", { class: "card" }, d.runs.length ? runsTable : el("p", { class: "muted" }, "No runs yet."))),
     d.agent_quality.evaluation_md ? el("div", {}, el("h2", {}, "How the agent tested"), el("div", { class: "card" }, mdEl(d.agent_quality.evaluation_md),
-      d.agent_quality.benchmark_md ? el("div", {}, el("h3", {}, "Nemotron models compared"), mdEl(d.agent_quality.benchmark_md)) : null)) : null);
+      d.agent_quality.benchmark_md ? el("div", {}, el("h3", {}, "Nemotron models compared"), mdEl(d.agent_quality.benchmark_md)) : null)) : null,
+    d.agent_quality.gaps_md ? el("div", {}, el("h2", {}, "Known gaps, checked"), el("div", { class: "card" }, mdEl(d.agent_quality.gaps_md))) : null);
   return page;
 }
 

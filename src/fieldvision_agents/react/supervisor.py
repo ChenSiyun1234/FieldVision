@@ -109,6 +109,7 @@ class RunState:
         self.features = False
         self.classify_runs = []        # policies used, in order
         self.aggregated_after_classify = False
+        self.last_aggregate = None     # latest aggregate result, so finish can refuse an empty county
         self.critic_results = []
         self.critic_on_latest = False
         self.abstained = False
@@ -226,7 +227,8 @@ def _dispatch(name, args, toolbox, state):
             return {"error": "Call classify first."}
         state.aggregated_after_classify = True
         state.critic_on_latest = False
-        return toolbox.aggregate(fips, year)
+        state.last_aggregate = toolbox.aggregate(fips, year)
+        return state.last_aggregate
 
     if name == "run_critic":
         if not state.aggregated_after_classify:
@@ -280,6 +282,9 @@ def _dispatch(name, args, toolbox, state):
                                  "Rerun with the policy the critic suggests if a rerun is left, otherwise call abstain_region."}
             if status == "accepted" and last.get("suggested_action") != "accept":
                 return {"error": "The critic did not accept. Use accepted_with_warnings or abstain."}
+            agg = state.last_aggregate or {}
+            if not (float(agg.get("silage_acres") or 0) + float(agg.get("grain_acres") or 0)):
+                return {"error": "No field was judged, so there is no county share to accept. Call abstain_region."}
         bad = ungrounded_numbers(args.get("summary", ""), state.tool_numbers)
         if bad:
             return {"error": f"These numbers are not in any tool result: {bad}. Copy numbers exactly or remove them."}
