@@ -23,6 +23,7 @@ so it is not a clean test. Headline = what the log named as the headline when th
 | Land-use prior, Maryland | 2025 | 10.6 % | NASS 8.9 % | no (county work) | 19:48 |
 | Racine WI | 2023 | 6.4 % counted clear (window 6.3 %) | survey 2023 2.4 %; band 2.4-6.4 % | no: inside the band | 22:58 |
 | Marathon WI (drawn blocks) | 2023 | 4.3 % counted clear (window 10.0 %) | survey 2023 49.9 %; band 32.1-49.9 % | no: **fail**, 28 points low; 48 % of fields abstained (harvest bracket over 20 days) | 22:58 |
+| Wisconsin (150 random blocks), Sentinel-2 + Landsat | 2025 | 16.5 % [13.7, 19.4] counted clear; shift guard flagged (reference 15.0 % vs Census 4.5 %); prior-updated 12.9 % (last official 19.8 %) and 11.6 % (land-use) | NASS 21.6 % | no: **fail** (5.1 low), as predicted before opening | 01:43 |
 
 ## Field calls (Beltsville, 44 labelled field-years, Maryland)
 
@@ -121,6 +122,14 @@ so it is shown beside, never as the headline.
 
 **Sequence model on Beltsville** (fourth scoring, logged 23:03 / 23:37): 42 of 44, 11 of 12 silage,
 passes its mark; on the seen counties it reads no better than the logistic and not Marathon.
+
+**Wisconsin 2025 (locked procedure, run once, 01:40).** With Landsat the sample is 96 % seen; the
+satellite alone reads 16.5 % [13.7, 19.4] against NASS 21.6 %, 5.1 points low, a fail by 0.1 point
+of its mark and the low reading predicted in the log before opening. The shift guard fired: the two
+lowest-silage reference counties read 15.0 % against their 4.5 % Census share. The prior updates are
+worse (12.9 % from the last official 19.8 %, 11.6 % from the land-use prior): where the satellite
+reads low, letting it update a good prior pulls the prior down. By region the counted share is
+Eastern 34.0 %, Southern 14.3 %, Central-Western-Northern 14.7 %.
 
 ## Open leads, in the order we would try them
 
