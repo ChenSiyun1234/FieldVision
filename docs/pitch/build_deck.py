@@ -400,7 +400,7 @@ def build(out):
         ("Double-crop corn was not scored",
          "Scored it with the same model, afterwards", "Maryland 2025: 4.75% → 6.7% (USDA 8.9%)"),
         ("The big model did not travel to a new country",
-         "Dropped dates in training; tried a sequence model", "37 → 39 of 44; 0.817 against 0.765 in Europe"),
+         "Dropped dates in training; tried a sequence model", "37 → 39 of 44; the sequence model reaches 42, a tie"),
         ("A northern dairy county reads far too low: Marathon 4% for 50%. A 25-day cloudy spell lay over the silage harvest, "
          "and our \"not seen\" measure did not flag it",
          "Repair the measure so such a county is reported as a range; add a land-use figure beside; add Landsat, a second satellite with a clear picture inside the gap",
@@ -454,19 +454,19 @@ def build(out):
              "Crop history shows the difference; pictures do not.",
           "有些籽粒玉米趁绿早收，在图片上看起来和青贮一样。轮作历史能看出区别，图片看不出。")
 
-    s = new_slide(prs, "Why the simple model won: it travels to a new country")
+    s = new_slide(prs, "Why we kept the simple model: a bigger one only ties it, and the simple one can be explained")
     body_picture(s, "s07_why_simple_won.png")
     notes(s, "In a new country the small model loses almost nothing; the big one loses more. "
-             "Dropping dates in training lifts the big model from 37 to 39 of 44. "
-             "A sequence model does better in Europe, 0.817 against 0.765, but it has not been tested on the US fields.",
-          "换一个国家，小模型几乎不掉精度，大模型掉得多。训练时丢掉一些日期，大模型从 37 升到 39（共 44）。"
-          "序列模型在欧洲更好（0.817 对 0.765），但还没有在美国的地块上检验过。")
+             "A sequence model ties the small one on USDA's labelled fields, 42 of 44, and is no better on the counties. "
+             "We kept the small one because it can be explained in one sentence; the sequence model is steadier when pictures are missing, so it is next.",
+          "换一个国家，小模型几乎不掉精度，大模型掉得多。序列模型在美国农业部带标签的地块上和小模型打平（44 对 42），在各县上也不更好。"
+          "我们留下小模型，因为一句话就能讲清它；序列模型在影像缺失时更稳，所以它是下一个要试的。")
 
     s = new_slide(prs, "Each test had its rule written down before it was run")
     ph = 3.25
     picture(s, "s10_maryland_test.png", MX, 1.4, ph * 1920 / 972)
     text(s, MX + ph * 1920 / 972 + 0.3, 1.6, FULL - ph * 1920 / 972 - 0.3, 3.0, "Every test rule went into a log, with the time, before the "
-         "test ran.\n\nThe 44 labelled fields were scored three times, each time logged, and never used for training.\n\n"
+         "test ran.\n\nThe 44 labelled fields were scored four times, each time logged, and never used for training.\n\n"
          "Failures are shown as failures.", size=15, color=INK, spacing=1.15)
     text(s, MX, 4.8, FULL, 0.35, "From the log: the rule first, then the test", size=14, bold=True, color=INK)
     logged = [("16:12", "16:40", "Queen Anne's", "failed"), ("17:30", "18:11", "Kent", "failed"),
@@ -481,8 +481,8 @@ def build(out):
         text(s, x + 0.25, 5.75, sw - 0.5, 0.35, f"{test_at}  test run once", size=13, color=WHITE if good else INK2)
         text(s, x + 0.2, 6.2, sw - 0.4, 0.6, f"{what}: {result}", size=15, bold=True, color=WHITE if good else INK)
     notes(s, "Every test rule was written in a log before the test ran. "
-             "The 44 labelled fields were scored three times, each time logged.",
-          "每条检验规则都在检验之前写进了日志。44 个带标签的地块一共打了三次分，每次都有记录。")
+             "The 44 labelled fields were scored four times, each time logged.",
+          "每条检验规则都在检验之前写进了日志。44 个带标签的地块一共打了四次分，每次都有记录。")
 
     s = new_slide(prs, "Maryland 2025, the state USDA scores: we read low")
     body_picture(s, "state_2025.png")

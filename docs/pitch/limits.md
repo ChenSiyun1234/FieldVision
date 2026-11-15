@@ -5,7 +5,8 @@ the range of USDA's figures (2.4 to 6.4 %). Marathon, the heaviest dairy county 
 where USDA has 32.1 to 49.9 %: 27.8 points low, with 48 % of its fields not judged. The cause,
 as measured afterwards: one cloudy spell of 25 days lay over the silage harvest, so the fields
 seen clearly were the late ones, which are grain, and the "not seen" measure did not flag it. The
-slide deck shows it; the rest of this page does not yet.
+labelled fields were also scored a fourth time (log 23:39): a sequence model got 42 of 44, a tie
+with the small model. The slide deck shows both; the rest of this page does not yet.
 
 "Log HH:MM" is a row of the evaluation access log (`<data>/eval/ACCESS_LOG.md`), named by its time
 on 14 Nov 2026 (Pacific). Everything else is a file in this repository.

@@ -196,8 +196,16 @@ TRANSFER_SUMMARY = [
     ("Small model", "6 features, logistic regression", 0.765, 0.005, "42 of 44"),
     ("Big model", "135 features, boosted trees", 0.764, 0.047, "37 of 44"),
     ("Big model, dates dropped", "observation dates removed at random in training", 0.780, 0.035, "39 of 44"),
-    ("Sequence model", "the whole season as a sequence; three seeds", 0.817, 0.031, "not tested"),
+    ("Sequence model", "the whole season as a sequence; three seeds", 0.817, 0.031, "42 of 44"),
 ]
+# The sequence model on the 44 labelled US field-years: 42 right, 11 of 12 silage found, 1 grain
+# called silage; pass mark (40 of 44 and 10 of 12 silage) written first. Log 23:03 (model and
+# mark), 23:39 (result). This was the fourth scoring of that set. On the eight seen counties it is
+# no better than the small model (mean miss 5.7 points for both, Marathon the worst for both), so
+# the small model stays. Where it is steadier: fields whose harvest fell between two pictures far
+# apart ("partly seen"), share called silage, small model / sequence model (log 23:39).
+SEQUENCE_PARTLY_SEEN = [("Queen Anne's", 18.3, 1.7), ("Racine", 35.4, 9.7), ("Kent", 25.5, 12.8)]
+LABELLED_SCORINGS = 4
 # Sequence model, three seeds, each country held out in turn: mean 0.817 (Austria 0.845, France
 # 0.854, Netherlands 0.752), against 0.765 and 0.764 above; loss against in-country 0.042 / 0.024 /
 # 0.026, mean 0.031. From the stream experiment's note of 14 Nov, confirmed by the coordinator (it
@@ -252,10 +260,9 @@ CONFUSION = {"silage_found": 11, "silage_missed": 1, "grain_called_silage": 1, "
 # adding the county up took another 57 seconds.
 RESPONSE_TIME = {"county": "Gratiot", "fields": 3_463, "seconds": 47, "ms_per_field": 14, "adding_up_seconds": 57}
 
-# Why Marathon read low. Source: the coordinator's message of 14 Nov (after 23:15), measured by
-# the modelling work and by the coordinator, who agree; the monthly counts are those of the
-# chart script marathon_gap_chart.py (clear looks per corn field by month, a look counted when at
-# least 60 % of the field is clear). Not yet a row of the access log when this was written.
+# Why Marathon read low. Source: log 23:33 ("Marathon diagnosis and safety net"), which also
+# holds the coordinator's monthly counts of clear looks per corn field (a look counted when at
+# least 60 % of the field is clear), the radar check and the Landsat scenes.
 # One cloudy spell, 20 September to 15 October 2023, lay over the silage harvest: 39 % of
 # Marathon's fields were cut inside that 25-day gap and could not be judged; the fields seen
 # clearly on both sides of the cut are the late harvest, which is grain. The "not seen" measure

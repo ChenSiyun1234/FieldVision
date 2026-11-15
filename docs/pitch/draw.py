@@ -229,7 +229,7 @@ def labelled_fields():
     ax.set_xticks([0, 11, 22, 33, 44])
     ax.set_xlabel("field-years called correctly, out of 44", fontsize=12.5, color=INK2, labelpad=10)
     first = N.LABELLED_FIRST_RUN
-    times = "twice" if thinned is None else "three times"
+    times = {2: "twice", 3: "three times", 4: "four times"}[getattr(N, "LABELLED_SCORINGS", 3 if thinned else 2)]
     foot(fig, f"44 field-years is a small test: one field is 2.3 points. The small model's two misses: one silage field missed, one grain field called silage.\n"
               f"The set was scored {times}, each time under a rule written beforehand. First run (models trained on Austria only): "
               f"small model {first['small']}, big model {first['big']}.")

@@ -244,7 +244,7 @@ def transfer_summary():
     fig = body()
     fig.text(D.LEFT, 0.95, "Accuracy (ROC-AUC) with each of three European countries held out of training in turn. "
              "8,000 labelled fields.", fontsize=13.5, color=INK2, va="top")
-    ax = fig.add_axes([0.35, 0.19, 0.42, 0.66])
+    ax = fig.add_axes([0.35, 0.285, 0.42, 0.575])
     D.clean(ax)
     ax.tick_params(axis="x", labelsize=14)
     rows = N.TRANSFER_SUMMARY
@@ -273,8 +273,12 @@ def transfer_summary():
         plt.Line2D([], [], marker="o", ls="", markersize=11, markerfacecolor=BG, markeredgecolor=GREY,
                    markeredgewidth=2.4, label="in a country it trained on"),
     ]
-    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.34, 0.04), ncol=2, frameon=False, fontsize=13.5,
+    fig.legend(handles=handles, loc="lower left", bbox_to_anchor=(0.34, 0.15), ncol=2, frameon=False, fontsize=13.5,
                labelcolor=INK2, handletextpad=0.3, columnspacing=1.6)
+    pairs = "; ".join(f"{name} {small:g}% against {seq:g}%" for name, small, seq in N.SEQUENCE_PARTLY_SEEN)
+    fig.text(D.LEFT, 0.02, "On the counties the two read equally well, so the small model was kept: it can be explained in one sentence.\n"
+             "Where pictures are missing around the harvest, the small model calls too much silage and the sequence model does not:\n"
+             f"{pairs} (share of such fields called silage).", fontsize=12, color=INK2, va="bottom", linespacing=1.4)
     put(fig, "s07_why_simple_won")
 
 
