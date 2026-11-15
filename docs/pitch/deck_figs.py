@@ -57,6 +57,77 @@ def county_map(maps, source, name):
     print(f"{name}.png: from {source}")
 
 
+# --- every place with a figure, against USDA -----------------------------------------------------
+def places():
+    def pct(v):
+        return f"{v:.2f}%" if round(v * 100) % 10 else f"{v:.1f}%"
+
+    fig = body()
+    ax = fig.add_axes([0.215, 0.17, 0.765, 0.72])
+    D.clean(ax, grid=None)
+    ax.set_xlim(-0.6, 81)
+    ax.set_ylim(-0.4, 11.4)
+    usda_x, ours_x, beside_x = 40, 47.5, 49.5
+    groups = [("tuning", "Used while tuning: four Maryland counties, 2022", 10.25),
+              ("test", "Tests: never looked at before, each run once", 5.75)]
+    y_of = {}
+    for key, head, y0 in groups:
+        ax.text(0, y0, head, fontsize=13.5, fontweight="bold", color=INK, va="center")
+        for k, row in enumerate([r for r in N.PLACES if r[0] == key]):
+            y_of[row[1]] = y0 - 0.85 - k * 0.85
+    ax.text(usda_x, 10.95, "USDA", fontsize=13, color=INK2, ha="right", va="center")
+    ax.text(ours_x, 10.95, "Ours", fontsize=13, fontweight="bold", color=BLUE, ha="right", va="center")
+    ax.text(beside_x, 10.95, "Beside it", fontsize=13, color=INK2, va="center")
+    for _, name, usda, band, plain, window, unseen in N.PLACES:
+        y = y_of[name]
+        by_window = unseen > N.NOT_SEEN_SWITCH
+        ours, other = (window, plain) if by_window else (plain, window)
+        ax.text(-1.2, y, name, ha="right", va="center", fontsize=14.5, fontweight="bold", color=INK)
+        if band:
+            ax.plot(band, [y, y], color=INK, lw=8, alpha=0.16, solid_capstyle="round", zorder=1)
+        ax.plot([min(usda, ours), max(usda, ours)], [y, y], color=GREY, lw=2.2, zorder=2)
+        ax.scatter([other], [y], s=95, facecolors=BG, edgecolors=GREY, linewidths=2.2, zorder=3)
+        ax.scatter([ours], [y], s=150, color=BLUE, edgecolors=BG, linewidths=1.5, zorder=5)
+        ax.scatter([usda], [y], s=125, marker="D", color=INK, edgecolors=BG, linewidths=1.5, zorder=6)
+        ax.text(usda_x, y, pct(usda), fontsize=14, color=INK, ha="right", va="center")
+        ax.text(ours_x, y, pct(ours), fontsize=14.5, fontweight="bold", color=BLUE, ha="right", va="center")
+        if by_window:
+            beside = f"plain count {pct(plain)}; {unseen:.0f}% of the corn not seen"
+        else:
+            beside = f"by harvest window {pct(window)}"
+        if name.startswith("Maryland 2025"):
+            dc = N.STATE_2025["Maryland"]["with_double_crop_share"]
+            ax.scatter([dc], [y], s=150, facecolors=BG, edgecolors=BLUE, linewidths=2.4, zorder=4)
+            beside += f"; {pct(dc)} with double-crop corn"
+        ax.text(beside_x, y, beside, fontsize=12.5, color=INK2, va="center")
+    ax.text(0, 2.05, "Being tested now", fontsize=13.5, fontweight="bold", color=INK, va="center")
+    for k, name in enumerate(N.PLACES_TO_COME):
+        y = 1.2 - k * 0.85
+        ax.text(-1.2, y, name, ha="right", va="center", fontsize=12.5, color=INK2)
+        D.to_come(ax, 0.4, 32, y, "to come", half=0.26, size=12)
+    for x in (0, 10, 20, 30):
+        ax.plot([x, x], [-0.4, 9.75], color=GRID, lw=1, zorder=0)
+    ax.set_yticks([])
+    ax.set_xticks([0, 10, 20, 30])
+    ax.set_xticklabels(["0%", "10%", "20%", "30%"])
+    handles = [
+        plt.Line2D([], [], marker="D", ls="", markersize=10, markerfacecolor=INK, markeredgecolor=BG,
+                   label="USDA (Census 2022; NASS 2025 for the state)"),
+        plt.Line2D([], [], marker="o", ls="", markersize=11, markerfacecolor=BLUE, markeredgecolor=BG, label="ours"),
+        plt.Line2D([], [], marker="o", ls="", markersize=10, markerfacecolor=BG, markeredgecolor=GREY, markeredgewidth=2.2,
+                   label="the other way of adding up"),
+        plt.Line2D([], [], marker="o", ls="", markersize=11, markerfacecolor=BG, markeredgecolor=BLUE, markeredgewidth=2.4,
+                   label="with double-crop corn, scored afterwards"),
+    ]
+    fig.legend(handles=handles, loc="upper left", bbox_to_anchor=(0.02, 1.0), ncol=4, frameon=False, fontsize=12.5,
+               labelcolor=INK2, handletextpad=0.3, columnspacing=1.5)
+    fig.text(0.025, 0.02, "Share of the corn area that is silage. Ours = the plain count of the clearly seen fields; where cloud hid more than "
+             f"{N.NOT_SEEN_SWITCH}% of the corn\n(Queen Anne's, Kent), the count by harvest window. "
+             "Grey band: USDA's range for the fields we score, where double-crop corn lies outside them.\n"
+             "Michigan passed its test. Maryland 2025 reads low.", fontsize=11.5, color=INK2, va="bottom", linespacing=1.4)
+    put(fig, "s05_places")
+
+
 # --- slide 7: why simple won ---------------------------------------------------------------------
 def transfer_summary():
     fig = body()
@@ -288,6 +359,7 @@ if __name__ == "__main__":
     D.module_diagram()
     D.labelled_fields()
     D.state_2025()
+    places()
     transfer_summary()
     gap_evidence()
     maryland_test()

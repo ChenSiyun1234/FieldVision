@@ -208,3 +208,26 @@ TRANSFER_SUMMARY = [
 # and 39.4 % with 28 and 35 days of observations around the drop removed. Fields that stay
 # clearly seen after that (few): 0 % at Beltsville, 0-5 % in France 2022.
 REPLAY = {"full": 3, "hidden": (28, 39), "clear": (0, 5)}
+
+# Every place with a figure: docs/RESULTS.md on main, "County and state shares of corn area
+# harvested for silage", and the log rows it names (18:09-19:23). Per place: USDA share (Census
+# 2022 for counties, NASS 2025 for the state), the USDA range for the fields we score where
+# double-crop corn lies outside them, our plain count of the clearly seen fields, the same added
+# up by two-week harvest window, and the share of corn area in windows with no clear view
+# (log 19:05, 19:11, 19:14). "tuning": looked at while the method was built. "test": never looked
+# at before, run once under rules logged first.
+PLACES = [
+    ("tuning", "Queen Anne's", 1.3, None, 4.0, 2.0, 57.2),
+    ("tuning", "Kent", 5.5, None, 12.9, 6.2, 54.4),
+    ("tuning", "Carroll", 8.9, (4.8, 7.5), 3.6, 5.1, 0.1),
+    ("tuning", "Frederick", 19.6, (11.2, 19.9), 13.2, 15.1, 0.5),
+    ("test", "Branch, Michigan", 1.8, None, 2.1, 3.6, 0.8),
+    ("test", "Gratiot, Michigan", 24.2, None, 30.0, 29.8, 0.2),
+    ("test", "Maryland 2025 (state)", 8.9, None, 4.75, 3.8, 0.6),
+]
+# Which of the two is read as "ours": the plain count, except where more than 20 % of the corn
+# area lies in windows with no clear view, where it is the count by harvest window (log 19:33; on
+# everything seen so far that means Queen Anne's and Kent).
+NOT_SEEN_SWITCH = 20
+# Places being tested as this is drawn (log 22:52): no figures yet.
+PLACES_TO_COME = ["Two Wisconsin counties, 2023", "Pennsylvania, Wisconsin 2025"]

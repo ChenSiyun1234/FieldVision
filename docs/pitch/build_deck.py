@@ -1,4 +1,4 @@
-"""Builds the slide deck (PowerPoint, 16:9): ten plain slides and three backup slides.
+"""Builds the slide deck (PowerPoint, 16:9): twelve plain slides and three backup slides.
 
     python docs/pitch/deck_figs.py --pictures <folder with the field picture strips> --maps <folder with the county maps>
     python docs/pitch/build_deck.py --out <folder>/FieldVision_model_story.pptx
@@ -122,7 +122,7 @@ def build(out):
     half = (FULL - 0.4) / 2
     third = (FULL - 2 * 0.3) / 3
 
-    # 1  title ---------------------------------------------------------------------------------
+    # title ---------------------------------------------------------------------------------
     s = new_slide(prs, "Chopped for silage or combined for grain?\nWe read it for every corn field, from space",
                   size=36, top=0.75, height=1.9)
     text(s, MX, 2.8, FULL, 0.5, "FieldVision: the model module. Hack the Harvest.", size=20)
@@ -133,7 +133,7 @@ def build(out):
              "We answer it from free satellite images.",
           "这是 FieldVision 的模型部分。对每一块玉米地，我们只问一个问题：青贮还是籽粒？我们用免费的卫星影像来回答。")
 
-    # 2  the problem and the catch --------------------------------------------------------------
+    # the problem and the catch --------------------------------------------------------------
     s = new_slide(prs, "A hard task, and the US has only 44 labelled fields")
     traps = [
         ("Clouds", "The harvest can fall between two clear images."),
@@ -157,7 +157,7 @@ def build(out):
              "And the US has only 44 labelled fields, all at one farm. That is too few to train on.",
           "这个任务有几个陷阱：云、早收、青贮地块少、双季作物。而且美国带标签的地块只有 44 个，全在一个农场。这点数据不够训练。")
 
-    # 3  what the satellite sees ----------------------------------------------------------------
+    # what the satellite sees ----------------------------------------------------------------
     s = new_slide(prs, "Silage is cut green. Grain is left to dry first")
     if (FIG / "pic_before_after.jpg").exists():
         ph = 5.05
@@ -188,9 +188,9 @@ def build(out):
              "Grain fields are already brown.",
           "这些是马里兰玉米地的真实卫星图片。青贮地在收割前还是绿的，籽粒地在收割前已经变黄。")
 
-    # 4  the model and its test -----------------------------------------------------------------
+    # the model and its test -----------------------------------------------------------------
     best, total = N.LABELLED[0][2], N.LABELLED_TOTAL
-    s = new_slide(prs, f"A small model, trained in Europe, gets {best} of {total} US fields right")
+    s = new_slide(prs, f"Field by field: a small model, trained in Europe, gets {best} of {total} right")
     lw = 5.6
     card(s, MX, 1.5, lw, 5.4)
     text(s, MX + 0.35, 1.7, lw - 0.7, 0.5, "How it works", size=20, bold=True, color=INK)
@@ -215,11 +215,48 @@ def build(out):
         text(s, rx + 0.35, y + 0.08, 2.3, 0.4, name, size=15, bold=i == 0, color=INK)
         bar(s, rx + 2.6, y, value * scale, 0.5, color)
         text(s, rx + 2.6 + value * scale + 0.12, y + 0.06, 0.8, 0.4, str(value), size=17, bold=i == 0, color=INK)
+    text(s, rx + 0.35, 6.42, rw - 0.7, 0.35, "This is the field test. Counties and the state are on the next slide.", size=13)
     notes(s, "Our model is small: six numbers and a simple formula, trained only on European fields. "
              "On the 44 labelled US fields it got 42 right. A much bigger model got 37.",
           "我们的模型很小：六个数加一个简单公式，只用欧洲的地块训练。在美国 44 个带标签的地块上，它对了 42 个。一个大得多的模型对了 37 个。")
 
-    # 5  the first county total ------------------------------------------------------------------
+    # every place against USDA ---------------------------------------------------------------------
+    s = new_slide(prs, "Counties and a state: every place we checked against USDA")
+    body_picture(s, "s05_places.png")
+    notes(s, "This is every place where we can compare our number with USDA. The four Maryland counties were used while tuning, "
+             "so they are not tests. The two Michigan counties passed their test, and Maryland 2025 reads low.",
+          "这是我们所有能和美国农业部数字对比的地方。马里兰的四个县在调优时用过，所以不算检验。密歇根两个县通过了检验，马里兰 2025 偏低。")
+
+    # what went wrong and what we did ----------------------------------------------------------------
+    s = new_slide(prs, "What went wrong, and what we did about it")
+    cols = [(MX, 4.75, "What went wrong"), (MX + 4.95, 3.75, "What we did"), (MX + 8.9, FULL - 8.9, "What came out")]
+    for x, w, head in cols:
+        text(s, x + 0.2, 1.42, w - 0.2, 0.35, head, size=14, bold=True, color=BLUE)
+    fixes = [
+        ("The first county total read far too high: 22% for 1.3%",
+         "Count only the fields seen clearly around the cut", "That county: 22% → 4%"),
+        ("A correction with a neighbour county failed its own test: Kent 21% for 5.5%",
+         "Dropped it", "Kent: 21% → 12.9%"),
+        ("Cloud hid the harvest of over half the Eastern Shore's corn",
+         "Add up by harvest window; report the corn not seen", "Worst miss 7.4 → 3.8 points, on counties already seen"),
+        ("Grain cut early and green looks like silage",
+         "Checked the crop history of those fields", "Shown, not solved"),
+        ("Double-crop corn was not scored",
+         "Scored it with the same model, afterwards", "Maryland 2025: 4.75% → 6.7% (USDA 8.9%)"),
+        ("The big model did not travel to a new country",
+         "Dropped dates in training; tried a sequence model", "37 → 39 of 44; 0.817 against 0.765 in Europe"),
+    ]
+    rh = 0.78
+    for i, cells in enumerate(fixes):
+        y = 1.85 + i * (rh + 0.07)
+        card(s, MX, y, FULL, rh)
+        for (x, w, _), cell, strong in zip(cols, cells, (False, False, True)):
+            text(s, x + 0.2, y, w - 0.3, rh, cell, size=14, bold=strong, color=INK, anchor=MSO_ANCHOR.MIDDLE, spacing=1.05)
+    notes(s, "Here is the tuning in one table. Each row is a problem the data showed us, what we did, and what came out. "
+             "One of them, early green grain, is still open.",
+          "这一页用一张表讲完调优过程：每一行是数据暴露出的一个问题、我们的做法和结果。其中一个，趁绿早收的籽粒玉米，还没有解决。")
+
+    # the first county total ------------------------------------------------------------------
     f = N.FIRST_COUNTY_TOTAL
     s = new_slide(prs, "Adding fields up to a county went wrong at first")
     card(s, MX, 1.6, half, 3.0)
@@ -237,14 +274,14 @@ def build(out):
              "So we went back to the data.",
           "接着我们把地块加总到县，结果错了。我们算出青贮占 22%，而普查是 1.3%。于是我们回到数据里找原因。")
 
-    # 6  lesson 1 --------------------------------------------------------------------------------
+    # lesson 1 --------------------------------------------------------------------------------
     s = new_slide(prs, "Lesson 1: count only the fields we saw clearly around the cut")
     body_picture(s, "s09_gap_evidence.png")
     notes(s, "First lesson. When the two pictures around the harvest are far apart, the model says silage far too often. "
              "So we count only the fields we saw clearly.",
           "第一个教训：收割前后两张影像隔得远的时候，模型判成青贮的次数多得离谱。所以我们只数那些看清了的地块。")
 
-    # 7  lesson 2 --------------------------------------------------------------------------------
+    # lesson 2 --------------------------------------------------------------------------------
     worst_before, worst_after = N.WINDOW_FIX_WORST
     s = new_slide(prs, "Lesson 2: clouds. Half the corn was cut in one cloudy fortnight")
     pw = 9.3
@@ -260,7 +297,7 @@ def build(out):
              "So we add up by harvest window, and we say how much we could not see.",
           "第二个教训：云。在东岸，一半以上的玉米是在同一个多云的两周里收的。所以我们按收割窗口来加总，并且说明有多少没看到。")
 
-    # 8  what we could not fix --------------------------------------------------------------------
+    # what we could not fix --------------------------------------------------------------------
     soy, hay = N.KENT_CALLS_HISTORY[0][1], N.KENT_CALLS_HISTORY[2][1]
     s = new_slide(prs, "What we could not fix: grain cut early and green looks like silage")
     picture(s, "pic_kent_early.png", MX, 1.42, pw)
@@ -276,25 +313,50 @@ def build(out):
              "Crop history shows the difference; pictures do not.",
           "有一件事我们没能解决：有些籽粒玉米趁绿早收，在图片上看起来和青贮一样。轮作历史能看出区别，图片看不出。")
 
-    # 9  places never looked at -------------------------------------------------------------------
-    md = N.STATE_2025["Maryland"]
-    (b_name, b_census, b_ours, _), (g_name, g_census, g_ours, _) = N.MICHIGAN_2022
-    s = new_slide(prs, "Places we had never looked at: Michigan passes, Maryland reads low")
-    text(s, MX, 1.5, 2 * third + 0.3, 0.45, "Michigan, two counties: passed", size=20, bold=True, color=BLUE)
-    text(s, MX + 2 * (third + 0.3), 1.5, third, 0.45, "Maryland 2025: reads low", size=20, bold=True, color=INK)
-    tile(s, MX, 2.1, third, 2.9, f"{b_ours}%", f"{b_name} County, little silage.\nThe Census says {b_census}%.")
-    tile(s, MX + third + 0.3, 2.1, third, 2.9, f"{g_ours}%", f"{g_name} County, much silage.\nThe Census says {g_census}%.")
-    tile(s, MX + 2 * (third + 0.3), 2.1, third, 2.9, f"{md['our_silage_share']}%",
-         f"of Maryland's corn is silage, we say.\nUSDA says {md['nass_silage_share']}%.", big_color=INK)
-    text(s, MX, 5.35, FULL, 1.5, "Maryland is the state the organisers score. Part of the gap is double-crop corn that we did not score "
-         f"(with it, scored afterwards: {md['with_double_crop_share']}%). The rest is not explained yet, and we say so.",
-         size=18, color=INK, spacing=1.2)
-    notes(s, "Then places we had never looked at. In Michigan it passed: 2.1 for 1.8, and 30.0 for 24.2. "
-             "For Maryland in 2025 we read low: 4.75 percent where USDA says 8.9.",
-          "然后是我们从没看过的地方。密歇根通过了：我们读 2.1%（普查 1.8%）和 30.0%（普查 24.2%）。"
-          "2025 年的马里兰我们偏低：读出 4.75%，美国农业部是 8.9%。")
+    # the whole team system, and where the model sits -------------------------------------------------
+    s = new_slide(prs, "Where the model sits in the team's system")
+    chain = [
+        ("In", 1.7, "Satellite images and field outlines", False),
+        ("Our part: the model layer", 2.8, "A toolbox the agent calls: a call for every field, county and state totals, "
+         "and the evidence behind them.", True),
+        ("Bridge", 2.2, "Loads the toolbox. Adds a prior from earlier USDA years and the per-field evidence.", False),
+        ("Supervisor agent", 2.2, "Runs the county steps in a fixed order. A critic searches USDA reports.", False),
+        ("Reporter and analyst screen", 2.0, "Explain the result.", False),
+    ]
+    gap = (FULL - sum(c[1] for c in chain)) / (len(chain) - 1)
+    x = MX
+    for i, (head, w, line, ours) in enumerate(chain):
+        card(s, x, 1.5, w, 2.35, fill=BLUE if ours else WHITE, line=None if ours else GREY)
+        text(s, x + 0.2, 1.65, w - 0.4, 0.75, head, size=16, bold=True, color=WHITE if ours else INK, spacing=1.05)
+        text(s, x + 0.2, 2.45, w - 0.4, 1.35, line, size=13, color=WHITE if ours else INK2, spacing=1.12)
+        if i < len(chain) - 1:
+            arrow = s.shapes.add_shape(MSO_SHAPE.RIGHT_ARROW, Inches(x + w + gap * 0.15), Inches(2.5), Inches(gap * 0.7), Inches(0.3))
+            arrow.fill.solid()
+            arrow.fill.fore_color.rgb = rgb(INK2)
+            arrow.line.fill.background()
+            arrow.shadow.inherit = False
+        x += w + gap
+    text(s, MX, 4.1, FULL, 0.35, "Around it, built by our teammates (one line each; they fill in the rest)", size=14, bold=True, color=INK)
+    around = [
+        ("Planner", "Which fields to visit."),
+        ("Recommender", "Grain fields near dairies that are short of silage."),
+        ("Picture check", "Looks at the before-and-after pictures of a field."),
+        ("Price module", "Details from the team."),
+        ("Four-state check", "Details from the team."),
+    ]
+    aw = (FULL - 4 * 0.25) / 5
+    for i, (head, line) in enumerate(around):
+        x = MX + i * (aw + 0.25)
+        card(s, x, 4.55, aw, 1.5)
+        text(s, x + 0.2, 4.68, aw - 0.4, 0.4, head, size=15, bold=True, color=INK)
+        text(s, x + 0.2, 5.12, aw - 0.4, 0.85, line, size=12.5, spacing=1.1)
+    text(s, MX, 6.35, FULL, 0.7, "Our model is the blue box. The agent reaches it through the bridge, which loads the module with the small "
+         "model behind it.", size=16, color=INK, spacing=1.15)
+    notes(s, "This is the team's whole system. Our model is the blue box, and the agent calls it through a bridge. "
+             "The other boxes are our teammates' parts.",
+          "这是团队的整个系统。我们的模型是蓝色那一块，智能体通过一个桥接层来调用它。其余的方框是队友们做的部分。")
 
-    # 10  what the team gets, what comes next -----------------------------------------------------
+    # what the team gets, what comes next -----------------------------------------------------
     s = new_slide(prs, "What the team gets, and what comes next")
     card(s, MX, 1.5, half, 4.2)
     text(s, MX + 0.4, 1.7, half - 0.8, 0.5, "What the team gets", size=22, bold=True, color=BLUE)
