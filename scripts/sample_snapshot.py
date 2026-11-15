@@ -12,7 +12,8 @@ field) are taken. Writes:
 * timeseries.parquet: rows of the corn stratum only (the fields that are scored);
 * timeseries_dblcrop.parquet: rows of the small-grain/corn stratum, kept apart so nothing scores them;
 * fields_coverage.csv, draw.json and state_acres.json (copied), and PARTIAL.json listing the parts included while any part
-  is missing; PARTIAL.json is removed once all parts are in.
+  is missing; PARTIAL.json is removed once all parts are in. sample_info.json always lists the parts and any
+  permanent scene errors (plausibility rejections, missing assets) that a part was accepted with.
 """
 import argparse
 import json
@@ -36,16 +37,30 @@ def replace(tmp, path):
             time.sleep(0.5 * (attempt + 1))
 
 
+def permanent(message):
+    """Scene errors no rerun can fix (same rule as scripts/report_s2_run.py): plausibility rejections, missing assets."""
+    return 'sanity check' in message or message.startswith('KeyError')
+
+
 def finished(run, fields):
+    """(ok, reason, permanent scene errors). Partial runs count when every scene error is permanent."""
     m = json.loads((run / 'manifest.json').read_text())
-    if m.get('status') != 'complete' or len(m.get('blocks', {})) != m.get('block_count'):
-        return False, f"status {m.get('status')}, {len(m.get('blocks', {}))}/{m.get('block_count')} blocks"
-    if any(b['status'] != 'complete' for b in m['blocks'].values()):
-        return False, 'a block is not complete'
+    if m.get('status') not in ('complete', 'partial') or not m.get('ended_at') or len(m.get('blocks', {})) != m.get('block_count'):
+        return False, f"status {m.get('status')}, {len(m.get('blocks', {}))}/{m.get('block_count')} blocks", {}
+    if m.get('invalid_fields'):
+        return False, 'invalid fields', {}
+    errors = {}
+    for bid, b in m['blocks'].items():
+        if b['status'] not in ('complete', 'partial'):
+            return False, f'block {bid} is {b["status"]}', {}
+        for scene, msg in b.get('scene_errors', {}).items():
+            if not permanent(msg):
+                return False, f'block {bid} has a retryable scene error: {msg[:80]}', {}
+            errors[f'{bid} {scene}'] = msg
     cov = pd.read_csv(run / 'fields_coverage.csv')
     if set(cov.field_id) != {f['properties']['field_id'] for f in fields}:
-        return False, 'coverage does not list exactly the part fields'
-    return True, 'complete'
+        return False, 'coverage does not list exactly the part fields', {}
+    return True, m['status'], errors
 
 
 def main(argv=None):
@@ -55,14 +70,16 @@ def main(argv=None):
     ap.add_argument('--out', type=Path, required=True)
     a = ap.parse_args(argv)
     draw = json.loads((a.sample_dir / 'draw.json').read_text())
-    feats, tables, covs, used, missing = [], [], [], [], {}
+    feats, tables, covs, used, missing, perm = [], [], [], [], {}, {}
     for run in a.runs:
         k = run.name.rsplit('_s', 1)[1]
         part = json.loads((a.sample_dir / f's{k}' / 'fields.geojson').read_text(encoding='utf-8'))['features']
-        ok, why = finished(run, part) if (run / 'manifest.json').exists() else (False, 'no manifest')
+        ok, why, errors = finished(run, part) if (run / 'manifest.json').exists() else (False, 'no manifest', {})
         if not ok:
             missing[run.name] = why
             continue
+        if errors:
+            perm[run.name] = errors
         feats += part
         tables.append(pd.read_parquet(run / 'timeseries.parquet'))
         covs.append(pd.read_csv(run / 'fields_coverage.csv'))
@@ -92,7 +109,9 @@ def main(argv=None):
             'fields_dblcrop': sum(v != 'corn' for v in stratum.values()),
             'read_blocks_included': sum(draw['parts'][u]['read_blocks'] for u in used),
             'read_blocks_drawn': draw['read_blocks_drawn'], 'read_blocks_total': draw['read_blocks_total'],
-            'rows_corn': int((s == 'corn').sum()), 'rows_dblcrop': int((s != 'corn').sum())}
+            'rows_corn': int((s == 'corn').sum()), 'rows_dblcrop': int((s != 'corn').sum()),
+            'permanent_scene_errors': perm}
+    (a.out / 'sample_info.json').write_text(json.dumps(info, indent=2), encoding='utf-8')
     if missing:
         (a.out / 'PARTIAL.json').write_text(json.dumps(info, indent=2), encoding='utf-8')
     else:
