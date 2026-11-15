@@ -125,6 +125,28 @@ def flagged_grain(preds, X, meta, model, top=50):
     return share, detail, medians
 
 
+def tier_table(preds, anomaly_model, classifier=REF, variant="c00"):
+    """Per scheme and confidence tier (anomaly.api.confidence_tier): share of fields, the
+    classifier's accuracy, recall and FPR inside the tier, and the share that is silage."""
+    from .api import confidence_tier
+    rows = []
+    for scheme, g in preds[preds["variant"] == variant].groupby("scheme", sort=False):
+        c = g[g["model"] == classifier].set_index("field_id")
+        a = g[g["model"] == anomaly_model].set_index("field_id")
+        m = c[["y", "pred", "low_evidence"]].join(a[["pred"]].rename(columns={"pred": "flag"}), how="inner")
+        m["tier"] = confidence_tier(m["pred"], m["flag"], m["low_evidence"])
+        for tier in ("agree", "disagree", "abstain", "all"):
+            t = m if tier == "all" else m[m["tier"] == tier]
+            if t.empty:
+                continue
+            yy, pp = t["y"].to_numpy(), t["pred"].to_numpy()
+            rows.append({"scheme": scheme, "tier": tier, "n": len(t), "share": len(t) / len(m),
+                         "silage_share": float(yy.mean()), "classifier_accuracy": float((yy == pp).mean()),
+                         "classifier_recall": float(pp[yy == 1].mean()) if (yy == 1).any() else np.nan,
+                         "classifier_fpr": float(pp[yy == 0].mean()) if (yy == 0).any() else np.nan})
+    return pd.DataFrame(rows)
+
+
 def fmt(v, nd=3):
     return "n/a" if v is None or not np.isfinite(v) else f"{v:.{nd}f}"
 
