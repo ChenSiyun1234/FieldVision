@@ -121,6 +121,25 @@ pass/weak/fail bands were logged at 17:30, before either county was opened: pass
 is within 0.07 of Census, weak within 0.15, fail beyond 0.15 or when there is no headline; the
 county step fails if either county fails or both are weak on the same side.
 
+**What a pass on Kent and Carroll can and cannot show.** Both test counties have little silage
+(5.5 % and 8.9 %). A county step that returned about 7 % for every county would pass both. So a
+pass shows that the false-alarm level is under control in a low-silage county. It does not show
+that the step follows the silage share up and down: on Frederick (19.6 %) the step reads 8.4 %, and
+its flagged area separates Queen Anne's from Frederick by about 3 points where the Census differs by
+18. Testing that needs a high-silage and a low-silage county in the same state, with bands written
+down before either is opened.
+
+**Why Frederick reads low** (seen data only: Queen Anne's, Frederick, European scores). The field
+set matches the Census corn total (39,029 against 39,500 acres) and Frederick's clear tier has more
+high-scoring area than Queen Anne's (12 % against 4 % above 0.6), so neither a missing piece of the
+county nor a threshold above Maryland's silage scores explains it. The tiers do: Frederick's wide
+tier was cut earlier (median 15 September against 7 October for the clear tier) and is flagged twice
+as often. The recall implied by Census at the local threshold is 0.36 on the clear tier alone but
+0.57 on clear and wide together, close to the European 0.63. Silage is cut in late summer, when a
+clear image on both sides of the cut is less likely, so silage ends up in the wide tier more often
+than grain and the clear tier under-reads where silage is common. In Queen Anne's the wide tier is
+flagged 39 % with almost no silage, so its flags cannot simply be added back.
+
 Known limits: the reference county's Census share enters the estimate, so the headline is not
 independent of Census; the matched TPR comes from Europe and the local step's error grows if it is
 off by 0.1 (to at most 0.11 in the pseudo-counties); on Frederick (partial snapshot and full
