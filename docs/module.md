@@ -46,6 +46,18 @@ read low), and the label-free checks did not catch that failure.**
   (8.4 % against 8.1 %). Any figure over many counties rests on that cancelling, which four counties
   cannot prove. Classifiers that have seen the Beltsville labels did worse here (Queen Anne's
   10.2 %, Kent 15-17 %): they raise the false alarms on the Eastern Shore.
+- **Which classifier counts.** Chosen by a rule set before the table (lowest worst error over the
+  four seen counties, Frederick judged against its scored-set range 11.2-19.9 %): `eu2_logistic_v1`
+  worst error 7.4 points, the Europe-plus-Beltsville logistic 11.5, the Beltsville-only one 9.2.
+  So the county and state figures use the Evaluation 2 model, not a locally calibrated one.
+- **Why Kent reads high.** Kent's clear-tier silage calls look like silage in the imagery (green and
+  moist right before the cut, like Beltsville's silage), but 72 of 75 were cut by 2 September, where
+  Frederick's calls spread from August into October. Early-planted Eastern Shore grain cut while
+  still partly green, or high-moisture corn, cannot be told from silage without labels; a date rule
+  would bring back the calendar rule taken out of the vote.
+- **Minimum evidence.** No county figure unless the clear tier has at least 100 fields and 15 % of
+  the scored corn area; no state figure unless the drawn blocks hold 300 clear fields and 15 %.
+  Otherwise the clear + wide counted share is shown as context and the figure is not reported.
 - **Michigan 2022** (Gratiot 24.2 %, Branch 1.8 %) is the one clean test left of whether the counted
   clear share follows the silage share: pass only if Gratiot reads at least 10 points above Branch
   and neither is more than 10 points off (logged before opening).
