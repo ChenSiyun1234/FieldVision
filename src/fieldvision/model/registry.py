@@ -578,9 +578,14 @@ def local_rates(run_dir, model, alpha=0.10, clear_max=12.0, wide_max=20.0):
     out = {"alpha": alpha, "source": "spatial out-of-fold, non-abstained, per country-year",
            "domains": sorted(set(groups))}
     for name, keep in tiers.items():
-        _, tpr = matched_tpr(m["p"].to_numpy()[keep], m["y"].to_numpy(int)[keep], alpha,
-                             groups[keep])
-        out[name] = {"matched_tpr": tpr, "n": int(keep.sum())}
+        sp, sy = m["p"].to_numpy()[keep], m["y"].to_numpy(int)[keep]
+        try:
+            _, tpr = matched_tpr(sp, sy, alpha, groups[keep])
+            pooled = False
+        except ValueError:      # no domain with enough fields of both classes
+            _, tpr = matched_tpr(sp, sy, alpha)
+            pooled = True
+        out[name] = {"matched_tpr": tpr, "n": int(keep.sum()), "pooled": pooled}
     return out
 
 

@@ -47,8 +47,8 @@ def _require_parquet_engine():
         raise ImportError(PARQUET_HINT)
 POLICIES = ("standard", "radar_first", "regional_threshold", "in_site", "module_v1", "module_v2")
 MODULE_V1_MODEL = "composite_v1"
-# module_v2's field classifier, chosen by the rule logged at 17:02 (see docs/module.md)
-MODULE_V2_MODEL = "eu_logistic_v1"
+# module_v2 field classifier: the logistic family (rule logged 17:02), final all-Europe fit (Evaluation 2)
+MODULE_V2_MODEL = "eu2_logistic_v1"
 CLEAR_BRACKET_DAYS = 12.0
 # module_v2's county step on the clear tier: "local_threshold", "reference", "europe" or "counted"
 MODULE_V2_COUNTY_STEP = "local_threshold"     # fixed by the rule logged at 17:30, see docs/module.md
@@ -458,6 +458,39 @@ class Toolbox:
             out["headline_method"] = "module_v2: counted share of the clear tier (county step not set or not available)"
         out["module_headline_share"] = out["silage_share_headline"]
         out["module_headline_method"] = out["headline_method"]
+        out.update(self._unscored(fips, year, out["silage_share_headline"], total))
+        return out
+
+    def _unscored(self, fips, year, share, scored_acres):
+        """Double-crop corn outside the scored field set (unscored_corn.json from the county
+        folder, boundaries only) and the county share range it implies: low = none of it is
+        silage, high = all of it is silage; the headline share applies to the scored set."""
+        out = {"unscored_corn_acres": None, "county_share_with_unscored_low": None,
+               "county_share_with_unscored_high": None}
+        f = self.data_root / str(fips) / str(year) / "unscored_corn.json"
+        if not f.exists():
+            return out
+        try:
+            doc = json.loads(f.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            return out
+        acres = None
+        if isinstance(doc, dict):
+            for k in ("unscored_corn_acres", "unscored_acres", "double_crop_corn_acres",
+                      "total_acres", "acres_total", "acres"):
+                if isinstance(doc.get(k), (int, float)):
+                    acres = float(doc[k])
+                    break
+            if acres is None:
+                vals = [v for k, v in doc.items() if "acre" in k.lower() and isinstance(v, (int, float))]
+                acres = float(sum(vals)) if vals else None
+        if acres is None:
+            return out
+        out["unscored_corn_acres"] = round(acres, 1)
+        if share is not None and scored_acres:
+            tot = scored_acres + acres
+            out["county_share_with_unscored_low"] = round(share * scored_acres / tot, 4)
+            out["county_share_with_unscored_high"] = round((share * scored_acres + acres) / tot, 4)
         return out
 
     @staticmethod

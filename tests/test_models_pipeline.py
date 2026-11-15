@@ -362,9 +362,10 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
     registry.export(out, "timing_rule", "eu_timing_rule_v1", reg, files, "abc1234")
     registry.export_composite(out, "composite_v1", reg, files, "abc1234")
     registry.write_rates(reg / "composite_v1", "composite", {"syn": (out, "composite")}, "syn:spatial")
-    registry.export(out, "logistic", "eu_logistic_v1", reg, files, "abc1234")
-    registry.write_rates(reg / "eu_logistic_v1", "logistic", {"syn": (out, "logistic")}, "syn:spatial",
-                         max_bracket=12, primary_clear="clear:syn:spatial")
+    registry.export(out, "logistic", "eu2_logistic_v1", reg, files, "abc1234")
+    registry.write_rates(reg / "eu2_logistic_v1", "logistic", {"syn": (out, "logistic")}, "syn:spatial",
+                         max_bracket=12, primary_clear="clear:syn:spatial",
+                         local_run=(out, "logistic"))
     fpath = next(fdir.glob("*AT*.geojson"))
     tpath = next(tdir.glob("*AT*.parquet"))
     make_pseudo_county(fpath, tpath, tmp_path / "counties", "24033", 2023)
@@ -417,10 +418,12 @@ def test_toolbox_matches_stub_interface(run_dir, tmp_path):
                   "wide_tier_share_called_silage", "clear_silage_share_counted",
                   "clear_silage_share_europe_adjusted", "clear_silage_share_reference_calibrated",
                   "clear_silage_share_local_threshold", "clear_reference",
-                  "clear_silage_share_local_flagged", "local_per_tier_share", "local_per_tier_detail"}
+                  "clear_silage_share_local_flagged", "local_per_tier_share", "local_per_tier_detail",
+                  "unscored_corn_acres", "county_share_with_unscored_low",
+                  "county_share_with_unscored_high"}
     assert set(am) == STUB_KEYS["aggregate"] | extra | clear_keys
     rows = [json.loads(l) for l in open(c2["results_path"].replace(".parquet", ".jsonl"))]
-    assert {r["model"] for r in rows} == {"eu_logistic_v1"}
+    assert {r["model"] for r in rows} == {"eu2_logistic_v1"}
     assert {r["evidence"]["evidence_tier"] for r in rows} <= {"clear", "wide", "abstain"}
     assert all((r["evidence"]["evidence_tier"] == "abstain") == r["abstain"] for r in rows)
     assert am["clear_tier_acres"] + am["wide_tier_acres"] + am["abstained_acres"] - total < 1.0
