@@ -1,0 +1,69 @@
+{
+ "fips": "42071",
+ "year": 2023,
+ "name": "Lancaster County, Pennsylvania",
+ "census_silage_pct": 27.4,
+ "census_year": 2022,
+ "census_history": [
+  {
+   "year": 2012,
+   "source": "CENSUS",
+   "grain": 101005,
+   "silage": 72539,
+   "silage_share_pct": 41.8
+  },
+  {
+   "year": 2017,
+   "source": "CENSUS",
+   "grain": 94511,
+   "silage": 52008,
+   "silage_share_pct": 35.5
+  },
+  {
+   "year": 2022,
+   "source": "CENSUS",
+   "grain": 95549,
+   "silage": 35988,
+   "silage_share_pct": 27.4
+  }
+ ],
+ "state_survey_2023_silage_pct": 33.7,
+ "module_v2": {
+  "silage_share_headline": 0.3519,
+  "headline_method": "module_v2 county step 'counted' on the clear tier",
+  "clear_tier_fields": 1057,
+  "clear_tier_share_of_area": 0.309,
+  "clear_silage_share_counted": 0.3519,
+  "clear_wide_share_called_silage": 0.3518,
+  "window_weighted_share": 0.1688
+ },
+ "acres": {
+  "silage_acres": 22906.5,
+  "silage_acres_low": 7075.7,
+  "silage_acres_high": 22906.5,
+  "grain_acres": 42187.2,
+  "abstained_acres": 36066.9
+ },
+ "field_calls": {
+  "silage": 519,
+  "grain": 1116,
+  "not judged": 2059
+ },
+ "fields": 3694,
+ "model": "eu2_logistic_v1",
+ "critic": [
+  {
+   "check": "silage_share_in_history",
+   "status": "pass",
+   "why": ""
+  },
+  {
+   "check": "abstained_share",
+   "status": "warn",
+   "why": "Abstained share of acres 35.7% against a 30% limit."
+  }
+ ],
+ "run_id": "42071-2023-abbdb7",
+ "status": "accepted_with_warnings",
+ "note": "Model estimates, not NASS statistics. USDA has no 2023 county figure; the nearest is the 2022 Census. Data: the team's Colab extraction (6 Sentinel-2 bands, May-December 2023), converted by scripts/colab_to_county.py; run once, nothing tuned on it."
+}

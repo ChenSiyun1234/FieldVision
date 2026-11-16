@@ -144,7 +144,7 @@ STATE_2025 = {
 }
 
 # =================================================================================================
-# Numbers used only by the slide deck (deck_figs.py, build_deck.py)
+# Numbers used only by the slides
 # =================================================================================================
 
 # Fields behind the work. Labelled: log 17:40 (8,000 European field-years). Unlabelled US corn

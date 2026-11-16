@@ -1,0 +1,424 @@
+{
+ "ground_truth": {
+  "beltsville": {
+   "right": 42,
+   "of": 44,
+   "right_range_95_pct": [
+    84.9,
+    98.7
+   ],
+   "always_grain": 32,
+   "always_grain_range_95_pct": [
+    58.2,
+    83.7
+   ],
+   "silage_found": 11,
+   "silage_total": 12,
+   "silage_found_range_95_pct": [
+    64.6,
+    98.5
+   ],
+   "source": "handoff/results/REPORT.md, scored once"
+  },
+  "county_share_ranges": {
+   "24021-2022": {
+    "share_pct": 13.2,
+    "range_95_pct": [
+     10.9,
+     16.1
+    ],
+    "clear_fields": 1581
+   },
+   "42071-2023": {
+    "share_pct": 35.2,
+    "range_95_pct": [
+     30.7,
+     39.8
+    ],
+    "clear_fields": 1057
+   }
+  },
+  "finding": "42 of 44 is 84.9\u201398.7% right at 95%; always-grain is 58.2\u201383.7%. The ranges do not overlap, so the model beats the baseline, but 44 field-years from one farm cannot say how it does elsewhere. No other US field labels are public; county shares are checked against the Census instead."
+ },
+ "corn_belt": {
+  "states": [
+   {
+    "state": "PA",
+    "ours_pct": 8.6,
+    "usda_2025_pct": 32.8,
+    "error_pts": -24.2,
+    "clear_fields": 203,
+    "ours_range_95_pct": [
+     5.3,
+     13.0
+    ],
+    "usda_inside_range": false,
+    "corn_belt": false
+   },
+   {
+    "state": "WI",
+    "ours_pct": 25.4,
+    "usda_2025_pct": 21.6,
+    "error_pts": 3.8,
+    "clear_fields": 230,
+    "ours_range_95_pct": [
+     20.0,
+     31.2
+    ],
+    "usda_inside_range": true,
+    "corn_belt": true
+   },
+   {
+    "state": "IA",
+    "ours_pct": 4.8,
+    "usda_2025_pct": 1.9,
+    "error_pts": 2.9,
+    "clear_fields": 228,
+    "ours_range_95_pct": [
+     2.7,
+     8.4
+    ],
+    "usda_inside_range": false,
+    "corn_belt": true
+   },
+   {
+    "state": "NE",
+    "ours_pct": 0.8,
+    "usda_2025_pct": 2.1,
+    "error_pts": -1.3,
+    "clear_fields": 233,
+    "ours_range_95_pct": [
+     0.2,
+     3.1
+    ],
+    "usda_inside_range": true,
+    "corn_belt": true
+   }
+  ],
+  "corn_belt_mean_abs_error_pts": 2.7,
+  "marathon_2023": {
+   "seen_before": 29,
+   "seen_after": 83,
+   "silage_before": 4.3,
+   "silage_after": 13.8,
+   "usda": 49.9
+  },
+  "finding": "In the Corn Belt the model lands within 3.8 points of NASS 2025 (WI +3.8, IA +2.9, NE -1.3); USDA's figure is inside our sampling range in WI, NE. Where silage is rare a few points is still a large relative miss, so low-silage states need a higher bar before a field is called silage. PA is 24.2 points low, so the big miss is in the East, not the Corn Belt. Each state rests on 228\u2013233 clearly seen fields. Further north it breaks: Marathon, Wisconsin 2023 reads 13.8% with Landsat against USDA's 49.9%. Northern silage is cut after the crop yellows, so a model trained in Europe reads it as grain; this needs labelled northern fields."
+ },
+ "year_gap": {
+  "ours_2023_pct": 35.2,
+  "ours_range_95_pct": [
+   30.7,
+   39.8
+  ],
+  "census_2022_pct": 27.4,
+  "census_trend_pts_per_year": -1.44,
+  "census_trend_2023_pct": 26.3,
+  "pa_survey_2022_pct": 30.2,
+  "pa_survey_2022_interpolated": true,
+  "pa_survey_2023_pct": 33.7,
+  "expected_2023_pct": 30.5,
+  "gap_vs_census_pts": 7.8,
+  "gap_explained_by_year_pts": 3.1,
+  "gap_left_pts": 4.7,
+  "finding": "Pennsylvania's survey share jumped to 33.7% in 2023 from about 30.2% in 2022, so if Lancaster kept its 2022 ratio to the state its 2023 share would be about 30.5%. That explains 3.1 of the 7.8 points between us and the 2022 Census; 4.7 points are left, at the edge of our sampling range (30.7\u201339.8%). The Census trend alone (-1.4 points a year) would point the other way, so the year gap is real but does not close the difference."
+ },
+ "unjudged": {
+  "Frederick 2022": {
+   "acres_basis": "field outlines (each field's own acres)",
+   "fields": 2233,
+   "fields_not_judged": 195,
+   "not_judged_share_of_acres_pct": 7.3,
+   "share_if_all_grain_pct": 15.3,
+   "share_if_all_silage_pct": 22.7,
+   "share_judged_only_pct": 16.6,
+   "share_with_model_lean_pct": 19.1,
+   "model_lean_on_not_judged_pct": 51.3,
+   "median_acres_judged": 11.8,
+   "median_acres_not_judged": 9.9,
+   "reasons": {
+    "wide_harvest_interval": 92,
+    "no_harvest_detected": 56,
+    "harvest_unconfirmed": 45,
+    "wide_harvest_interval+harvest_unconfirmed": 2
+   }
+  },
+  "Lancaster 2023": {
+   "acres_basis": "the agent's county aggregate (the acres the critic checked)",
+   "fields": 3694,
+   "fields_not_judged": 2059,
+   "not_judged_share_of_acres_pct": 35.7,
+   "share_if_all_grain_pct": 22.6,
+   "share_if_all_silage_pct": 58.3,
+   "share_judged_only_pct": 35.2,
+   "share_with_model_lean_pct": 40.1,
+   "model_lean_on_not_judged_pct": 49.0,
+   "median_acres_judged": 12.0,
+   "median_acres_not_judged": 12.1,
+   "reasons": {
+    "wide_harvest_interval": 1168,
+    "harvest_unconfirmed": 457,
+    "wide_harvest_interval+harvest_unconfirmed": 203,
+    "no_harvest_detected": 88,
+    "few_usable_dates+wide_harvest_interval": 57,
+    "few_usable_dates+wide_harvest_interval+harvest_unconfirmed": 45,
+    "few_usable_dates+harvest_unconfirmed": 24,
+    "few_usable_dates+no_harvest_detected": 12,
+    "few_usable_dates": 5
+   }
+  },
+  "landsat": [
+   {
+    "county": "Kent",
+    "corn_seen_pct": [
+     9,
+     94
+    ],
+    "silage_pct": [
+     12.9,
+     7.3
+    ],
+    "usda": 5.5,
+    "control": false
+   },
+   {
+    "county": "Queen Anne's",
+    "corn_seen_pct": [
+     14,
+     70
+    ],
+    "silage_pct": [
+     4.0,
+     2.4
+    ],
+    "usda": 1.3,
+    "control": false
+   },
+   {
+    "county": "Marathon",
+    "corn_seen_pct": [
+     29,
+     83
+    ],
+    "silage_pct": [
+     4.3,
+     13.8
+    ],
+    "usda": 49.9,
+    "control": false
+   },
+   {
+    "county": "Racine",
+    "corn_seen_pct": [
+     80,
+     90
+    ],
+    "silage_pct": [
+     6.4,
+     7.4
+    ],
+    "usda": [
+     2.4,
+     6.4
+    ],
+    "control": true
+   }
+  ],
+  "finding": "In Lancaster the share could be anywhere from 22.6% to 58.3% depending on the unjudged fields. Filling them with the model's own lean gives 40.1%. Most unjudged fields were cut inside a long gap between clear images (wide_harvest_interval); Landsat 8/9 is the fix the team took: a second satellite whose passes fill the gaps. Kent: corn seen 9% to 94%, silage 12.9% to 7.3% (USDA 5.5). Queen Anne's: corn seen 14% to 70%, silage 4.0% to 2.4% (USDA 1.3). Marathon: corn seen 29% to 83%, silage 4.3% to 13.8% (USDA 49.9). The app uses Landsat wherever a county has it on disk; Frederick and Lancaster do not yet. These are checks on counties seen while tuning."
+ },
+ "price": {
+  "our_net_error_4_states_acres": 301000,
+  "as_national_points": 0.31,
+  "price_effect_of_that_error_pct": [
+   0.26,
+   2.91
+  ],
+  "state_errors_pts": [
+   -24.2,
+   3.8
+  ],
+  "loyo_mae_pct": {
+   "no_change": 15.9,
+   "supply": 17.1,
+   "stocks": 22.7,
+   "stocks_prev": 14.4
+  },
+  "finding": "Our four-state silage error nets out to 301,000 acres, about 0.31 points of US corn, which the price models turn into 0.3\u20132.9% on price. State errors run from -24.2 to +3.8 points, so the sign is not settled. On clean leave-one-year-out tests no model beats last year's price by much (15.9% vs 14.4% average error). So the price page stays a labelled what-if; it is not a forecast and our silage map should not feed one yet."
+ },
+ "blind_test": {
+  "rows": [
+   {
+    "place": "Frederick County, MD",
+    "season": 2022,
+    "ours_pct": 13.2,
+    "usda_pct": 19.6,
+    "usda_source": "2022 Census",
+    "hidden": "yes: the critic only reads Census years before 2022 (2012, 2017)",
+    "error_pts": -6.4
+   },
+   {
+    "place": "Maryland",
+    "season": 2025,
+    "ours_pct": 4.7,
+    "usda_pct": 8.9,
+    "usda_source": "NASS 2025 survey",
+    "hidden": "yes: the state run used 2022 Census reference blocks",
+    "error_pts": -4.2
+   },
+   {
+    "place": "PA",
+    "season": 2025,
+    "ours_pct": 8.6,
+    "usda_pct": 32.8,
+    "usda_source": "NASS 2025 survey",
+    "hidden": "yes: priors come from earlier years",
+    "error_pts": -24.2
+   },
+   {
+    "place": "WI",
+    "season": 2025,
+    "ours_pct": 25.4,
+    "usda_pct": 21.6,
+    "usda_source": "NASS 2025 survey",
+    "hidden": "yes: priors come from earlier years",
+    "error_pts": 3.8
+   },
+   {
+    "place": "IA",
+    "season": 2025,
+    "ours_pct": 4.8,
+    "usda_pct": 1.9,
+    "usda_source": "NASS 2025 survey",
+    "hidden": "yes: priors come from earlier years",
+    "error_pts": 2.9
+   },
+   {
+    "place": "NE",
+    "season": 2025,
+    "ours_pct": 0.8,
+    "usda_pct": 2.1,
+    "usda_source": "NASS 2025 survey",
+    "hidden": "yes: priors come from earlier years",
+    "error_pts": -1.3
+   },
+   {
+    "place": "Lancaster County, PA",
+    "season": 2023,
+    "ours_pct": 35.2,
+    "usda_pct": 27.4,
+    "usda_source": "2022 Census (no 2023 county figure)",
+    "hidden": "no: nearest year, and the critic saw it",
+    "error_pts": 7.8
+   }
+  ],
+  "history_update_seen_while_tuning": [
+   {
+    "county": "Queen Anne's",
+    "last_official_pct": 2.2,
+    "updated_pct": 2.1,
+    "true_pct": 1.3,
+    "closer": true
+   },
+   {
+    "county": "Branch, Michigan",
+    "last_official_pct": 3.6,
+    "updated_pct": 1.9,
+    "true_pct": 1.8,
+    "closer": true
+   },
+   {
+    "county": "Racine, Wisconsin",
+    "last_official_pct": 4.2,
+    "updated_pct": 2.6,
+    "true_pct": 2.4,
+    "closer": true
+   },
+   {
+    "county": "Kent",
+    "last_official_pct": 5.8,
+    "updated_pct": 5.5,
+    "true_pct": 5.5,
+    "closer": true
+   },
+   {
+    "county": "Carroll",
+    "last_official_pct": 11.4,
+    "updated_pct": 5.3,
+    "true_pct": 8.9,
+    "closer": false
+   },
+   {
+    "county": "Frederick",
+    "last_official_pct": 24.3,
+    "updated_pct": 16.6,
+    "true_pct": 19.6,
+    "closer": true
+   },
+   {
+    "county": "Gratiot, Michigan",
+    "last_official_pct": 19.8,
+    "updated_pct": 21.8,
+    "true_pct": 24.2,
+    "closer": true
+   },
+   {
+    "county": "Marathon, Wisconsin",
+    "last_official_pct": 44.9,
+    "updated_pct": 39.4,
+    "true_pct": 49.9,
+    "closer": false
+   }
+  ],
+  "history_update_mean_miss_pts": {
+   "last": 2.7,
+   "updated": 2.6,
+   "last_no_marathon": 2.3,
+   "updated_no_marathon": 1.4,
+   "satellite": 9.7
+  },
+  "clean_tests": [
+   {
+    "place": "Wisconsin 2025",
+    "usda_pct": 21.6,
+    "usda_band": null,
+    "ours_pct": 16.6
+   },
+   {
+    "place": "Pennsylvania 2025",
+    "usda_pct": 32.8,
+    "usda_band": null,
+    "ours_pct": 15.2
+   },
+   {
+    "place": "Lancaster, Pa. 2023",
+    "usda_pct": 27.4,
+    "usda_band": [
+     27.4,
+     54.8
+    ],
+    "ours_pct": 26.6
+   },
+   {
+    "place": "Michigan 2025",
+    "usda_pct": 14.7,
+    "usda_band": null,
+    "ours_pct": 14.4
+   },
+   {
+    "place": "New York 2025",
+    "usda_pct": 53.2,
+    "usda_band": null,
+    "ours_pct": 48.7
+   }
+  ],
+  "blind_n": 6,
+  "blind_within_5_pts": 4,
+  "blind_mean_abs_error_pts": 7.1,
+  "finding": "4 of 6 blind comparisons land within 5 points of USDA. The misses: Frederick County, MD -6.4, PA -24.2. Frederick's critic range (24.3\u201332.1%, from the 2012 and 2017 Census) would only have warned on the true 19.6% as well, so the history check cannot see a real change coming. Starting from USDA's last figure and letting the fields update it, 6 of 8 counties move closer to the truth, mean miss 2.6 points (the satellite alone 9.7); these counties were seen while tuning, so it is not a clean test. Clean tests, written down before opening: Wisconsin 2025, Pennsylvania 2025, Lancaster, Pa. 2023, Michigan 2025, New York 2025."
+ },
+ "scale": {
+  "script": "scripts/pod_batch_counties.py",
+  "finding": "Satellite pulls are the bottleneck; the batch script lines up the top silage counties for the pod."
+ },
+ "note": "Model estimates, not NASS statistics. Built from results on disk; nothing re-trained or tuned."
+}

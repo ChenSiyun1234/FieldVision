@@ -1,0 +1,91 @@
+{
+ "fips": "36121",
+ "year": 2022,
+ "landsat": false,
+ "summary": {
+  "fields": 820,
+  "corn_acres": 17299.1,
+  "kinds": {
+   "clear": {
+    "fields": 155,
+    "acres": 3082.3,
+    "share_of_corn_acres": 0.1782
+   },
+   "gap": {
+    "fields": 659,
+    "acres": 14125.9,
+    "share_of_corn_acres": 0.8166
+   },
+   "unseen": {
+    "fields": 6,
+    "acres": 90.8,
+    "share_of_corn_acres": 0.0052
+   }
+  },
+  "abstained_fields": 208,
+  "abstained_with_bracket": 202,
+  "abstained_with_bracket_acres": 4756.8,
+  "abstained_with_bracket_called_silage_share": 0.9449,
+  "main_gaps": [
+   {
+    "from": "2022-10-05",
+    "to": "2022-10-23",
+    "days": 18,
+    "fields": 264,
+    "abstained_fields": 0,
+    "acres": 5128.0,
+    "median_ndvi_before": 0.67,
+    "median_ndvi_after": 0.24,
+    "called_silage_share": 0.3385
+   },
+   {
+    "from": "2022-09-10",
+    "to": "2022-10-05",
+    "days": 25,
+    "fields": 110,
+    "abstained_fields": 110,
+    "acres": 2758.1,
+    "median_ndvi_before": 0.84,
+    "median_ndvi_after": 0.22,
+    "called_silage_share": 0.9925
+   },
+   {
+    "from": "2022-10-05",
+    "to": "2022-10-25",
+    "days": 20,
+    "fields": 114,
+    "abstained_fields": 5,
+    "acres": 2690.7,
+    "median_ndvi_before": 0.61,
+    "median_ndvi_after": 0.24,
+    "called_silage_share": 0.2099
+   }
+  ],
+  "silage_share": {
+   "clear_only": 0.9132,
+   "called": 0.5358,
+   "with_gap_fields": 0.6489,
+   "lower": 0.6455,
+   "upper": 0.6507
+  },
+  "note": "Model estimates from satellite data. Not a NASS statistic. No USDA figure was used."
+ },
+ "vision_gap": {
+  "checked": 40,
+  "readable": 32,
+  "supported": 24,
+  "conflict": 8,
+  "unclear": 8,
+  "agreement": 0.75
+ },
+ "vision_clear": {
+  "checked": 30,
+  "readable": 20,
+  "supported": 13,
+  "conflict": 7,
+  "unclear": 10,
+  "agreement": 0.65
+ },
+ "reasons_written": 8,
+ "reasons_by_nemotron": 5
+}
