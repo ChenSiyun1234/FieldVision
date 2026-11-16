@@ -1,0 +1,12 @@
+- 2026-11-15 03:54 CA_06107: CSB polygons in county 28064, corn fields kept 282, area 4,875 ha (12,047 ac); corn mask: CDL 2022 raster (CropScape); read 125 s
+- 2026-11-15 03:54 NY_36121: CSB polygons in county 10023, corn fields kept 2059, area 16,761 ha (41,417 ac); corn mask: CDL 2022 raster (CropScape); read 28 s
+- 2026-11-15 03:58 CA_06107 s2_test: tiles 1 (ran 1), scenes 72, failed [], window ('03-01', '12-15'), cloud<60, SCL [4, 5], clear>=0.8, buffer 15 m
+- 2026-11-15 03:59 NY_36121 s2_test: tiles 1 (ran 1), scenes 37, failed [], window ('04-01', '12-15'), cloud<60, SCL [4, 5], clear>=0.8, buffer 15 m
+- 2026-11-15 04:00 CA_06107 s2_test: tiles 1 (ran 0), scenes 0, failed [], window ('03-01', '12-15'), cloud<60, SCL [4, 5], clear>=0.8, buffer 15 m
+- 2026-11-15 04:00 NY_36121 s2_test: tiles 1 (ran 0), scenes 0, failed [], window ('04-01', '12-15'), cloud<60, SCL [4, 5], clear>=0.8, buffer 15 m
+- 2026-11-15 04:00 County context (workspace QuickStats CSV): 2 counties
+- 2026-11-15 04:00 CA_06107: exported 4 fields, 179 rows to /workspace/hima_data/fieldvision_export/counties/06107/2022
+- 2026-11-15 04:00 NY_36121: exported 4 fields, 49 rows to /workspace/hima_data/fieldvision_export/counties/36121/2022
+- 2026-11-15 04:30 NY_36121 s2: tiles 30 (ran 30), scenes 2309, failed [], window ('04-01', '12-15'), cloud<60, SCL [4, 5], clear>=0.8, buffer 15 m
+- 2026-11-15 04:30 County context (workspace QuickStats CSV): 1 counties
+- 2026-11-15 04:30 NY_36121: exported 820 fields, 18,385 rows to /workspace/hima_data/fieldvision_export/counties/36121/2022
