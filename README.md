@@ -1,3 +1,19 @@
+<p align="center">
+  <img src="docs/readme/00_banner.png" alt="FieldVision: Grand Prize, 1st place, Hack the Harvest 2026, USDA NASS challenge" width="100%">
+</p>
+
+<p align="center">
+  <img alt="Grand Prize" src="https://img.shields.io/badge/Grand%20Prize-1st%20place-D4AF37?style=for-the-badge">
+  <img alt="Prize" src="https://img.shields.io/badge/Prize-%245%2C000-2F6B4F?style=for-the-badge">
+  <img alt="Hack the Harvest 2026" src="https://img.shields.io/badge/Hack%20the%20Harvest-2026-2878D6?style=for-the-badge">
+  <img alt="USDA NASS challenge" src="https://img.shields.io/badge/USDA%20NASS-challenge-143A2B?style=for-the-badge">
+</p>
+
+<p align="center">
+  <img src="docs/readme/grand_prize_check.jpg" alt="The Grand Prize check made out to Field Vision, $5,000, Nov 15, 2026" width="62%"><br>
+  <sub>The Grand Prize check, Nov 15, 2026. Hosted and organized by the Human Machine Collaboration Institute, with USDA, UC Davis, NVIDIA, Solidigm, FarmGPU and Keeboh. Team makai.</sub>
+</p>
+
 # FieldVision
 
 **An explainable, satellite-driven corn harvest intelligence system.** Was this corn field chopped green for
@@ -23,6 +39,7 @@ Every figure the system produces is a **model estimate, not a NASS statistic**.
 | Sentinel-1 radar replay (France, 3-5 week optical gap) | recall **0.33 → 0.54** |
 | Nemotron agents | 5/5 routing, 4/4 Q&A, **0 unsupported numbers** |
 
+- [The classification model](#the-classification-model)
 - [What it does](#what-it-does)
 - [Results](#results)
 - [Results slides](#results-slides)
@@ -34,6 +51,50 @@ Every figure the system produces is a **model estimate, not a NASS statistic**.
 - [Tests](#tests)
 - [Known limits](#known-limits)
 - [Working together](#working-together)
+
+## The classification model
+
+I built the part that makes the field-by-field call and turns it into county and state totals: the data, the training set, the model, how it was validated, and the toolbox the rest of the system calls. This section describes the model alone. The Bayesian update with USDA history, the Nemotron agents and the app are covered further down. The numbers here come from [`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/ACCESS_LOG.md`](handoff/results/ACCESS_LOG.md), and every figure is drawn by [`scripts/make_readme_figures.py`](scripts/make_readme_figures.py) from those files and from `git log`.
+
+![From a corn parcel to a silage-area estimate](docs/readme/01_pipeline.png)
+
+### What I decided, and why
+
+1. **Data.** Field outlines come from USDA Crop Sequence Boundaries. For every field I extract a Sentinel-2 time series on Google Colab, and later add Landsat 8/9 as a second satellite so cloud gaps stop hiding the harvest. The extraction is identical across places, so a result in one county means the same thing in another.
+2. **Training set.** Only 44 field-years in the US carry labels, too few to train on and too valuable to spend. I trained on 8,000 labelled fields from Austria, France and the Netherlands and kept every US label for testing. The model never sees a US label.
+3. **Model.** Six crop-timing features per field: greenness and moisture before the cut, how fast the field dries, days from peak to cut, and what the stubble looks like afterwards. I fit a logistic regression. I also tried boosted trees on 135 features, a composite, a timing rule and a sequence model, and picked the final one by a rule I wrote down before computing it: the best mean ROC-AUC when a whole country is held out. A difference smaller than the spread across held-out groups goes to the simpler model.
+4. **Evidence tiers.** A field's call only counts toward a total when two clear looks around the cut are at most 12 days apart. Every field still keeps a call, but fields with wide or no evidence are reported separately, along with how much area the model could not see. A total that hides what it did not see would look better and mean less.
+5. **Totals.** I add the field calls into county and state silage shares, area-weighted, with a sampling range.
+6. **Validation.** For every test I wrote the rule, the pass mark and my own prediction before opening the data, and ran each test once. Failures stay in the record: the first county method failed on Kent County, and Pennsylvania 2025 failed the final checks.
+7. **Hand-over.** The model ships as one Python interface, `fieldvision.toolbox.Toolbox`, with a hand-over page ([`HANDOFF.md`](HANDOFF.md)), a results document and a slide deck.
+
+![The six features and their weights](docs/readme/02_features.png)
+
+![Transfer to a new country and to labelled US fields](docs/readme/03_validation.png)
+
+### Field level: 42 of 44
+
+On the organisers' 44 labelled Beltsville field-years, scored once, the model gets 42 right: 11 of 12 silage fields found, one false alarm. A rule that always says "grain" gets 32.
+
+![Confusion matrix on 44 labelled US field-years](docs/readme/04_confusion.png)
+
+### County and state totals: five checks, four within 5 points
+
+![Five clean checks against USDA](docs/readme/05_nass_comparison.png)
+
+Michigan 2025, New York 2025, Lancaster County 2023 and Wisconsin 2025 land within 5 points of USDA. Wisconsin passes by 0.02 points and its own guard flags it as unreliable. Pennsylvania 2025 misses by 17.6 points. I kept that in the README because the fix is not a tuning knob: dairy country with long cloud gaps at harvest hides exactly the fields that matter.
+
+### What helped most
+
+![Landsat as a second satellite](docs/readme/06_landsat.png)
+
+![Why the evidence tiers exist](docs/readme/08_evidence_tiers.png)
+
+### 22.5 hours
+
+![Commits across the build window](docs/readme/07_timeline.png)
+
+Of my 271 commits on `main`, 266 fall inside the build window (Nov 14 10:30 to Nov 15 09:00, Pacific time). The labelled milestones come from the evaluation access log, which every scoring and every rule change was written into before the run.
 
 ## What it does
 
