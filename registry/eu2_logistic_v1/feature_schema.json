@@ -1,0 +1,79 @@
+{
+  "computed_by": "fieldvision.features.build.build_features (time series -> one row per field)",
+  "input_contract": "long Sentinel-2 table: field_id, date, clear_fraction, B02..B12 reflectance 0-1 (NaN = looked, nothing clear)",
+  "feature_config": {
+    "min_clear_fraction": 0.6,
+    "min_clear_pixels": 1,
+    "peak_window": [
+      160,
+      280
+    ],
+    "min_peak_ndvi": 0.5,
+    "min_amplitude": 0.25,
+    "drop_fraction": 0.35,
+    "confirm_days": 25.0,
+    "confirm_obs": 2,
+    "bare_soil_ndmi": 0.05,
+    "slope_window_days": 30.0,
+    "integral_window": [
+      213,
+      304
+    ],
+    "integral_rel_days": 75.0,
+    "integral_edge_tolerance": 20.0,
+    "post_window_days": 20.0,
+    "post_max_obs": 3,
+    "regreen_window_days": 45.0,
+    "regreen_min_lag_days": 10.0,
+    "regreen_min_delta": 0.15,
+    "season_window": [
+      182,
+      334
+    ],
+    "spring_window": [
+      60,
+      150
+    ],
+    "drydown_ndmi_fraction": 0.6,
+    "soil_max_ndvi": 0.3,
+    "min_green_change": 0.03,
+    "rel_bin_start": -30,
+    "rel_bin_stop": 120,
+    "rel_bin_width": 15,
+    "low_evidence_max_interval_days": 20.0,
+    "low_evidence_min_usable": 6
+  },
+  "features": [
+    {
+      "name": "harv_days_since_peak",
+      "kind": "relative",
+      "unit": "days"
+    },
+    {
+      "name": "harv_decline_days",
+      "kind": "relative",
+      "unit": "days"
+    },
+    {
+      "name": "pre_ndvi_frac",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "pre_ndmi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "sen_ndvi_slope_rel",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "post_ndti",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    }
+  ],
+  "gaps": "missing values replaced by the training median, then standardised"
+}

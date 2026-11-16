@@ -1,0 +1,55 @@
+{
+ "fips": "24021",
+ "year": 2022,
+ "census_silage_pct": 19.6,
+ "module_v2": {
+  "silage_share_headline": 0.132,
+  "headline_method": "module_v2 county step 'counted' on the clear tier",
+  "clear_tier_fields": 1581,
+  "clear_tier_share_of_area": 0.6738,
+  "clear_silage_share_counted": 0.132,
+  "clear_wide_share_called_silage": 0.1655,
+  "window_weighted_share": 0.151
+ },
+ "prior_pct": 24.3,
+ "prior_source": "USDA NASS Census 2017, county 24021 silage share of harvested corn",
+ "rows": [
+  {
+   "model": "eu2_logistic_v1",
+   "fields": 2233,
+   "decided": 2038,
+   "abstained": 195,
+   "called_silage_pct": 16.6,
+   "mean_p_pct": 30.8,
+   "mean_p_at_prior_pct": 15.1
+  },
+  {
+   "model": "eu_logistic_v1",
+   "fields": 2233,
+   "decided": 2038,
+   "abstained": 195,
+   "called_silage_pct": 16.9,
+   "mean_p_pct": 29.2,
+   "mean_p_at_prior_pct": 15.1
+  },
+  {
+   "model": "eu_barc_logistic_v1",
+   "fields": 2233,
+   "decided": 2038,
+   "abstained": 195,
+   "called_silage_pct": 17.6,
+   "mean_p_pct": 24.4,
+   "mean_p_at_prior_pct": 15.4
+  },
+  {
+   "model": "composite_v1 (team run)",
+   "fields": 2233,
+   "decided": 2026,
+   "abstained": 207,
+   "called_silage_pct": 20.9,
+   "mean_p_pct": 36.5,
+   "mean_p_at_prior_pct": 17.3
+  }
+ ],
+ "note": "Model estimates, not NASS statistics. Census share is silage / (silage + grain) harvested acres."
+}

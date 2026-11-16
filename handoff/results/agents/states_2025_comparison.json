@@ -1,0 +1,917 @@
+{
+ "year": 2025,
+ "models": [
+  "eu2_logistic_v1",
+  "eu_logistic_v1"
+ ],
+ "shares": [
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "usda_2025_silage_pct": 32.8,
+   "headline_pct": 8.6,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 13.3,
+   "clear_fields": 203,
+   "clear_called_silage_pct": 8.6,
+   "mean_p_pct": 29.8,
+   "mean_p_at_prior_pct": 17.1,
+   "prior_pct": 30.6,
+   "usda_2025_silage_acres": 315000,
+   "model_silage_acres": 82000,
+   "csb_corn_acres": 953172,
+   "usda_2025_corn_acres": 960000,
+   "fields": 300,
+   "abstained": 60
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "usda_2025_silage_pct": 21.6,
+   "headline_pct": 25.4,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 22.2,
+   "clear_fields": 230,
+   "clear_called_silage_pct": 25.4,
+   "mean_p_pct": 34.7,
+   "mean_p_at_prior_pct": 16.6,
+   "prior_pct": 20.8,
+   "usda_2025_silage_acres": 885000,
+   "model_silage_acres": 1139000,
+   "csb_corn_acres": 4479695,
+   "usda_2025_corn_acres": 4095000,
+   "fields": 300,
+   "abstained": 25
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "IA",
+   "usda_2025_silage_pct": 1.9,
+   "headline_pct": 4.8,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 6.2,
+   "clear_fields": 228,
+   "clear_called_silage_pct": 4.8,
+   "mean_p_pct": 26.2,
+   "mean_p_at_prior_pct": 1.2,
+   "prior_pct": 2.8,
+   "usda_2025_silage_acres": 250000,
+   "model_silage_acres": 661000,
+   "csb_corn_acres": 13851994,
+   "usda_2025_corn_acres": 13400000,
+   "fields": 300,
+   "abstained": 25
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "NE",
+   "usda_2025_silage_pct": 2.1,
+   "headline_pct": 0.8,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 0.7,
+   "clear_fields": 233,
+   "clear_called_silage_pct": 0.8,
+   "mean_p_pct": 15.5,
+   "mean_p_at_prior_pct": 0.6,
+   "prior_pct": 2.8,
+   "usda_2025_silage_acres": 220000,
+   "model_silage_acres": 89000,
+   "csb_corn_acres": 10877166,
+   "usda_2025_corn_acres": 10610000,
+   "fields": 300,
+   "abstained": 21
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "usda_2025_silage_pct": 32.8,
+   "headline_pct": 8.6,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 13.0,
+   "clear_fields": 203,
+   "clear_called_silage_pct": 8.6,
+   "mean_p_pct": 27.9,
+   "mean_p_at_prior_pct": 16.3,
+   "prior_pct": 30.6,
+   "usda_2025_silage_acres": 315000,
+   "model_silage_acres": 82000,
+   "csb_corn_acres": 953172,
+   "usda_2025_corn_acres": 960000,
+   "fields": 300,
+   "abstained": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "usda_2025_silage_pct": 21.6,
+   "headline_pct": 27.2,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 23.3,
+   "clear_fields": 230,
+   "clear_called_silage_pct": 27.2,
+   "mean_p_pct": 35.7,
+   "mean_p_at_prior_pct": 19.1,
+   "prior_pct": 20.8,
+   "usda_2025_silage_acres": 885000,
+   "model_silage_acres": 1217000,
+   "csb_corn_acres": 4479695,
+   "usda_2025_corn_acres": 4095000,
+   "fields": 300,
+   "abstained": 25
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "IA",
+   "usda_2025_silage_pct": 1.9,
+   "headline_pct": 6.3,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 8.5,
+   "clear_fields": 228,
+   "clear_called_silage_pct": 6.3,
+   "mean_p_pct": 26.2,
+   "mean_p_at_prior_pct": 1.4,
+   "prior_pct": 2.8,
+   "usda_2025_silage_acres": 250000,
+   "model_silage_acres": 872000,
+   "csb_corn_acres": 13851994,
+   "usda_2025_corn_acres": 13400000,
+   "fields": 300,
+   "abstained": 25
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "NE",
+   "usda_2025_silage_pct": 2.1,
+   "headline_pct": 1.0,
+   "headline_method": "counted share of the clear tier (module_v2)",
+   "called_silage_pct": 0.9,
+   "clear_fields": 233,
+   "clear_called_silage_pct": 1.0,
+   "mean_p_pct": 13.5,
+   "mean_p_at_prior_pct": 0.7,
+   "prior_pct": 2.8,
+   "usda_2025_silage_acres": 220000,
+   "model_silage_acres": 108000,
+   "csb_corn_acres": 10877166,
+   "usda_2025_corn_acres": 10610000,
+   "fields": 300,
+   "abstained": 21
+  }
+ ],
+ "harvest_pace": [
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 1.8,
+   "fields_with_date": 208
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 8.1,
+   "fields_with_date": 208
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 14.9,
+   "fields_with_date": 208
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 6.0,
+   "model_pct_harvested": 26.5,
+   "fields_with_date": 208
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 80.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 208
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 89.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 208
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-08-24",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 32
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-08-31",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 1.8,
+   "fields_with_date": 32
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 11.0,
+   "model_pct_harvested": 2.3,
+   "fields_with_date": 32
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 35.0,
+   "model_pct_harvested": 10.4,
+   "fields_with_date": 32
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 45.0,
+   "model_pct_harvested": 20.0,
+   "fields_with_date": 32
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 56.0,
+   "model_pct_harvested": 55.7,
+   "fields_with_date": 32
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 99.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 32
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 220
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 1.8,
+   "fields_with_date": 220
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 1.0,
+   "model_pct_harvested": 3.8,
+   "fields_with_date": 220
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 4.0,
+   "model_pct_harvested": 13.8,
+   "fields_with_date": 220
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 86.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 220
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 90.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 220
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-10",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-17",
+   "usda_pct_harvested": 1.0,
+   "model_pct_harvested": 0.4,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-24",
+   "usda_pct_harvested": 2.0,
+   "model_pct_harvested": 0.4,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-31",
+   "usda_pct_harvested": 4.0,
+   "model_pct_harvested": 0.4,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 10.0,
+   "model_pct_harvested": 0.6,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 22.0,
+   "model_pct_harvested": 9.0,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 41.0,
+   "model_pct_harvested": 11.5,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 66.0,
+   "model_pct_harvested": 32.5,
+   "fields_with_date": 55
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 7.5,
+   "fields_with_date": 254
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 24.4,
+   "fields_with_date": 254
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 8.0,
+   "model_pct_harvested": 34.4,
+   "fields_with_date": 254
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 15.0,
+   "model_pct_harvested": 77.3,
+   "fields_with_date": 254
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 97.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 254
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 99.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 254
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 271
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 2.8,
+   "fields_with_date": 271
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 5.0,
+   "model_pct_harvested": 7.6,
+   "fields_with_date": 271
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 11.0,
+   "model_pct_harvested": 24.7,
+   "fields_with_date": 271
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 74.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 271
+  },
+  {
+   "model": "eu2_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 92.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 271
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 1.8,
+   "fields_with_date": 207
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 8.1,
+   "fields_with_date": 207
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 14.8,
+   "fields_with_date": 207
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 6.0,
+   "model_pct_harvested": 26.8,
+   "fields_with_date": 207
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 80.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 207
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 89.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 207
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-08-24",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 33
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-08-31",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 1.9,
+   "fields_with_date": 33
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 11.0,
+   "model_pct_harvested": 2.4,
+   "fields_with_date": 33
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 35.0,
+   "model_pct_harvested": 10.6,
+   "fields_with_date": 33
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 45.0,
+   "model_pct_harvested": 20.5,
+   "fields_with_date": 33
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 56.0,
+   "model_pct_harvested": 54.6,
+   "fields_with_date": 33
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "PA",
+   "use": "silage",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 99.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 33
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 215
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 1.8,
+   "fields_with_date": 215
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 1.0,
+   "model_pct_harvested": 3.6,
+   "fields_with_date": 215
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 4.0,
+   "model_pct_harvested": 12.8,
+   "fields_with_date": 215
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 86.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 215
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 90.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 215
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-10",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-17",
+   "usda_pct_harvested": 1.0,
+   "model_pct_harvested": 0.4,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-24",
+   "usda_pct_harvested": 2.0,
+   "model_pct_harvested": 0.4,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-08-31",
+   "usda_pct_harvested": 4.0,
+   "model_pct_harvested": 0.4,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 10.0,
+   "model_pct_harvested": 0.6,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 22.0,
+   "model_pct_harvested": 8.5,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 41.0,
+   "model_pct_harvested": 12.0,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "WI",
+   "use": "silage",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 66.0,
+   "model_pct_harvested": 34.8,
+   "fields_with_date": 60
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 7.7,
+   "fields_with_date": 248
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 24.3,
+   "fields_with_date": 248
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 8.0,
+   "model_pct_harvested": 34.5,
+   "fields_with_date": 248
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 15.0,
+   "model_pct_harvested": 76.7,
+   "fields_with_date": 248
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 97.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 248
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "IA",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 99.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 248
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-07",
+   "usda_pct_harvested": 0.0,
+   "model_pct_harvested": 0.0,
+   "fields_with_date": 270
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-14",
+   "usda_pct_harvested": 3.0,
+   "model_pct_harvested": 2.7,
+   "fields_with_date": 270
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-21",
+   "usda_pct_harvested": 5.0,
+   "model_pct_harvested": 7.4,
+   "fields_with_date": 270
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-09-28",
+   "usda_pct_harvested": 11.0,
+   "model_pct_harvested": 24.5,
+   "fields_with_date": 270
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-11-16",
+   "usda_pct_harvested": 74.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 270
+  },
+  {
+   "model": "eu_logistic_v1",
+   "state": "NE",
+   "use": "grain",
+   "week_ending": "2025-11-23",
+   "usda_pct_harvested": 92.0,
+   "model_pct_harvested": 100.0,
+   "fields_with_date": 270
+  }
+ ],
+ "summary": {
+  "eu2_logistic_v1": {
+   "rank_usda": [
+    "PA",
+    "WI",
+    "NE",
+    "IA"
+   ],
+   "rank_model": [
+    "WI",
+    "PA",
+    "IA",
+    "NE"
+   ],
+   "share_mean_abs_error_pts": 8.0,
+   "share_mean_abs_error_pts_with_prior": 5.7,
+   "silage_acres_total_usda": 1670000,
+   "silage_acres_total_model": 1971000,
+   "pace_mean_abs_diff_pts": {
+    "grain": 11.8,
+    "silage": 10.1
+   }
+  },
+  "eu_logistic_v1": {
+   "rank_usda": [
+    "PA",
+    "WI",
+    "NE",
+    "IA"
+   ],
+   "rank_model": [
+    "WI",
+    "PA",
+    "IA",
+    "NE"
+   ],
+   "share_mean_abs_error_pts": 8.8,
+   "share_mean_abs_error_pts_with_prior": 5.2,
+   "silage_acres_total_usda": 1670000,
+   "silage_acres_total_model": 2279000,
+   "pace_mean_abs_diff_pts": {
+    "grain": 11.8,
+    "silage": 10.0
+   }
+  }
+ },
+ "sources": {
+  "shares_and_acres": "USDA NASS Quick Stats, state survey 2025 (the challenge's evaluation numbers)",
+  "corn_area": "USDA NASS Crop Sequence Boundaries 2018-2025, CDL2025 corn polygons",
+  "pace": "USDA NASS Quick Stats Crop Progress 2025, PCT HARVESTED"
+ },
+ "note": "Model estimates from a block sample of about 300 fields per state; not NASS statistics. Beltsville was not used. The prior uses survey years before 2025 only."
+}

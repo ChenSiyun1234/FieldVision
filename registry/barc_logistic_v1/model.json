@@ -1,0 +1,18 @@
+{
+  "name": "barc_logistic_v1",
+  "class": "LogisticModel",
+  "positive_class": "silage",
+  "decision": "silage if p_silage >= 0.5",
+  "threshold": 0.5,
+  "features": [
+    "harv_days_since_peak",
+    "harv_decline_days",
+    "pre_ndvi_frac",
+    "pre_ndmi",
+    "sen_ndvi_slope_rel",
+    "post_ndti"
+  ],
+  "description": "logit = +0.05*z(harv_days_since_peak) -0.81*z(harv_decline_days) +0.45*z(pre_ndvi_frac) +0.41*z(pre_ndmi) +0.02*z(sen_ndvi_slope_rel) -1.79*z(post_ndti) -1.11",
+  "training": "Six-feature logistic regression fitted on the 44 Beltsville field-years only (the team's plan: train on Beltsville, test on held-out Beltsville).",
+  "comparison_name": "logistic_barc"
+}

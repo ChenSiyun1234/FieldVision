@@ -1,0 +1,724 @@
+{
+  "computed_by": "fieldvision.features.build.build_features (time series -> one row per field)",
+  "input_contract": "long Sentinel-2 table: field_id, date, clear_fraction, B02..B12 reflectance 0-1 (NaN = looked, nothing clear)",
+  "feature_config": {
+    "min_clear_fraction": 0.6,
+    "min_clear_pixels": 1,
+    "peak_window": [
+      160,
+      280
+    ],
+    "min_peak_ndvi": 0.5,
+    "min_amplitude": 0.25,
+    "drop_fraction": 0.35,
+    "confirm_days": 25.0,
+    "confirm_obs": 2,
+    "bare_soil_ndmi": 0.05,
+    "slope_window_days": 30.0,
+    "integral_window": [
+      213,
+      304
+    ],
+    "integral_rel_days": 75.0,
+    "integral_edge_tolerance": 20.0,
+    "post_window_days": 20.0,
+    "post_max_obs": 3,
+    "regreen_window_days": 45.0,
+    "regreen_min_lag_days": 10.0,
+    "regreen_min_delta": 0.15,
+    "season_window": [
+      182,
+      334
+    ],
+    "spring_window": [
+      60,
+      150
+    ],
+    "drydown_ndmi_fraction": 0.6,
+    "soil_max_ndvi": 0.3,
+    "min_green_change": 0.03,
+    "rel_bin_start": -30,
+    "rel_bin_stop": 120,
+    "rel_bin_width": 15,
+    "low_evidence_max_interval_days": 20.0,
+    "low_evidence_min_usable": 6
+  },
+  "features": [
+    {
+      "name": "peak_ndvi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "base_ndvi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "amplitude",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "peak_ndmi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "peak_ndre",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "peak_b11",
+      "kind": "neutral",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "harv_days_since_peak",
+      "kind": "relative",
+      "unit": "days"
+    },
+    {
+      "name": "harv_days_since_plateau_start",
+      "kind": "relative",
+      "unit": "days"
+    },
+    {
+      "name": "harv_decline_days",
+      "kind": "relative",
+      "unit": "days"
+    },
+    {
+      "name": "pre_ndvi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "pre_ndmi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "pre_evi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "pre_nbr",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "pre_ndre",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "pre_psri",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "pre_ndti",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "pre_b11",
+      "kind": "neutral",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "pre_b12",
+      "kind": "neutral",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "pre_ndvi_frac",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "pre_ndmi_rel",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "pre_ndre_frac",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "pre_b11_ratio",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "sen_ndvi_slope",
+      "kind": "neutral",
+      "unit": "index units per day"
+    },
+    {
+      "name": "sen_ndmi_slope",
+      "kind": "neutral",
+      "unit": "index units per day"
+    },
+    {
+      "name": "sen_psri_slope",
+      "kind": "neutral",
+      "unit": "index units per day"
+    },
+    {
+      "name": "sen_ndvi_slope_rel",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "gi_rel_after_peak",
+      "kind": "relative",
+      "unit": "index x days (integral)"
+    },
+    {
+      "name": "post_ndvi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_ndmi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_nbr",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_psri",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_ndti",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_b11",
+      "kind": "neutral",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "post_b12",
+      "kind": "neutral",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "drop_ndvi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "drop_ndvi_frac",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "drop_ndmi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "drop_ndti",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "drop_rate_ndvi",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_regreen_delta",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_regreen_frac",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "post_regreen_flag",
+      "kind": "neutral",
+      "unit": "count or 0/1 flag"
+    },
+    {
+      "name": "pre_ndvi_over_peak",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "pre_ndmi_over_peak",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "pre_ndre_over_peak",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "drop_over_peak",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "drop_rate_over_peak",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "harv_drydown_days",
+      "kind": "relative",
+      "unit": "days"
+    },
+    {
+      "name": "post_ndti_minus_soil",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_bright_minus_soil",
+      "kind": "relative",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "sen_dndmi_over_dndvi",
+      "kind": "relative",
+      "unit": "ratio (field relative to itself)"
+    },
+    {
+      "name": "sen_dndmi_minus_dndvi",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "post_bright",
+      "kind": "neutral",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "soil_ndti",
+      "kind": "neutral",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "soil_bright",
+      "kind": "neutral",
+      "unit": "surface reflectance 0-1"
+    },
+    {
+      "name": "rel_ndvi_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvi_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndmi_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_evi_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_nbr_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndre_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_psri_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndti_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_m030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_m015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p000",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p015",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p030",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p045",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p060",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p075",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p090",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    },
+    {
+      "name": "rel_ndvifrac_p105",
+      "kind": "relative",
+      "unit": "normalised index, unitless (-1..1)"
+    }
+  ],
+  "gaps": "missing values stay NaN; LightGBM sends them down the branch learned for missing values in training"
+}

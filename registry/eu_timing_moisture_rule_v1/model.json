@@ -1,0 +1,33 @@
+{
+  "name": "eu_timing_moisture_rule_v1",
+  "description": "Timing + moisture rule: silage if the drop comes soon enough after the field's own peak OR the canopy is still wet just before it; thresholds fitted on Austria 2024 only",
+  "class": "RuleModel",
+  "positive_class": "silage",
+  "decision": "silage if p_silage >= threshold",
+  "threshold": 0.5,
+  "features": [
+    "harv_days_since_peak",
+    "pre_ndmi"
+  ],
+  "probability": "Platt-calibrated for a 50/50 training class balance",
+  "platt": {
+    "a": 0.603753250731123,
+    "b": 0.11564149342334222
+  },
+  "rule": {
+    "timing": "harv_days_since_peak",
+    "moisture": "pre_ndmi",
+    "min_gain": 0.01,
+    "name": "rule",
+    "mode_": "or",
+    "t_time_": 26.74799999999999,
+    "t_moist_": 0.21288017214855265,
+    "scale_time_": 19.27353595255745,
+    "scale_moist_": 0.20197396666098835,
+    "p_missing_": 0.4583333333333333,
+    "prevalence_": 0.5,
+    "threshold": 0.5
+  },
+  "rule_text": "silage if harv_days_since_peak <= 26.7 OR pre_ndmi >= 0.213; no harvest detected -> score 0.46",
+  "effective_rule": "silage if harv_days_since_peak <= 28.6 (OR pre_ndmi test as in rule)"
+}

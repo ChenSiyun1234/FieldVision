@@ -1,0 +1,52 @@
+{
+  "name": "eu2_gbm_thin_v1",
+  "exported": "2026-11-14T18:39:39",
+  "training_run": "data/model/runs/eu_all_gbm_thin",
+  "run_id": "341a9a0d1cef",
+  "trained": "2026-11-14T18:39:09",
+  "frozen_model_id": "be7191650edaca57",
+  "git_commit_of_training_code": "90c9734",
+  "training_data": [
+    {
+      "path": "data/labels/at_2022/fields.geojson",
+      "sha256": "3d2051ded44565f81d93509ad4be0ae5a218e1c5a0e424c9b9e76d0f0b6c0b8c"
+    },
+    {
+      "path": "data/labels/at_2023/fields.geojson",
+      "sha256": "9b4c8040c752e96e873552980fa5eb8517814e0d3aaf60fc69d41d8ba8d55ee7"
+    },
+    {
+      "path": "data/labels/at_2024/fields.geojson",
+      "sha256": "ed883231287f186c71c58d6becabb8f6b06ae237c979761d0a7458ce0534de7e"
+    },
+    {
+      "path": "data/labels/fr_2022/fields.geojson",
+      "sha256": "5bf6393821c345b696005fbf1eabdf5054aa30f1c83e9089d472c6209d7bc4ce"
+    },
+    {
+      "path": "data/labels/nl_2025/fields.geojson",
+      "sha256": "9b83ba3028e17506feb5b89d38e254a76c9309889709321e81b18eef814a4728"
+    },
+    {
+      "path": "data/timeseries/at_2022/timeseries.parquet",
+      "sha256": "3d146a84a1909daecbdd6607a478fca2b921cc0a447b2430b09988ac24b4cdfb"
+    },
+    {
+      "path": "data/timeseries/at_2023/timeseries.parquet",
+      "sha256": "83165604e3360b35c806b4a2e8139c0722024e589a1bf864809bb3994695bf27"
+    },
+    {
+      "path": "data/timeseries/at_2024/timeseries.parquet",
+      "sha256": "002f4a449bd9a70f593349d16c96b7642748dd9c5ab38229f98ee4844153ef07"
+    },
+    {
+      "path": "data/timeseries/fr_2022/timeseries.parquet",
+      "sha256": "66aa52b6054226553ae5bd05665cf42b9c4b2bf0b82925d4a1d5ad18d8ae992e"
+    },
+    {
+      "path": "data/timeseries/nl_2025/timeseries.parquet",
+      "sha256": "efbd4232617d30dedc8df6e23ead515c69a333b8e6e68d1347c7fd312c9229de"
+    }
+  ],
+  "training_command": "python -m fieldvision.foundation.augment_train --timeseries data/timeseries/at_2022/timeseries.parquet data/timeseries/at_2023/timeseries.parquet data/timeseries/at_2024/timeseries.parquet data/timeseries/fr_2022/timeseries.parquet data/timeseries/nl_2025/timeseries.parquet --fields data/labels/at_2022/fields.geojson data/labels/at_2023/fields.geojson data/labels/at_2024/fields.geojson data/labels/fr_2022/fields.geojson data/labels/nl_2025/fields.geojson --out data/model/runs/eu_all_gbm_thin"
+}

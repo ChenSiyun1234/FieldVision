@@ -1,0 +1,58 @@
+{
+  "frederick_silage_clear": {
+    "field_id": "csb-241825009415137",
+    "fips": "24021",
+    "label": "silage",
+    "abstain": false,
+    "evidence_tier": "clear",
+    "drop_date": "2022-09-02",
+    "last_standing_date": "2022-08-31",
+    "area_ha": 4.293550226784817,
+    "p_silage": 0.5388,
+    "n_usable_dates": 33,
+    "group_size": 232,
+    "group_median_area_ha": 4.29
+  },
+  "frederick_grain_clear": {
+    "field_id": "csb-241825014024676",
+    "fips": "24021",
+    "label": "grain",
+    "abstain": false,
+    "evidence_tier": "clear",
+    "drop_date": "2022-10-07",
+    "last_standing_date": "2022-09-27",
+    "area_ha": 4.661519881129246,
+    "p_silage": 0.4393,
+    "n_usable_dates": 31,
+    "group_size": 1349,
+    "group_median_area_ha": 4.66
+  },
+  "kent_silage_clear_early": {
+    "field_id": "csb-241825009210238",
+    "fips": "24029",
+    "label": "silage",
+    "abstain": false,
+    "evidence_tier": "clear",
+    "drop_date": "2022-09-02",
+    "last_standing_date": "2022-08-23",
+    "area_ha": 7.209325621229049,
+    "p_silage": 0.8402,
+    "n_usable_dates": 17,
+    "group_size": 72,
+    "group_median_area_ha": 6.89
+  },
+  "kent_cloudy_spell": {
+    "field_id": "csb-241825009210577",
+    "fips": "24029",
+    "label": "grain",
+    "abstain": false,
+    "evidence_tier": "wide",
+    "drop_date": "2022-09-17",
+    "last_standing_date": "2022-09-02",
+    "area_ha": 10.822613970636926,
+    "p_silage": 0.3499,
+    "n_usable_dates": 16,
+    "group_size": 587,
+    "group_median_area_ha": 10.82
+  }
+}

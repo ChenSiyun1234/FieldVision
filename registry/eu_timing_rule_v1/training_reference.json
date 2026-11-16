@@ -1,0 +1,6 @@
+{
+  "note": "added after export for the toolbox's regional_threshold policy; not used by the model",
+  "training_median_harv_mid_doy": 252.5,
+  "n_training_fields": 2400,
+  "source": "runs/at2024_full features.parquet, development split"
+}

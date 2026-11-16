@@ -1,0 +1,77 @@
+{
+  "runs": [
+    {
+      "name": "at_2022",
+      "year": 2022,
+      "fields": "fields_at_2022.geojson",
+      "reference": "ref_at_2022.parquet",
+      "n_fields": 601
+    },
+    {
+      "name": "at_2023",
+      "year": 2023,
+      "fields": "fields_at_2023.geojson",
+      "reference": "ref_at_2023.parquet",
+      "n_fields": 592
+    },
+    {
+      "name": "at_2024",
+      "year": 2024,
+      "fields": "fields_at_2024.geojson",
+      "reference": "ref_at_2024.parquet",
+      "n_fields": 636
+    },
+    {
+      "name": "fr_2022",
+      "year": 2022,
+      "fields": "fields_fr_2022.geojson",
+      "reference": "ref_fr_2022.parquet",
+      "n_fields": 1212
+    },
+    {
+      "name": "nl_2025",
+      "year": 2025,
+      "fields": "fields_nl_2025.geojson",
+      "reference": "ref_nl_2025.parquet",
+      "n_fields": 1241
+    },
+    {
+      "name": "barc_2021",
+      "year": 2021,
+      "fields": "fields_barc_2021.geojson",
+      "reference": null,
+      "n_fields": 18
+    },
+    {
+      "name": "barc_2022",
+      "year": 2022,
+      "fields": "fields_barc_2022.geojson",
+      "reference": null,
+      "n_fields": 7
+    },
+    {
+      "name": "barc_2023",
+      "year": 2023,
+      "fields": "fields_barc_2023.geojson",
+      "reference": null,
+      "n_fields": 19
+    }
+  ],
+  "code_zip": "code_stream_efb675be.zip",
+  "code_sha256": "efb675bed75a5acbf046c73b895656a1583b5892969a87862aa23d710a105ee5",
+  "s2_source_sha256": "9cd0447bcc1272bafdfb336059b4d60e2e0b56bd45825a580b410c43db6a0977",
+  "pins": {
+    "numpy": "2.5.4",
+    "pandas": "3.1.1",
+    "pyarrow": "26.0.1",
+    "rasterio": "1.5.2",
+    "shapely": "2.2.0",
+    "pyproj": "3.8.0",
+    "requests": "2.34.2",
+    "urllib3": "2.8.0",
+    "affine": "3.0.1"
+  },
+  "pins_source": "build_colab_bundle.PINS fallback; no restricted template bundle was read",
+  "chip_size": 12,
+  "result_part_mb": 50
+}

@@ -1,0 +1,27 @@
+{
+  "name": "timing_rule_v1",
+  "class": "RuleModel",
+  "positive_class": "silage",
+  "decision": "silage if the rule holds (score >= 0.5)",
+  "threshold": 0.5,
+  "features": [
+    "harv_mid_doy",
+    "pre_ndvi"
+  ],
+  "rule": {
+    "timing": "harv_mid_doy",
+    "moisture": "pre_ndvi",
+    "min_gain": 0.01,
+    "name": "timing_rule_v1",
+    "mode_": "and",
+    "t_time_": 257.5,
+    "t_moist_": 0.7077508732350996,
+    "scale_time_": 10.378057820607857,
+    "scale_moist_": 0.21833173300896733,
+    "p_missing_": 0.2727272727272727,
+    "prevalence_": 0.2727272727272727,
+    "threshold": 0.5
+  },
+  "rule_text": "silage if harv_mid_doy <= 257.5 AND pre_ndvi >= 0.708; no harvest detected -> score 0.27",
+  "probability": "rule margin squashed to 0-1; not a calibrated probability"
+}

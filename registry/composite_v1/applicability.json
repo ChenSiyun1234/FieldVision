@@ -1,0 +1,20 @@
+{
+  "model": "composite_v1",
+  "requires": {
+    "sensors": [
+      "Sentinel-2 L2A surface reflectance, bands B02-B12"
+    ],
+    "optical_clear_obs_in_harvest_window": 1,
+    "clear_obs_before_and_after_drop": true,
+    "min_usable_dates_jul_nov_for_confident": 6,
+    "max_harvest_bracket_days_for_confident": 20.0
+  },
+  "abstains_when": [
+    "low evidence (see the members)",
+    "members disagree strongly"
+  ],
+  "confidence_tier": "medium",
+  "validated_on": [
+    "European data only; not scored on Beltsville before Evaluation 2"
+  ]
+}
