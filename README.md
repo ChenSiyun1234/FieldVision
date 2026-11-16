@@ -273,6 +273,34 @@ guessing, and every number Nemotron writes checked against tool results. The loo
 range, and the reason for each field. Between seasons the **5-day watch loop** (`src/fieldvision_agents/watch/`)
 reruns the agent only when new clear imagery moves the estimate.
 
+### What we learned from each Nemotron model
+
+Measured in our benchmark (`src/fieldvision_agents/benchmark/`, `notebooks/agents/14_benchmark.ipynb`) and in
+the agent runs' audit logs.
+
+| Model | What worked | What did not, at first | What we changed |
+|---|---|---|---|
+| Nemotron 3.5 Lightning (supervisor) | 5/5 routing decisions; 15.3 s per county run | Called tools without saying why; returned empty replies at a 900-token limit; followed an instruction injected into a tool result; picked the policy with the fewest abstentions first; reran a policy it had already used | `reason` is a required argument on every tool; 2,048-token limit; after a critic fail only a rerun or abstain is allowed, enforced in code; prompt rule on the first policy; code refuses a repeat rerun |
+| Nemotron 3 Ultra (explainer and writer) | 5/5 routing, 4/4 evidence Q&A; resisted prompt injection; 0 invented numbers under guardrails | With thinking on, used its whole budget and returned nothing; added numbers not in the evidence in 2 of 8 field reasons; misread a harvest-pace table once; about a minute per report | Thinking off for explanations; every number checked, with a template fallback; the critic's verdict is decided in code and Ultra only explains it; reply cache, and Lightning drafts the Q&A |
+| Nemotron 3.5 Super VL (vision) | Clear before-and-after descriptions in about 6 s per field | Empty replies at a 400-token limit (it reasons for about 570 tokens first); no tool calling; right on 15 of 28 readable labelled fields at 10 m | 2,048-token limit; asks for plain JSON, validated in code; used as visual context, never as the label |
+| Nemotron 3.5 Bolt (benchmarked) | 5/5 routing; fastest at 6.9 s per county run; resisted prompt injection | Without guardrails, once called the pipeline's output "the NASS estimate" | Prompt rule plus a code check that sends the answer back once |
+
+**Access and limits.** Nemotron 3 Super 120B returned 404 on our key, so Ultra runs the critic. No embedding
+model was available, so the RAG index uses local search. A shared free-tier key (about 40 requests a minute) meant
+caching every reply, running counties one at a time, and an offline rule-based agent that calls the same tools.
+
+**Design decisions.**
+- Small model routes, large model explains: Lightning keeps the loop fast, Ultra's quality is worth its time
+  where the wording matters.
+- Code owns every number: Nemotron decides the steps and writes the explanation, and code checks every
+  number it writes.
+- Wake the agent only when it matters: in a 5-day replay of Wyoming County NY 2022 the agent would run 4 times
+  instead of 21.
+
+**Feedback for the Nemotron team:** a thinking budget per call, tool calling in Super VL, and an embedding model
+on the same key.
+
+
 ## Repository map
 
 ```
