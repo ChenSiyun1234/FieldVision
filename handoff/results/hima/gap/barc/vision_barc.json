@@ -1,0 +1,27 @@
+{
+ "fields_with_bracket": 44,
+ "truth_counts": {
+  "grain": 32,
+  "silage": 12
+ },
+ "vision_readable": 28,
+ "vision_correct": 15,
+ "vision_says": {
+  "bare_soil": 16,
+  "unclear": 14,
+  "residue": 12,
+  "green_cover": 2
+ },
+ "vision_by_truth": {
+  "grain": {
+   "grain": 9,
+   "silage": 3
+  },
+  "silage": {
+   "grain": 10,
+   "silage": 6
+  }
+ },
+ "model_correct_same_fields": 42,
+ "errors": 0
+}
