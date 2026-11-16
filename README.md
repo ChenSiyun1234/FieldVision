@@ -244,6 +244,35 @@ every result has **Download PDF**, and **Light/Dark** switches the theme.
 6. **App** (`src/fieldvision_agents/app/`): command line and web app for both roles; the dairy finder runs on the
    recommender (`recommender/`).
 
+### The agentic loop (NVIDIA Nemotron)
+
+![Agent architecture](handoff/figures/results/10_agent_architecture.jpg)
+
+An analyst or dairy owner asks about a county. **Nemotron 3.5 Lightning** is the supervisor: in a
+reason-then-act loop it picks the next tool, reads the result and decides what comes next. Code makes every
+number; Nemotron decides and explains.
+
+| Step | Tool | What it does |
+|---|---|---|
+| 1 | `scout` · `extract_features` | What imagery exists per field (Sentinel-2 + Landsat 8/9), then the harvest features |
+| 2 | `classify` · `aggregate` | The frozen model calls each field or abstains; fields add up to county acres with a range |
+| 3 | `run_critic` | Checks the county share against USDA history; retrieves NASS report passages only when the check fails (agentic RAG) |
+| 4 | `inspect_gaps` | Finds fields hidden by cloud at harvest, scores them by harvest timing with Bayes' rule, warns "likely low" at 20% unjudged |
+| 5 | `recommend_sources` | Silage Match: dairies short on feed matched to nearby standing corn |
+| 6 | report · Q&A | The written report and answers, every number traced to a tool result |
+
+| Model | Role |
+|---|---|
+| Nemotron 3.5 Lightning | Supervisor: picks each step and calls the tools |
+| Nemotron 3 Ultra | Explains the critic's verdict, writes and edits the report, writes a reason for each cloud-hidden field |
+| Nemotron 3.5 Super VL | Looks at a field's last clear image before a cloud gap and the first one after it |
+| Nemotron 3.5 Bolt | Benchmarked for fast Q&A (6.9 s per county run) |
+
+**Guardrails in code:** fixed step order, one rerun, the critic before accept or abstain, abstain instead of
+guessing, and every number Nemotron writes checked against tool results. The loop returns county acres, the
+range, and the reason for each field. Between seasons the **5-day watch loop** (`src/fieldvision_agents/watch/`)
+reruns the agent only when new clear imagery moves the estimate.
+
 ## Repository map
 
 ```
