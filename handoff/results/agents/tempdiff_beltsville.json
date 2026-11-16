@@ -1,0 +1,82 @@
+{
+ "rule": {
+  "name": "tempdiff_us_v1",
+  "date": "09-28",
+  "date_source": "USDA NASS Agricultural Handbook 628 (2010), Maryland: corn silage most active Sep 9-Oct 1, corn grain most active Sep 22-Oct 22; midpoint of the two window middles",
+  "lswi_threshold": 0.05,
+  "threshold_source": "FieldVision features.season bare-soil NDMI level (0.05)",
+  "bin_days": 15,
+  "season": [
+   "04-01",
+   "11-30"
+  ],
+  "whittaker_lambda": 10.0,
+  "max_gap_days": 20
+ },
+ "all": {
+  "n": 44,
+  "silage": 12,
+  "correct": 22,
+  "tp": 5,
+  "fp": 15,
+  "fn": 7,
+  "tn": 17,
+  "silage_precision": 0.25,
+  "silage_recall": 0.417,
+  "fpr": 0.469,
+  "low_evidence": 0,
+  "always_grain_correct": 32,
+  "roc_auc": 0.331
+ },
+ "by_year": {
+  "2021": {
+   "n": 18,
+   "silage": 4,
+   "correct": 5,
+   "tp": 2,
+   "fp": 11,
+   "fn": 2,
+   "tn": 3,
+   "silage_precision": 0.154,
+   "silage_recall": 0.5,
+   "fpr": 0.786,
+   "low_evidence": 0,
+   "always_grain_correct": 14,
+   "roc_auc": 0.125
+  },
+  "2022": {
+   "n": 7,
+   "silage": 4,
+   "correct": 4,
+   "tp": 2,
+   "fp": 1,
+   "fn": 2,
+   "tn": 2,
+   "silage_precision": 0.667,
+   "silage_recall": 0.5,
+   "fpr": 0.333,
+   "low_evidence": 0,
+   "always_grain_correct": 3,
+   "roc_auc": 0.583
+  },
+  "2023": {
+   "n": 19,
+   "silage": 4,
+   "correct": 13,
+   "tp": 1,
+   "fp": 3,
+   "fn": 3,
+   "tn": 12,
+   "silage_precision": 0.25,
+   "silage_recall": 0.25,
+   "fpr": 0.2,
+   "low_evidence": 0,
+   "always_grain_correct": 15,
+   "roc_auc": 0.267
+  }
+ },
+ "comparison_from_model_cards": {
+  "eu_logistic_v1": "42 of 44 (zero-shot)",
+  "eu_timing_rule_v1": "38 of 44 (zero-shot)"
+ }
+}

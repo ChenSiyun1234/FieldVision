@@ -1,0 +1,120 @@
+{
+ "leave_one_year_out_2001_2024": [
+  {
+   "model": "no_change",
+   "mae_pct": 15.9,
+   "direction_right": 1,
+   "years": 24
+  },
+  {
+   "model": "supply",
+   "mae_pct": 17.1,
+   "direction_right": 14,
+   "years": 24
+  },
+  {
+   "model": "stocks",
+   "mae_pct": 22.7,
+   "direction_right": 19,
+   "years": 24
+  },
+  {
+   "model": "stocks_prev",
+   "mae_pct": 14.4,
+   "direction_right": 19,
+   "years": 24
+  }
+ ],
+ "test_2025": {
+  "no_change": {
+   "predicted": 4.24,
+   "actual": 4.16,
+   "error_pct": 1.9
+  },
+  "supply": {
+   "predicted": 4.01,
+   "actual": 4.16,
+   "error_pct": -3.5
+  },
+  "stocks": {
+   "predicted": 3.48,
+   "actual": 4.16,
+   "error_pct": -16.4
+  },
+  "stocks_prev": {
+   "predicted": 3.96,
+   "actual": 4.16,
+   "error_pct": -4.8
+  }
+ },
+ "coefficients": {
+  "supply": {
+   "intercept": 0.048,
+   "dlog_prod": -0.787
+  },
+  "stocks": {
+   "intercept": -0.794,
+   "log_stu": -0.991
+  },
+  "stocks_prev": {
+   "intercept": -0.605,
+   "log_stu": -0.541,
+   "log_price_prev": 0.601
+  }
+ },
+ "silage_plus_1pt_2025": {
+  "supply": {
+   "acres": 971350,
+   "grain_bushels": -181156775,
+   "price_change_pct": 0.85
+  },
+  "stocks": {
+   "acres": 971350,
+   "grain_bushels": -181156775,
+   "price_change_pct": 9.38
+  },
+  "stocks_prev": {
+   "acres": 971350,
+   "grain_bushels": -181156775,
+   "price_change_pct": 5.01
+  }
+ },
+ "stocks_to_use_2025": 0.128,
+ "our_four_states_2025": {
+  "silage_acres_ours_minus_usda": 301000,
+  "states": [
+   {
+    "state": "PA",
+    "model_silage_acres": 82000,
+    "usda_2025_silage_acres": 315000
+   },
+   {
+    "state": "WI",
+    "model_silage_acres": 1139000,
+    "usda_2025_silage_acres": 885000
+   },
+   {
+    "state": "IA",
+    "model_silage_acres": 661000,
+    "usda_2025_silage_acres": 250000
+   },
+   {
+    "state": "NE",
+    "model_silage_acres": 89000,
+    "usda_2025_silage_acres": 220000
+   }
+  ],
+  "supply": {
+   "grain_bushels": -56136500,
+   "price_change_pct": 0.26
+  },
+  "stocks": {
+   "grain_bushels": -56136500,
+   "price_change_pct": 2.73
+  },
+  "stocks_prev": {
+   "grain_bushels": -56136500,
+   "price_change_pct": 1.48
+  }
+ }
+}

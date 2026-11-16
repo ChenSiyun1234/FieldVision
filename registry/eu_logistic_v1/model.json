@@ -1,0 +1,21 @@
+{
+  "name": "eu_logistic_v1",
+  "description": "Six-feature logistic regression (timing, dry-down, pre-harvest greenness and moisture, slope, residue), Platt-calibrated, trained on Austria 2024 registry labels",
+  "class": "LogisticModel",
+  "positive_class": "silage",
+  "decision": "silage if p_silage >= threshold",
+  "threshold": 0.5,
+  "features": [
+    "harv_days_since_peak",
+    "harv_decline_days",
+    "pre_ndvi_frac",
+    "pre_ndmi",
+    "sen_ndvi_slope_rel",
+    "post_ndti"
+  ],
+  "probability": "Platt-calibrated for a 50/50 training class balance",
+  "platt": {
+    "a": 0.9425345746427715,
+    "b": -0.03867520053916949
+  }
+}

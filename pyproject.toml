@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fieldvision"
+version = "0.1.0"
+requires-python = ">=3.10"
+dependencies = [
+    "requests",
+    "numpy",
+    "pandas",
+    "geopandas",
+    "pyogrio",
+    "shapely>=2",
+    "pyproj",
+    "pyarrow",
+    "matplotlib",
+    "rasterio",
+    "scipy",
+    "scikit-learn",
+    "lightgbm",
+    "tabulate",
+]
+
+[project.optional-dependencies]
+# Only needed for the pretrained time-series model comparison in src/fieldvision/foundation.
+foundation = ["torch", "einops"]
+# The Nemotron agents (src/fieldvision_agents), the analyst console and the recommender.
+agents = ["openai", "fastapi", "uvicorn", "networkx", "ipywidgets"]
+# Embedding search over the NASS report index, and rebuilding it from PDFs. Without it the console
+# uses keyword search over the same passages. Pulls in torch (about 1 GB).
+rag = ["sentence-transformers", "pymupdf"]
+dev = ["pytest"]
+
+[project.scripts]
+fieldvision = "fieldvision_agents.app.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+fieldvision_agents = ["app/static/*", "market/data/*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]

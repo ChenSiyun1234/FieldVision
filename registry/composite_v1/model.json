@@ -1,0 +1,104 @@
+{
+  "name": "composite_v1",
+  "class": "CompositeModel",
+  "positive_class": "silage",
+  "decision": "silage if the mean of the members' calibrated probabilities >= 0.5",
+  "threshold": 0.5,
+  "members": {
+    "timing_rule": {
+      "name": "timing_rule",
+      "description": "",
+      "class": "RuleModel",
+      "positive_class": "silage",
+      "decision": "silage if p_silage >= threshold",
+      "threshold": 0.5,
+      "features": [
+        "harv_mid_doy",
+        "pre_ndmi"
+      ],
+      "probability": "Platt-calibrated for a 50/50 training class balance",
+      "platt": {
+        "a": 0.19459550095053268,
+        "b": 0.15098335316406647
+      },
+      "rule": {
+        "timing": "harv_mid_doy",
+        "moisture": "pre_ndmi",
+        "min_gain": null,
+        "name": "timing_rule",
+        "mode_": "timing_only",
+        "t_time_": 251.5,
+        "t_moist_": null,
+        "scale_time_": 11.11934766493699,
+        "scale_moist_": 0.20197396666098835,
+        "p_missing_": 0.4583333333333333,
+        "prevalence_": 0.5,
+        "threshold": 0.5
+      },
+      "rule_text": "silage if harv_mid_doy <= 251.5; no harvest detected -> score 0.46",
+      "effective_rule": "silage if harv_mid_doy <= 255.8"
+    },
+    "rule": {
+      "name": "rule",
+      "description": "",
+      "class": "RuleModel",
+      "positive_class": "silage",
+      "decision": "silage if p_silage >= threshold",
+      "threshold": 0.5,
+      "features": [
+        "harv_days_since_peak",
+        "pre_ndmi"
+      ],
+      "probability": "Platt-calibrated for a 50/50 training class balance",
+      "platt": {
+        "a": 0.603753250731123,
+        "b": 0.11564149342334222
+      },
+      "rule": {
+        "timing": "harv_days_since_peak",
+        "moisture": "pre_ndmi",
+        "min_gain": 0.01,
+        "name": "rule",
+        "mode_": "or",
+        "t_time_": 26.74799999999999,
+        "t_moist_": 0.21288017214855265,
+        "scale_time_": 19.27353595255745,
+        "scale_moist_": 0.20197396666098835,
+        "p_missing_": 0.4583333333333333,
+        "prevalence_": 0.5,
+        "threshold": 0.5
+      },
+      "rule_text": "silage if harv_days_since_peak <= 26.7 OR pre_ndmi >= 0.213; no harvest detected -> score 0.46",
+      "effective_rule": "silage if harv_days_since_peak <= 28.6 (OR pre_ndmi test as in rule)"
+    },
+    "logistic": {
+      "name": "logistic",
+      "description": "",
+      "class": "LogisticModel",
+      "positive_class": "silage",
+      "decision": "silage if p_silage >= threshold",
+      "threshold": 0.5,
+      "features": [
+        "harv_days_since_peak",
+        "harv_decline_days",
+        "pre_ndvi_frac",
+        "pre_ndmi",
+        "sen_ndvi_slope_rel",
+        "post_ndti"
+      ],
+      "probability": "Platt-calibrated for a 50/50 training class balance",
+      "platt": {
+        "a": 0.9425345746427715,
+        "b": -0.03867520053916949
+      }
+    }
+  },
+  "member_frozen_ids": {
+    "timing_rule": "dd9379ee699047de",
+    "rule": "987eec2c7acf3e5e",
+    "logistic": "40236202627a4344"
+  },
+  "abstain": "low evidence, or members split their votes with probabilities at least 0.5 apart",
+  "spread_limit": 0.5,
+  "why_mean_not_vote": "Austria 2024 spatial CV: ROC-AUC 0.766 for the mean vs 0.739 for a majority vote"
+}

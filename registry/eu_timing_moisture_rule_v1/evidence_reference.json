@@ -1,0 +1,26 @@
+{
+  "note": "added after export: class medians of the evidence features on the training fields, used only to write explanation sentences; the model does not read this file",
+  "evidence_reference": {
+    "harv_days_since_peak": {
+      "silage": 46.5,
+      "grain": 55.5
+    },
+    "sen_ndvi_slope_rel": {
+      "silage": -0.0049223056600217665,
+      "grain": -0.014020304745214067
+    },
+    "pre_ndvi_frac": {
+      "silage": 0.8324533568017808,
+      "grain": 0.5249964117217253
+    },
+    "pre_ndmi": {
+      "silage": 0.316326555041028,
+      "grain": 0.11746919184087841
+    },
+    "post_ndti": {
+      "silage": 0.1375101506837653,
+      "grain": 0.15980781610367145
+    }
+  },
+  "source_run_id": "24500e02a9e0"
+}

@@ -146,7 +146,8 @@ def critic_checks(fips: str, year: int, agg: dict, policy: str | None,
     if total > 0:
         a_share = abstained / total
         checks.append({"check": "abstained_share", "status": "warn" if a_share > ABSTAIN_WARN_SHARE else "pass",
-                       "observed": round(a_share, 4), "limit": ABSTAIN_WARN_SHARE})
+                       "observed": round(a_share, 4), "limit": ABSTAIN_WARN_SHARE,
+                       "why": f"Abstained share of acres {a_share:.1%} against a {ABSTAIN_WARN_SHARE:.0%} limit."})
 
     # 3. is the county result resting on enough fields
     if n_fields < MIN_FIELDS_FOR_COUNTY_CHECK:

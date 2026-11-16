@@ -1,15 +1,15 @@
 """recommend_sources inside the supervisor loop, with the team's stub toolbox and a scripted LLM.
 
-Run in the workspace terminal:  cd /workspace && python3 FieldVision/recommender/tests/test_supervisor_recommend.py
+Run from the repository root:  python recommender/tests/test_supervisor_recommend.py
 """
 import sys
 import tempfile
 from pathlib import Path
 
-sys.path[:0] = ["/workspace", "/workspace/FieldVision/.deps"]
-from agents.react.supervisor import run_county  # noqa: E402
-from agents.react.test_supervisor import ScriptedLLM, call, last_tool_result, summary_from_aggregate  # noqa: E402
-from agents.react.tools_stub import StubToolbox  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
+from fieldvision_agents.react.supervisor import run_county  # noqa: E402
+from fieldvision_agents.react.test_supervisor import ScriptedLLM, call, last_tool_result, summary_from_aggregate  # noqa: E402
+from fieldvision_agents.react.tools_stub import StubToolbox  # noqa: E402
 
 FIPS, YEAR = "24021", 2022
 seen = {}

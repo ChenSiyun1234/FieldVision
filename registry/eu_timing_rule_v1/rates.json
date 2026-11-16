@@ -1,0 +1,42 @@
+{
+  "note": "true/false positive rates of this model family on held-out European fields it did not abstain on (no US labels); added after export, not read by the model",
+  "primary": "at2024:spatial",
+  "sets": {
+    "at2024:spatial": {
+      "tp": 590,
+      "fp": 296,
+      "fn": 235,
+      "tn": 485,
+      "n": 1606,
+      "tpr": 0.7151515151515152,
+      "fpr": 0.37900128040973113
+    },
+    "at2022_2024:loyo:2022": {
+      "tp": 168,
+      "fp": 54,
+      "fn": 132,
+      "tn": 194,
+      "n": 548,
+      "tpr": 0.56,
+      "fpr": 0.21774193548387097
+    },
+    "at2022_2024:loyo:2024": {
+      "tp": 709,
+      "fp": 568,
+      "fn": 116,
+      "tn": 213,
+      "n": 1606,
+      "tpr": 0.8593939393939394,
+      "fpr": 0.7272727272727273
+    },
+    "at2022_2024:spatial": {
+      "tp": 776,
+      "fp": 371,
+      "fn": 349,
+      "tn": 658,
+      "n": 2154,
+      "tpr": 0.6897777777777778,
+      "fpr": 0.36054421768707484
+    }
+  }
+}
