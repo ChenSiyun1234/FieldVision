@@ -117,6 +117,7 @@ class RunState:
         self.available_policies = None  # set from route_options; None means the default POLICIES
         self.finished = None
         self.recommended = False       # recommend_sources runs at most once
+        self.gaps_inspected = False    # inspect_gaps runs at most once
         self.tool_numbers = set()      # every number seen in tool args and results
 
     def rerun_allowed_policy(self):
@@ -238,6 +239,12 @@ def _dispatch(name, args, toolbox, state):
         result = toolbox.run_critic(fips, year)
         state.critic_results.append(result)
         state.critic_on_latest = True
+        if result.get("overall") != "pass" and not state.gaps_inspected and hasattr(toolbox, "inspect_gaps"):
+            # a share outside the county's history is often a cloud gap over the silage harvest:
+            # look before deciding, so the reason given to the analyst names the cause
+            result = {**result, "gap_hint": "Before you rerun, abstain or finish, call inspect_gaps with "
+                      "vision_fields 6 to see whether cloud hid the harvest. Quote its gap dates and range "
+                      "in your reason or summary, copied exactly."}
         if result.get("suggested_action") != "accept" and len(state.classify_runs) >= 2:
             result = {**result, "note": "Rerun already used. Call abstain_region" +
                       ("." if result.get("overall") == "fail" else ", or finish with a warning status.")}
@@ -252,6 +259,20 @@ def _dispatch(name, args, toolbox, state):
         state.abstain_reason = args["reason"]
         return {**toolbox.abstain_region(fips, year, args["reason"]),
                 "next": "Call finish with status 'abstained' and a short summary."}
+
+    if name == "inspect_gaps":
+        if not state.classify_runs:
+            return {"error": "Call classify first."}
+        if state.gaps_inspected:
+            return {"error": "inspect_gaps already ran in this run."}
+        if not hasattr(toolbox, "inspect_gaps"):
+            return {"error": "This toolbox has no inspect_gaps tool; skip it."}
+        state.gaps_inspected = True
+        try:
+            n = max(0, min(int(args.get("vision_fields") or 0), 12))
+        except (TypeError, ValueError):
+            n = 0
+        return toolbox.inspect_gaps(fips, year, vision_fields=n)
 
     if name == "recommend_sources":
         if not state.critic_on_latest:

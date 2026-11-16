@@ -23,6 +23,13 @@ Steps:
    then aggregate and run_critic again. Never more than one rerun.
    If the implied policy is the one you already used, do not rerun: finish with accepted_with_warnings or abstain.
 6. If the critic does not accept after the rerun, or the data is too poor, call abstain_region.
+   Optional: after classify, you may call inspect_gaps once. It shows how many fields the model could not
+   judge because cloud hid the harvest, the dates of the main cloud gap, and the range the county share
+   could take. Set vision_fields (up to 12) to have the vision model look at before and after images of
+   some of those fields. It never changes the county estimate. If it reports cloud_gap_at_harvest true,
+   add one sentence to the summary with the gap dates and the range, copied exactly.
+   If it reports reads_low_warning true, say that the estimate likely reads low and give
+   not_judged_share_of_corn_pct and silage_share_if_all_not_judged_were_silage_pct, copied exactly.
    Optional: after a run_critic result that is not "fail", you may call recommend_sources once. It matches
    dairies short on silage with standing grain-bound fields nearby. It never changes the county estimate.
    If you call it, add one sentence to the summary with its matched tons, copied exactly.
@@ -79,6 +86,14 @@ TOOL_SPECS = [
           "Check the latest county result against QuickStats history (excluding this year), planted acres "
           "and dairy density. Returns overall pass/warn/fail and a suggested_action.",
           _COUNTY, ["fips", "year"]),
+    _tool("inspect_gaps",
+          "Optional, after classify: count the fields the model could not judge because cloud hid the harvest, "
+          "name the main cloud gap, and give the range of the county silage share. With vision_fields, the "
+          "vision model looks at before and after images of that many of those fields. "
+          "Does not change the county estimate.",
+          {**_COUNTY,
+           "vision_fields": {"type": "integer", "description": "0 to 12 fields to show the vision model; default 0"}},
+          ["fips", "year"]),
     _tool("recommend_sources",
           "Optional, after run_critic (not fail): match dairies that are short on silage with nearby standing "
           "corn fields predicted grain-bound, as of a date. Returns matched tons per dairy, prices and checks. "
