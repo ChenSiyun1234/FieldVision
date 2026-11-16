@@ -39,18 +39,7 @@ Every figure the system produces is a **model estimate, not a NASS statistic**.
 | Sentinel-1 radar replay (France, 3-5 week optical gap) | recall **0.33 → 0.54** |
 | Nemotron agents | 5/5 routing, 4/4 Q&A, **0 unsupported numbers** |
 
-- [The classification model](#the-classification-model)
-- [What it does](#what-it-does)
-- [Results](#results)
-- [Results slides](#results-slides)
-- [Quick start](#quick-start)
-- [How it works](#how-it-works)
-- [Repository map](#repository-map)
-- [Data](#data)
-- [Reproduce the main results](#reproduce-the-main-results)
-- [Tests](#tests)
-- [Known limits](#known-limits)
-- [Working together](#working-together)
+[Model](#the-classification-model) · [What it does](#what-it-does) · [Results](#results) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Repository map](#repository-map) · [Data](#data) · [Reproduce](#reproduce-the-main-results) · [Tests](#tests) · [Known limits](#known-limits)
 
 ## The classification model
 
@@ -58,43 +47,37 @@ I built the part that makes the field-by-field call and turns it into county and
 
 ![From a corn parcel to a silage-area estimate](docs/readme/01_pipeline.png)
 
-### What I decided, and why
+| | What I did | Why |
+|---|---|---|
+| **Data** | A Sentinel-2 time series for every USDA Crop Sequence Boundaries field, extracted on Google Colab the same way everywhere. Landsat 8/9 came later as a second satellite. | Cloud gaps stop hiding the harvest, and a result in one county means the same thing in another. |
+| **Training set** | 8,000 labelled fields from Austria, France and the Netherlands. The model never sees a US label. | Only 44 US field-years carry labels: too few to train on and too valuable to spend. |
+| **Model** | A logistic regression on six crop-timing features: greenness and moisture before the cut, how fast the field dries, days from peak to cut, and the stubble afterwards. I also tried boosted trees on 135 features, a composite, a timing rule and a sequence model. | I picked by a rule written down first: best mean ROC-AUC with a whole country held out. A gap smaller than the spread across held-out groups goes to the simpler model. |
+| **Evidence tiers** | A call counts toward a total only when two clear looks around the cut are at most 12 days apart. Fields with wide or no evidence are reported separately, with the area the model could not see. | A total that hides what it did not see would look better and mean less. |
+| **Totals** | Field calls add up to county and state silage shares, area-weighted, with a sampling range. | The range shows how far each share can be trusted. |
+| **Validation** | For every test I wrote the rule, the pass mark and my own prediction before opening the data, and ran it once. | Failures stay in the record: the first county method failed on Kent County, and Pennsylvania 2025 failed the final checks. |
+| **Hand-over** | One Python interface, `fieldvision.toolbox.Toolbox`, with [`HANDOFF.md`](HANDOFF.md), a results document and a slide deck. | The rest of the system calls the model through it. |
 
-1. **Data.** Field outlines come from USDA Crop Sequence Boundaries. For every field I extract a Sentinel-2 time series on Google Colab, and later add Landsat 8/9 as a second satellite so cloud gaps stop hiding the harvest. The extraction is identical across places, so a result in one county means the same thing in another.
-2. **Training set.** Only 44 field-years in the US carry labels, too few to train on and too valuable to spend. I trained on 8,000 labelled fields from Austria, France and the Netherlands and kept every US label for testing. The model never sees a US label.
-3. **Model.** Six crop-timing features per field: greenness and moisture before the cut, how fast the field dries, days from peak to cut, and what the stubble looks like afterwards. I fit a logistic regression. I also tried boosted trees on 135 features, a composite, a timing rule and a sequence model, and picked the final one by a rule I wrote down before computing it: the best mean ROC-AUC when a whole country is held out. A difference smaller than the spread across held-out groups goes to the simpler model.
-4. **Evidence tiers.** A field's call only counts toward a total when two clear looks around the cut are at most 12 days apart. Every field still keeps a call, but fields with wide or no evidence are reported separately, along with how much area the model could not see. A total that hides what it did not see would look better and mean less.
-5. **Totals.** I add the field calls into county and state silage shares, area-weighted, with a sampling range.
-6. **Validation.** For every test I wrote the rule, the pass mark and my own prediction before opening the data, and ran each test once. Failures stay in the record: the first county method failed on Kent County, and Pennsylvania 2025 failed the final checks.
-7. **Hand-over.** The model ships as one Python interface, `fieldvision.toolbox.Toolbox`, with a hand-over page ([`HANDOFF.md`](HANDOFF.md)), a results document and a slide deck.
+| | |
+|---|---|
+| ![The six features and their weights](docs/readme/02_features.png) | ![Transfer to a new country and to labelled US fields](docs/readme/03_validation.png) |
+| ![Confusion matrix on 44 labelled US field-years](docs/readme/04_confusion.png) | ![Five clean checks against USDA](docs/readme/05_nass_comparison.png) |
 
-![The six features and their weights](docs/readme/02_features.png)
+**42 of 44 fields.** On the organisers' 44 labelled Beltsville field-years, scored once, the model gets 42 right: 11 of 12 silage fields found, one false alarm. A rule that always says "grain" gets 32.
 
-![Transfer to a new country and to labelled US fields](docs/readme/03_validation.png)
+**Four of five checks within 5 points.** Michigan 2025, New York 2025, Lancaster County 2023 and Wisconsin 2025 land within 5 points of USDA. Wisconsin passes by 0.02 points and its own guard flags it as unreliable. Pennsylvania 2025 misses by 17.6 points. I kept that in the README because the fix is not a tuning knob: dairy country with long cloud gaps at harvest hides exactly the fields that matter.
 
-### Field level: 42 of 44
+![Commits across the build window](docs/readme/07_timeline.png)
 
-On the organisers' 44 labelled Beltsville field-years, scored once, the model gets 42 right: 11 of 12 silage fields found, one false alarm. A rule that always says "grain" gets 32.
+**22.5 hours.** Of my 271 commits on `main`, 266 fall inside the build window (Nov 14 10:30 to Nov 15 09:00, Pacific time). The labelled milestones come from the evaluation access log, which every scoring and every rule change was written into before the run.
 
-![Confusion matrix on 44 labelled US field-years](docs/readme/04_confusion.png)
-
-### County and state totals: five checks, four within 5 points
-
-![Five clean checks against USDA](docs/readme/05_nass_comparison.png)
-
-Michigan 2025, New York 2025, Lancaster County 2023 and Wisconsin 2025 land within 5 points of USDA. Wisconsin passes by 0.02 points and its own guard flags it as unreliable. Pennsylvania 2025 misses by 17.6 points. I kept that in the README because the fix is not a tuning knob: dairy country with long cloud gaps at harvest hides exactly the fields that matter.
-
-### What helped most
+<details>
+<summary><b>More figures</b>: Landsat as a second satellite, and why the evidence tiers exist</summary>
 
 ![Landsat as a second satellite](docs/readme/06_landsat.png)
 
 ![Why the evidence tiers exist](docs/readme/08_evidence_tiers.png)
 
-### 22.5 hours
-
-![Commits across the build window](docs/readme/07_timeline.png)
-
-Of my 271 commits on `main`, 266 fall inside the build window (Nov 14 10:30 to Nov 15 09:00, Pacific time). The labelled milestones come from the evaluation access log, which every scoring and every rule change was written into before the run.
+</details>
 
 ## What it does
 
@@ -111,7 +94,10 @@ explains it, and code checks every number it writes.
 The figures below come from the logged runs and match the presentation. The full record, with which results were clean tests and
 when each was logged, is in [`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/REPORT.md`](handoff/results/REPORT.md).
 
-### Field level: 44 labelled US field-years (Beltsville, MD, 2021-23)
+Open any line for the tables.
+
+<details>
+<summary><b>Field level: 44 labelled US field-years (Beltsville, MD, 2021-23)</b>: 42 of 44 right, trained with zero US labels</summary>
 
 Trained with **zero US labels** (8,000 labelled European fields from three countries), scored once.
 
@@ -126,7 +112,10 @@ Trained with **zero US labels** (8,000 labelled European fields from three count
 
 For comparison: a larger gradient-boosted model gets 37 of 44, and always saying "grain" gets 32 of 44.
 
-### Clean tests against USDA
+</details>
+
+<details>
+<summary><b>Clean tests against USDA</b>: 4 of 5 within 5 points; Pennsylvania 2025 missed</summary>
 
 Each place was run once, under rules written down before it was opened, with Sentinel-2 and Landsat 8/9.
 Silage share of harvested corn acres; ranges in brackets.
@@ -143,7 +132,10 @@ Silage share of harvested corn acres; ranges in brackets.
 4.75% [3.4, 6.3] against 8.9% (4.2 low); Branch County MI 2022, 2.1% against 1.8% (pass); Gratiot County MI
 2022, 30.0% against 24.2% (pass under its logged rule).
 
-### Earlier state samples: model alone
+</details>
+
+<details>
+<summary><b>Earlier state samples: model alone</b>: 7 states, average gap 2.0 points</summary>
 
 300 fields per state, Sentinel-2, from the runs used while building the method (not clean tests). Within 5
 points of USDA in 7 states:
@@ -159,7 +151,10 @@ points of USDA in 7 states:
 | Wisconsin | 21.6% | 22.2% | 0.6 |
 | **Average** | | | **2.0** |
 
-### Model + USDA history: where images mislead, USDA history steers
+</details>
+
+<details>
+<summary><b>Model + USDA history: where images mislead, USDA history steers</b>: average gap 13.3 → 1.4 points</summary>
 
 Each field's silage probability *p* is adjusted with the state's recent USDA silage share π (2021, 2023, 2024) by
 Bayes' rule, p′ = p·π ÷ (p·π + (1 − p)(1 − π)), and the state estimate is the area-weighted mean of p′. On the
@@ -175,7 +170,10 @@ earlier samples (not clean tests):
 Counting the fields hidden by cloud by the model's own call brings two counties seen while tuning close to the
 Census: Frederick County MD 2022, 19.2% against 19.6%, and Wyoming County NY 2022, 64.9% against 66.7%.
 
-### Cloud gaps: Landsat 8/9 as a second satellite
+</details>
+
+<details>
+<summary><b>Cloud gaps: Landsat 8/9 as a second satellite</b>: hidden fields 217 → 136</summary>
 
 | | Sentinel-2 only | + Landsat 8/9 |
 |---|---|---|
@@ -183,7 +181,10 @@ Census: Frederick County MD 2022, 19.2% against 19.6%, and Wyoming County NY 202
 | Model-alone miss, in points | 3.5 | 2.8 |
 | Iowa silage share (NASS 1.9%) | 6.2% | 2.5% |
 
-### Cloud gaps: Sentinel-1 radar (pilot)
+</details>
+
+<details>
+<summary><b>Cloud gaps: Sentinel-1 radar (pilot)</b>: recall 0.33 → 0.54 in a replay</summary>
 
 Radar sees through cloud, so it can date a harvest the optical pictures missed. In a replay on labelled fields
 (France), where a 3-5 week optical gap was cut out around the harvest, a radar harvest date recovered about half
@@ -201,7 +202,10 @@ the Colab notebooks for Kent County MD 2022 and the Maryland 2025 sample are in
 radar cannot close that gap. The replay's table (`radar_replay.csv`) is not in this repository; the figures above
 are as logged in [`docs/RESULTS.md`](docs/RESULTS.md).
 
-### Corn price scenario
+</details>
+
+<details>
+<summary><b>Corn price scenario</b>: what silage acres do to the grain market</summary>
 
 A ridge regression on USDA stocks-to-use, last year's price and yield (`src/fieldvision_agents/market/`) sizes
 what silage acres do to the grain market: 0.8 points more silage nationally is about 131 million fewer bushels
@@ -209,7 +213,10 @@ of grain a year and 2 to 2.5% on price. Its 2026-28 path ($3.42, $3.06, $2.77) r
 written into the code, and USDA's September 2026 price is $4.81. Use it to size silage's effect, not to call
 next year's price. The agents reach it through the `silage_what_if` tool.
 
-### Agents (Nemotron)
+</details>
+
+<details>
+<summary><b>Agents (Nemotron)</b>: 5/5 routing, 4/4 Q&A, 0 unsupported numbers</summary>
 
 | Correct routing decisions | Evidence Q&A checks | Unsupported numbers after guardrails | County run time |
 |---|---|---|---|
@@ -219,14 +226,20 @@ Failures found and fixed: empty replies from reasoning tokens (larger per-call o
 tried to steer the agent (next steps enforced in code); numbers added by the writer in 2 of 8 reasons (every number
 checked, with a template fallback); vision correct on 15 of 28 at 10 m (used as context, never as the label).
 
-### Where it still reads low
+</details>
+
+<details>
+<summary><b>Where it still reads low</b>: Pennsylvania 2025, and what closes it</summary>
 
 Pennsylvania 2025 is the clean test that missed: 15.2% against NASS's 32.8%. Dairy country with long cloud gaps
 at harvest reads silage low, because the fields the model cannot judge there are mostly silage, and northern silage
 cut after the crop yellows can look like grain. Why, and what closes it:
 [`handoff/results/hima/COMBINED_GAP_FINDINGS.md`](handoff/results/hima/COMBINED_GAP_FINDINGS.md).
 
-### Where each result lives
+</details>
+
+<details>
+<summary><b>Where each result lives</b>: the file behind every number</summary>
 
 | Result | File |
 |---|---|
@@ -239,7 +252,12 @@ cut after the crop yellows can look like grain. Why, and what closes it:
 | Price scenario | `handoff/results/agents/price_impact.json` |
 | Numbers quoted in the talk | [`docs/pitch/pitch_numbers.py`](docs/pitch/pitch_numbers.py) |
 
+</details>
+
 ## Results slides
+
+<details>
+<summary>Show the eight slides</summary>
 
 From the final presentation; the images are in [`handoff/figures/results/`](handoff/figures/results/).
 
@@ -249,6 +267,8 @@ From the final presentation; the images are in [`handoff/figures/results/`](hand
 | ![Counties against USDA](handoff/figures/results/07_counties_vs_usda.jpg) | ![Cloud gaps](handoff/figures/results/08_cloud_gaps.jpg) |
 | ![Field-level test](handoff/figures/results/09_field_level_test.jpg) | ![Agent architecture](handoff/figures/results/10_agent_architecture.jpg) |
 | ![Agent reliability](handoff/figures/results/11_agent_reliability.jpg) | ![Price scenario](handoff/figures/results/14_price_scenario.jpg) |
+
+</details>
 
 ## Quick start
 
@@ -280,6 +300,9 @@ every result has **Download PDF**, and **Light/Dark** switches the theme.
 
 ![Architecture](handoff/figures/architecture.png)
 
+<details>
+<summary><b>The two lanes, step by step</b>: offline (trained once) and online (per county-season)</summary>
+
 **Offline lane (trained once).**
 
 1. **Features** (`src/fieldvision/features/`): each field's Sentinel-2 series, plus Landsat 8/9 where Sentinel-2
@@ -305,7 +328,10 @@ every result has **Download PDF**, and **Light/Dark** switches the theme.
 6. **App** (`src/fieldvision_agents/app/`): command line and web app for both roles; the dairy finder runs on the
    recommender (`recommender/`).
 
-### The agentic loop (NVIDIA Nemotron)
+</details>
+
+<details>
+<summary><b>The agentic loop (NVIDIA Nemotron)</b></summary>
 
 ![Agent architecture](handoff/figures/results/10_agent_architecture.jpg)
 
@@ -334,7 +360,10 @@ guessing, and every number Nemotron writes checked against tool results. The loo
 range, and the reason for each field. Between seasons the **5-day watch loop** (`src/fieldvision_agents/watch/`)
 reruns the agent only when new clear imagery moves the estimate.
 
-### What we learned from each Nemotron model
+</details>
+
+<details>
+<summary><b>What we learned from each Nemotron model</b></summary>
 
 Measured in our benchmark (`src/fieldvision_agents/benchmark/`, `notebooks/agents/14_benchmark.ipynb`) and in
 the agent runs' audit logs.
@@ -361,8 +390,12 @@ caching every reply, running counties one at a time, and an offline rule-based a
 **Feedback for the Nemotron team:** a thinking budget per call, tool calling in Super VL, and an embedding model
 on the same key.
 
+</details>
 
 ## Repository map
+
+<details>
+<summary>Show the repository map</summary>
 
 ```
 FieldVision/
@@ -408,7 +441,12 @@ FieldVision/
 | See what was tried, including what failed | [`docs/log.md`](docs/log.md) |
 | Present it | [`handoff/presentation/FieldVision.pdf`](handoff/presentation/FieldVision.pdf) |
 
+</details>
+
 ## Data
+
+<details>
+<summary>Show data sources and layout</summary>
 
 All public. Nothing large is in git.
 
@@ -429,7 +467,12 @@ County data for the agent goes in `data/counties/<fips>/<year>/` (`fields.geojso
 with `python scripts/colab_to_county.py <extract_dir> <year>`; pull Landsat with
 `python -m fieldvision.ls.extract --fields data/counties/<fips>/<year>/fields.geojson --year <year> --out <dir>`.
 
+</details>
+
 ## Reproduce the main results
+
+<details>
+<summary>Show the commands</summary>
 
 | Result | How |
 |---|---|
@@ -440,6 +483,8 @@ with `python scripts/colab_to_county.py <extract_dir> <year>`; pull Landsat with
 | Gap table and 5-day replay | `python -m fieldvision_agents.gap.gap <fips> <year> --data data/counties`, `python -m fieldvision_agents.watch.watch <fips> <year> --data data/counties` (guides in their folders) |
 | Price models | `src/fieldvision_agents/market/README.md` before quoting any number |
 | Many counties on a server | `python scripts/pod_batch_counties.py list --top 50`, then `run <extract_root> <year>` |
+
+</details>
 
 ## Tests
 
