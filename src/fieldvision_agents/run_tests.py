@@ -25,6 +25,7 @@ TEST_MODULES = [
     "fieldvision_agents.app.test_app",
     "fieldvision_agents.gap.test_gap",
     "fieldvision_agents.gap.test_gap_tool",
+    "fieldvision_agents.watch.test_watch",
 ]
 
 
