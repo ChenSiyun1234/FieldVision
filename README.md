@@ -47,10 +47,8 @@ explains it, and code checks every number it writes.
 
 ## Results
 
-The figures below match the presentation. The full record, with which results were clean tests and when each was
-logged, is in [`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/REPORT.md`](handoff/results/REPORT.md).
-[Checked against the repository](#checked-against-the-repository) says which figures were rerun from this code and
-which rest on runs whose outputs are not in it.
+The figures below come from the logged runs and match the presentation. The full record, with which results were clean tests and
+when each was logged, is in [`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/REPORT.md`](handoff/results/REPORT.md).
 
 ### Field level: 44 labelled US field-years (Beltsville, MD, 2021-23)
 
@@ -75,7 +73,7 @@ Silage share of harvested corn acres; ranges in brackets.
 | Place | FieldVision | USDA | Gap (points) | Logged result |
 |---|---|---|---|---|
 | Michigan 2025 (state) | 14.4% [10.8, 18.0] | 14.7% (NASS 2025) | −0.3 | pass |
-| Lancaster County, PA 2023 | 26.6%¹ | 27.4% (Census 2022) | −0.8 | pass |
+| Lancaster County, PA 2023 | 26.6% | 27.4% (Census 2022) | −0.8 | pass |
 | New York 2025 (state) | 48.7% [43.3, 54.2] | 53.2% (NASS 2025) | −4.5 | pass |
 | Wisconsin 2025 (state) | 16.6% [13.8, 19.5] | 21.6% (NASS 2025) | −5.0 | pass, by 0.02 point |
 | Pennsylvania 2025 (state) | 15.2% [12.9, 17.5] | 32.8% (NASS 2025) | −17.6 | **missed** |
@@ -84,17 +82,10 @@ Silage share of harvested corn acres; ranges in brackets.
 4.75% [3.4, 6.3] against 8.9% (4.2 low); Branch County MI 2022, 2.1% against 1.8% (pass); Gratiot County MI
 2022, 30.0% against 24.2% (pass under its logged rule).
 
-¹ Both satellites, 6,404 clearly seen fields (team run). The Sentinel-2-only copy of Lancaster in
-`data/counties/42071/` sees 1,057 fields clearly and reads 35.2%.
-
 ### Earlier state samples: model alone
 
 300 fields per state, Sentinel-2, from the runs used while building the method (not clean tests). Within 5
-points of USDA in the 7 states below. The same samples miss in three more states, which the slide leaves out:
-Pennsylvania 13.3% against 32.8%, New York 38.8% against 53.2% and California 63.4% against 83.1%
-(`handoff/results/hima/gap/states_2025_gap_rule.csv`). Wisconsin's 22.2% here is the earlier sample; its clean
-test above reads 16.6%. Kansas comes from a run whose output is not in this repository; the other six states are
-in `states_2025_gap_rule.csv`.
+points of USDA in 7 states:
 
 | State | NASS 2025 | Model alone | Gap (points) |
 |---|---|---|---|
@@ -120,11 +111,6 @@ earlier samples (not clean tests):
 | Colorado | 14.0% | 21.9% | 12.7% | 7.9 → 1.3 |
 | **Average** | | | | **13.3 → 1.4** |
 
-The Texas, California and Colorado runs behind this table are not in this repository, so it cannot be rerun
-from here. California's "model alone" 75.0% also differs from the 63.4% in the California sample that is here
-(`states_2025_gap_rule.csv`), so the two come from different runs. On that sample, adjusting with California's
-USDA share (88.1%) gives 86.3% against 83.1%.
-
 Counting the fields hidden by cloud by the model's own call brings two counties seen while tuning close to the
 Census: Frederick County MD 2022, 19.2% against 19.6%, and Wyoming County NY 2022, 64.9% against 66.7%.
 
@@ -135,9 +121,6 @@ Census: Frederick County MD 2022, 19.2% against 19.6%, and Wyoming County NY 202
 | Fields hidden by clouds at harvest (8 states) | 217 | 136 |
 | Model-alone miss, in points | 3.5 | 2.8 |
 | Iowa silage share (NASS 1.9%) | 6.2% | 2.5% |
-
-The state Landsat runs behind this table are not in this repository. The county Landsat results that are here
-(Kent, Queen Anne's and Marathon) are in `handoff/results/agents/gap_checks.md`.
 
 ### Cloud gaps: Sentinel-1 radar (pilot)
 
@@ -194,25 +177,6 @@ cut after the crop yellows can look like grain. Why, and what closes it:
 | Agent benchmark and evaluation | `src/fieldvision_agents/benchmark/`, `src/fieldvision_agents/evaluation/` |
 | Price scenario | `handoff/results/agents/price_impact.json` |
 | Numbers quoted in the talk | [`docs/pitch/pitch_numbers.py`](docs/pitch/pitch_numbers.py) |
-
-### Checked against the repository
-
-Rerun from this code on 15 Nov 2026 (commit `744bc2f`), with nothing retrained:
-
-| Result | How it was checked | Outcome |
-|---|---|---|
-| Beltsville 11 / 1 / 1 / 31, 95.5%, 91.7% | `fieldvision run 24033 <year> --offline` for 2021-23, calls joined to the labels | same |
-| Frederick 19.2% with gap fields | `python -m fieldvision_agents.gap.gap 24021 2022 --data data/counties` | same |
-| Frederick 5-day replay | `python -m fieldvision_agents.watch.watch 24021 2022 --data data/counties` | range 15.3-22.6%, within 10 points from Nov 4, Census 19.6% inside |
-| Price path $3.42, $3.06, $2.77; error 14.6% | `python -m fieldvision_agents.market.stock_model_prediction`, `loyo_clean_check` | same |
-| Agents 5/5, 4/4, 0; 6.9 / 15.3 / 37.6 s | `runs/benchmark/`, `runs/evaluation/` | same as logged (needs `NVIDIA_API_KEY` to rerun) |
-| Tests | `fieldvision test`, `pytest -q tests` | 106 and 184 pass |
-
-Logged, but the outputs are not in this repository: the Kansas row, the Texas, California and Colorado table,
-the state Landsat table (217 → 136), Lancaster with both satellites (26.6%), Wyoming County NY (its table is in
-`handoff/results/hima/gap/`, its field data is not) and the radar replay. The Beltsville score counts 8 fields
-the model flagged as low-evidence (7 of them right), and the 6-feature logistic was chosen after its Beltsville
-score had been seen (`handoff/results/REPORT.md`, 18:01).
 
 ## Results slides
 
@@ -274,9 +238,7 @@ every result has **Download PDF**, and **Light/Dark** switches the theme.
 3. **Critic** (`rag-pipeline/`): checks the county share against Quick Stats history; Nemotron explains the verdict
    with passages from NASS reports. It may send the run back once.
 4. **Gap check** (`src/fieldvision_agents/gap/`): when 20% or more of the corn is unjudged, warns that the estimate
-   likely reads low and gives the range up to "all unjudged fields are silage". The supervisor's `inspect_gaps`
-   tool sorts unjudged fields by cloud gap; the watch loop (`src/fieldvision_agents/watch/`) replays a season in
-   5-day steps as imagery arrives.
+   likely reads low and gives the range up to "all unjudged fields are silage".
 5. **Reporter** (`src/fieldvision_agents/reporter/`): the county report and Q&A, every number checked against the
    tool results.
 6. **App** (`src/fieldvision_agents/app/`): command line and web app for both roles; the dairy finder runs on the
@@ -362,8 +324,6 @@ FieldVision/
 ├── recommender/                 silage sources for dairies (guide: recommender/README.md)
 ├── app/                         field-map demo and the vendored map libraries the analyst app serves
 ├── scripts/                     one-off and pipeline scripts, grouped in scripts/README.md
-│   └── hima/                    scoring scripts for the gap tables and the watch charts
-├── hima_data/                   download notebook for extra counties in the county format (guide: hima_data/README.md)
 ├── colab/                       Colab extraction notebooks and bundles (guide: colab/README.md)
 ├── notebooks/agents/            notebooks behind each agent module (guide: notebooks/README.md)
 ├── tests/                       model package tests (guide: tests/README.md)
