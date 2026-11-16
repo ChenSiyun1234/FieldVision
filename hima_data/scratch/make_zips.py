@@ -34,7 +34,7 @@ with zipfile.ZipFile(data, "w", zipfile.ZIP_DEFLATED) as z:
     e = add_tree(z, W / "hima_data" / "processed", "hima_data/processed", skip_dirs={"parts"})
     f = add_tree(z, W / "hima_data" / "fieldvision_export", "hima_data/fieldvision_export")
     g = add_tree(z, W / "hima_data" / "results", "hima_data/results")
-    h = add_tree(z, W / "hima_data" / "claude_test_results", "hima_data/claude_test_results")
+    h = add_tree(z, W / "hima_data" / "model_test_results", "hima_data/model_test_results")
 print("data zip:", data, round(data.stat().st_size / 1e6, 1), "MB; files:", d, e, f, g, h)
 with zipfile.ZipFile(code) as z:
     names = z.namelist()
