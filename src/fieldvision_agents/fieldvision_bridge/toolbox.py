@@ -232,6 +232,16 @@ class FieldVisionToolbox:
         county = self._county.get(key) or self.aggregate(fips, year)
         return self.critic(fips, year, county, policy=self._policy.get(key, "standard"))
 
+    def inspect_gaps(self, fips, year, vision_fields=0):
+        """Cloud-gap picture of the latest classify result: how many fields the model could not judge
+        because cloud hid the harvest, the main gap, and the range. Never changes the estimate."""
+        from ..gap.gap import gap_tool_result
+        from ..settings import RUNS
+        key = (str(fips), int(year))
+        policy = self._inner_policy.get(key) or self.final_policy or "standard"
+        return gap_tool_result(self.inner, fips, year, policy, vision_fields=vision_fields,
+                               out_dir=RUNS / "gap" / f"{fips}_{year}")
+
     # --- per-field access for the reporter, Q&A and planner -----------------
 
     def fields(self, fips, year):
