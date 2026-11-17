@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 130" width="1200" height="130" role="img" aria-label="4 of 5 states within 5 pts of NASS 2025; 95.5% field accuracy, 42 of 44; 13.3 → 1.4 pt gap: Bayes + USDA history; 13.1 → 1.8 pt miss: cloud-gap Bayes; 0 unsupported LLM numbers">
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f3f8f5"/></linearGradient>
+    <style>
+      text { font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+      .in { animation: rise 1s ease-out both; }
+      @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    </style>
+  </defs>
+  <g class="in" style="animation-delay:0.00s"><rect x="1" y="1" width="226" height="128" rx="14" fill="url(#card)" stroke="#cfdcd4"/><text x="20" y="56" font-size="34" font-weight="800" fill="#1d6b47">4 of 5</text><text x="20" y="85" font-size="14" fill="#13261c">states within 5 pts of NASS 2025</text><text x="20" y="107" font-size="13" fill="#4f6358">graded test, each run once</text></g>
+  <g class="in" style="animation-delay:0.15s"><rect x="244" y="1" width="226" height="128" rx="14" fill="url(#card)" stroke="#cfdcd4"/><text x="263" y="56" font-size="34" font-weight="800" fill="#1d6b47">95.5%</text><text x="263" y="85" font-size="14" fill="#13261c">field accuracy, 42 of 44</text><text x="263" y="107" font-size="13" fill="#4f6358">USDA-labelled Beltsville fields</text></g>
+  <g class="in" style="animation-delay:0.30s"><rect x="487" y="1" width="226" height="128" rx="14" fill="url(#card)" stroke="#cfdcd4"/><text x="506" y="56" font-size="34" font-weight="800" fill="#1d6b47">13.3 → 1.4</text><text x="506" y="85" font-size="14" fill="#13261c">pt gap: Bayes + USDA history</text><text x="506" y="107" font-size="13" fill="#4f6358">Texas, California, Colorado</text></g>
+  <g class="in" style="animation-delay:0.45s"><rect x="730" y="1" width="226" height="128" rx="14" fill="url(#card)" stroke="#cfdcd4"/><text x="749" y="56" font-size="34" font-weight="800" fill="#1d6b47">13.1 → 1.8</text><text x="749" y="85" font-size="14" fill="#13261c">pt miss: cloud-gap Bayes</text><text x="749" y="107" font-size="13" fill="#4f6358">Wyoming County, NY</text></g>
+  <g class="in" style="animation-delay:0.60s"><rect x="973" y="1" width="226" height="128" rx="14" fill="url(#card)" stroke="#cfdcd4"/><text x="992" y="56" font-size="34" font-weight="800" fill="#1d6b47">0</text><text x="992" y="85" font-size="14" fill="#13261c">unsupported LLM numbers</text><text x="992" y="107" font-size="13" fill="#4f6358">5/5 routing, 4/4 Q&amp;A</text></g>
+</svg>

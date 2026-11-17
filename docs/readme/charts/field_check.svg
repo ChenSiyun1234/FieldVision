@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 474" width="1200" height="474" role="img" aria-label="Field-level check on 44 labelled US fields: Always say &quot;grain&quot; (the baseline to beat) 32 of 44; 135-feature boosted trees (trained on Austria) 30 of 44; 135-feature boosted trees (trained on all of Europe) 37 of 44; Harvest-timing rule (date of the green-to-bare drop) 38 of 44; 6-feature logistic regression (the model we ship, trained on 8,000 EU fields) 42 of 44; + Beltsville labels in training (cross-validated: train on 2 seasons, test the 3rd) 43 of 44">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <style>
+      text { font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+      .grow { transform-box: fill-box; transform-origin: left center; animation: grow 1.1s ease-out both; }
+      @keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+    </style>
+  </defs>
+  <rect width="1200" height="474" rx="20" fill="url(#bg)" stroke="#dde7e1" stroke-width="1.5"/>
+  <text x="30" y="44" font-size="20" font-weight="800" fill="#13261c">Field-level check: the simple model wins</text>
+  <text x="30" y="68" font-size="13" fill="#4f6358">44 USDA-labelled Beltsville fields, Maryland 2021-23. Big models fit Europe better and the US worse.</text>
+  <line x1="470" y1="90" x2="470" y2="390" stroke="#13261c" stroke-opacity="0.08"/><text x="470" y="408" font-size="12" fill="#4f6358" text-anchor="middle">0</text>
+  <line x1="615" y1="90" x2="615" y2="390" stroke="#13261c" stroke-opacity="0.08"/><text x="615" y="408" font-size="12" fill="#4f6358" text-anchor="middle">11</text>
+  <line x1="760" y1="90" x2="760" y2="390" stroke="#13261c" stroke-opacity="0.08"/><text x="760" y="408" font-size="12" fill="#4f6358" text-anchor="middle">22</text>
+  <line x1="905" y1="90" x2="905" y2="390" stroke="#13261c" stroke-opacity="0.08"/><text x="905" y="408" font-size="12" fill="#4f6358" text-anchor="middle">33</text>
+  <line x1="1050" y1="90" x2="1050" y2="390" stroke="#13261c" stroke-opacity="0.08"/><text x="1050" y="408" font-size="12" fill="#4f6358" text-anchor="middle">44</text>
+  <text x="1050" y="428" font-size="12" fill="#4f6358" text-anchor="end">fields right, of 44</text>
+  <text x="30" y="108" font-size="14.5" font-weight="700" fill="#13261c">Always say &quot;grain&quot;</text><text x="30" y="126" font-size="12.5" fill="#4f6358">the baseline to beat</text>
+  <rect class="grow" style="animation-delay:0.20s" x="470" y="92" width="421.8" height="26" rx="4" fill="#b9c6be"/>
+  <text x="901.8" y="110" font-size="14" font-weight="600" fill="#4f6358">32 / 44 · 72.7%</text>
+  <text x="30" y="158" font-size="14.5" font-weight="700" fill="#13261c">135-feature boosted trees</text><text x="30" y="176" font-size="12.5" fill="#4f6358">trained on Austria</text>
+  <rect class="grow" style="animation-delay:0.40s" x="470" y="142" width="395.5" height="26" rx="4" fill="#b9c6be"/>
+  <text x="875.5" y="160" font-size="14" font-weight="600" fill="#4f6358">30 / 44 · 68.2%</text>
+  <text x="30" y="208" font-size="14.5" font-weight="700" fill="#13261c">135-feature boosted trees</text><text x="30" y="226" font-size="12.5" fill="#4f6358">trained on all of Europe</text>
+  <rect class="grow" style="animation-delay:0.60s" x="470" y="192" width="487.7" height="26" rx="4" fill="#b9c6be"/>
+  <text x="967.7" y="210" font-size="14" font-weight="600" fill="#4f6358">37 / 44 · 84.1%</text>
+  <text x="30" y="258" font-size="14.5" font-weight="700" fill="#13261c">Harvest-timing rule</text><text x="30" y="276" font-size="12.5" fill="#4f6358">date of the green-to-bare drop</text>
+  <rect class="grow" style="animation-delay:0.80s" x="470" y="242" width="500.9" height="26" rx="4" fill="#b9c6be"/>
+  <text x="980.9" y="260" font-size="14" font-weight="600" fill="#4f6358">38 / 44 · 86.4%</text>
+  <text x="30" y="308" font-size="14.5" font-weight="700" fill="#13261c">6-feature logistic regression</text><text x="30" y="326" font-size="12.5" fill="#4f6358">the model we ship, trained on 8,000 EU fields</text>
+  <rect class="grow" style="animation-delay:1.00s" x="470" y="292" width="553.6" height="26" rx="4" fill="#1d6b47"/>
+  <text x="1033.6" y="310" font-size="14" font-weight="800" fill="#1d6b47">42 / 44 · 95.5%</text>
+  <text x="30" y="358" font-size="14.5" font-weight="700" fill="#13261c">+ Beltsville labels in training</text><text x="30" y="376" font-size="12.5" fill="#4f6358">cross-validated: train on 2 seasons, test the 3rd</text>
+  <rect class="grow" style="animation-delay:1.20s" x="470" y="342" width="566.8" height="26" rx="4" fill="#7fb898"/>
+  <text x="1046.8" y="360" font-size="14" font-weight="600" fill="#1d6b47">43 / 44 · 97.7%</text>
+  <text x="30" y="454" font-size="12" fill="#4f6358">Beltsville is the only labelled US set and was looked at during development, so this is a field-level check; the graded test is the 2025 state acres.</text>
+</svg>

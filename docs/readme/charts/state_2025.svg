@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 464" width="1200" height="464" role="img" aria-label="Graded against USDA NASS 2025: Michigan 14.4% vs 14.7%; New York 48.7% vs 53.2%; Maryland 4.75% vs 8.9%; Wisconsin 16.6% vs 21.6%; Pennsylvania 15.2% vs 32.8%">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#ffffff"/></linearGradient>
+    <style>
+      text { font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+      .in { animation: rise 1s ease-out both; }
+      @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+    </style>
+  </defs>
+  <rect width="1200" height="464" rx="20" fill="url(#bg)" stroke="#dde7e1" stroke-width="1.5"/>
+  <text x="30" y="44" font-size="20" font-weight="800" fill="#13261c">Graded against USDA NASS 2025</text>
+  <text x="30" y="68" font-size="13" fill="#4f6358">Silage share of harvested corn, by state. Each state run once on 150 random blocks, under a rule logged before any 2025 imagery was scored.</text>
+  <circle cx="760" cy="94" r="7" fill="#1d6b47"/><text x="774" y="99" font-size="13" fill="#13261c">FieldVision, with range</text>
+  <path d="M945,86 L953,94 L945,102 L937,94 Z" fill="#c98f0c"/><text x="960" y="99" font-size="13" fill="#13261c">USDA NASS 2025</text>
+  <text x="1170" y="98" font-size="12" font-weight="700" fill="#4f6358" text-anchor="end">GAP</text>
+  <line x1="260" y1="106" x2="260" y2="372" stroke="#13261c" stroke-opacity="0.08"/><text x="260" y="390" font-size="12" fill="#4f6358" text-anchor="middle">0%</text>
+  <line x1="385" y1="106" x2="385" y2="372" stroke="#13261c" stroke-opacity="0.08"/><text x="385" y="390" font-size="12" fill="#4f6358" text-anchor="middle">10%</text>
+  <line x1="510" y1="106" x2="510" y2="372" stroke="#13261c" stroke-opacity="0.08"/><text x="510" y="390" font-size="12" fill="#4f6358" text-anchor="middle">20%</text>
+  <line x1="635" y1="106" x2="635" y2="372" stroke="#13261c" stroke-opacity="0.08"/><text x="635" y="390" font-size="12" fill="#4f6358" text-anchor="middle">30%</text>
+  <line x1="760" y1="106" x2="760" y2="372" stroke="#13261c" stroke-opacity="0.08"/><text x="760" y="390" font-size="12" fill="#4f6358" text-anchor="middle">40%</text>
+  <line x1="885" y1="106" x2="885" y2="372" stroke="#13261c" stroke-opacity="0.08"/><text x="885" y="390" font-size="12" fill="#4f6358" text-anchor="middle">50%</text>
+  <line x1="1010" y1="106" x2="1010" y2="372" stroke="#13261c" stroke-opacity="0.08"/><text x="1010" y="390" font-size="12" fill="#4f6358" text-anchor="middle">60%</text>
+  <text x="30" y="125" font-size="15" font-weight="700" fill="#13261c">Michigan</text>
+  <line x1="395.0" y1="120" x2="485.0" y2="120" stroke="#1d6b47" stroke-opacity="0.35" stroke-width="8" stroke-linecap="round"/>
+  <g class="in" style="animation-delay:0.20s"><circle cx="440.0" cy="120" r="8" fill="#1d6b47" stroke="#ffffff" stroke-width="2"/></g>
+  <path d="M443.8,111 L452.8,120 L443.8,129 L434.8,120 Z" fill="#c98f0c" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="499.0" y="125" font-size="12.5" fill="#4f6358">14.4% vs 14.7%</text>
+  <text x="1170" y="125" font-size="14" font-weight="800" fill="#1d6b47" text-anchor="end">-0.3</text>
+  <text x="30" y="179" font-size="15" font-weight="700" fill="#13261c">New York</text>
+  <line x1="801.2" y1="174" x2="937.5" y2="174" stroke="#1d6b47" stroke-opacity="0.35" stroke-width="8" stroke-linecap="round"/>
+  <g class="in" style="animation-delay:0.35s"><circle cx="868.8" cy="174" r="8" fill="#1d6b47" stroke="#ffffff" stroke-width="2"/></g>
+  <path d="M925.0,165 L934.0,174 L925.0,183 L916.0,174 Z" fill="#c98f0c" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="951.5" y="179" font-size="12.5" fill="#4f6358">48.7% vs 53.2%</text>
+  <text x="1170" y="179" font-size="14" font-weight="800" fill="#1d6b47" text-anchor="end">-4.5</text>
+  <text x="30" y="233" font-size="15" font-weight="700" fill="#13261c">Maryland</text>
+  <line x1="302.5" y1="228" x2="338.8" y2="228" stroke="#1d6b47" stroke-opacity="0.35" stroke-width="8" stroke-linecap="round"/>
+  <g class="in" style="animation-delay:0.50s"><circle cx="319.4" cy="228" r="8" fill="#1d6b47" stroke="#ffffff" stroke-width="2"/></g>
+  <path d="M371.2,219 L380.2,228 L371.2,237 L362.2,228 Z" fill="#c98f0c" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="394.2" y="233" font-size="12.5" fill="#4f6358">4.75% vs 8.9%</text>
+  <text x="1170" y="233" font-size="14" font-weight="800" fill="#1d6b47" text-anchor="end">-4.2</text>
+  <text x="30" y="287" font-size="15" font-weight="700" fill="#13261c">Wisconsin</text>
+  <line x1="432.5" y1="282" x2="503.8" y2="282" stroke="#1d6b47" stroke-opacity="0.35" stroke-width="8" stroke-linecap="round"/>
+  <g class="in" style="animation-delay:0.65s"><circle cx="467.5" cy="282" r="8" fill="#1d6b47" stroke="#ffffff" stroke-width="2"/></g>
+  <path d="M530.0,273 L539.0,282 L530.0,291 L521.0,282 Z" fill="#c98f0c" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="553.0" y="287" font-size="12.5" fill="#4f6358">16.6% vs 21.6%</text>
+  <text x="1170" y="287" font-size="14" font-weight="800" fill="#1d6b47" text-anchor="end">-5.0</text>
+  <text x="30" y="341" font-size="15" font-weight="700" fill="#13261c">Pennsylvania</text>
+  <line x1="421.2" y1="336" x2="478.8" y2="336" stroke="#1d6b47" stroke-opacity="0.35" stroke-width="8" stroke-linecap="round"/>
+  <g class="in" style="animation-delay:0.80s"><circle cx="450.0" cy="336" r="8" fill="#1d6b47" stroke="#ffffff" stroke-width="2"/></g>
+  <path d="M670.0,327 L679.0,336 L670.0,345 L661.0,336 Z" fill="#c98f0c" stroke="#ffffff" stroke-width="1.5"/>
+  <text x="693.0" y="341" font-size="12.5" fill="#4f6358">15.2% vs 32.8%</text>
+  <text x="1170" y="341" font-size="14" font-weight="800" fill="#a4471b" text-anchor="end">-17.6</text>
+  <text x="30" y="444" font-size="12" fill="#4f6358">4 of 5 within 5 points. Pennsylvania is the miss: northern silage cut after the crop yellows reads as grain. Maryland's method was set after its county runs.</text>
+</svg>
