@@ -17,7 +17,7 @@
 harvested for grain, months before USDA publishes the official number.**
 
 Grand Prize (1st place) at Hack the Harvest 2026, the USDA NASS challenge at UC Davis, judged by USDA, NVIDIA,
-Niantic Spatial and UC Davis. Built in 22.5 hours by Team makai: Hetvi Bhadani, Hima Verma, Krishi Shah,
+Niantic Spatial and UC Davis. Built in 22.5 hours by Team FieldVision: Hetvi Bhadani, Hima Verma, Krishi Shah,
 Priyanka Ramachandran and Siyun Chen.
 
 <p align="center">
