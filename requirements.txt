@@ -1,0 +1,16 @@
+geopandas
+pandas
+numpy
+xarray
+odc-stac
+pystac-client
+planetary-computer
+rasterio
+matplotlib
+shapely
+pyproj
+rasterstats
+tqdm
+h5netcdf
+pygridmet
+scikit-learn
