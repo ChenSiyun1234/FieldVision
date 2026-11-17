@@ -1,16 +1,21 @@
 <p align="center">
-  <img src="docs/readme/00_banner.png" alt="FieldVision: Grand Prize, 1st place, Hack the Harvest 2026, USDA NASS challenge" width="100%">
+  <img src="docs/readme/hero.svg" alt="FieldVision: Grand Prize, 1st place, Hack the Harvest 2026, USDA NASS challenge" width="100%">
 </p>
 
 <p align="center">
-  <img alt="Grand Prize" src="https://img.shields.io/badge/Grand%20Prize-1st%20place-D4AF37?style=for-the-badge">
-  <img alt="Prize" src="https://img.shields.io/badge/Prize-%245%2C000-2F6B4F?style=for-the-badge">
-  <img alt="Hack the Harvest 2026" src="https://img.shields.io/badge/Hack%20the%20Harvest-2026-2878D6?style=for-the-badge">
-  <img alt="USDA NASS challenge" src="https://img.shields.io/badge/USDA%20NASS-challenge-143A2B?style=for-the-badge">
+  <a href="handoff/presentation/FieldVision.pdf"><img alt="Slides" src="https://img.shields.io/badge/-Slides-D4AF37?style=for-the-badge"></a>
+  <a href="#results"><img alt="Results" src="https://img.shields.io/badge/-Results-2F6B4F?style=for-the-badge"></a>
+  <a href="#the-classification-model"><img alt="The model" src="https://img.shields.io/badge/-The%20model-2F6B4F?style=for-the-badge"></a>
+  <a href="#quick-start"><img alt="Quick start" src="https://img.shields.io/badge/-Quick%20start-2F6B4F?style=for-the-badge"></a>
+  <a href="#how-it-works"><img alt="How it works" src="https://img.shields.io/badge/-How%20it%20works-2F6B4F?style=for-the-badge"></a>
 </p>
 
 <p align="center">
-  <img src="docs/readme/grand_prize_check.jpg" alt="The Grand Prize check made out to Field Vision, $5,000, Nov 15, 2026" width="62%"><br>
+  <img src="docs/readme/stats.svg" width="100%" alt="42 of 44 fields right; 4 of 5 checks within 5 points of USDA; gap 13.3 to 1.4 points with USDA history; 0 unsupported numbers from the agents">
+</p>
+
+<p align="center">
+  <img src="docs/readme/grand_prize_check_card.png" alt="The Grand Prize check made out to Field Vision, $5,000, Nov 15, 2026" width="58%"><br>
   <sub>The Grand Prize check, Nov 15, 2026. Hosted and organized by the Human Machine Collaboration Institute, with USDA, UC Davis, NVIDIA, Solidigm, FarmGPU and Keeboh. Team makai.</sub>
 </p>
 
@@ -39,11 +44,13 @@ Every figure the system produces is a **model estimate, not a NASS statistic**.
 | Sentinel-1 radar replay (France, 3-5 week optical gap) | recall **0.33 → 0.54** |
 | Nemotron agents | 5/5 routing, 4/4 Q&A, **0 unsupported numbers** |
 
-[Model](#the-classification-model) · [What it does](#what-it-does) · [Results](#results) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Repository map](#repository-map) · [Data](#data) · [Reproduce](#reproduce-the-main-results) · [Tests](#tests) · [Known limits](#known-limits)
-
 ## The classification model
 
 I built the part that makes the field-by-field call and turns it into county and state totals: the data, the training set, the model, how it was validated, and the toolbox the rest of the system calls. This section describes the model alone. The Bayesian update with USDA history, the Nemotron agents and the app are covered further down. The numbers here come from [`docs/RESULTS.md`](docs/RESULTS.md) and [`handoff/results/ACCESS_LOG.md`](handoff/results/ACCESS_LOG.md), and every figure is drawn by [`scripts/make_readme_figures.py`](scripts/make_readme_figures.py) from those files and from `git log`.
+
+<p align="center">
+  <img src="docs/readme/model_stats.svg" width="100%" alt="8,000 European training fields; 0 US labels used in training; 6 crop-timing features; 266 commits inside the 22.5-hour build">
+</p>
 
 ![From a corn parcel to a silage-area estimate](docs/readme/01_pipeline.png)
 

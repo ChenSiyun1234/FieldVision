@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 132" width="1200" height="132" role="img" aria-label="8,000 European training fields; 0 US labels used in training; 6 crop-timing features; 266 commits inside the 22.5-hour build">
+  <defs>
+    <linearGradient id="card" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b2a1e"/>
+      <stop offset="1" stop-color="#17493a"/>
+    </linearGradient>
+    <style>text { font-family: 'Segoe UI', 'Helvetica Neue', Helvetica, Arial, sans-serif; }</style>
+  </defs>
+  <rect x="1" y="1" width="280" height="130" rx="14" fill="url(#card)" stroke="#2f6b4f"/><text x="22" y="58" font-size="40" font-weight="800" fill="#f2d16b">8,000</text><text x="22" y="86" font-size="14" fill="#e8f3ed">European training fields</text><text x="22" y="108" font-size="13" fill="#a9c5b6">Austria, France, the Netherlands</text><rect x="307" y="1" width="280" height="130" rx="14" fill="url(#card)" stroke="#2f6b4f"/><text x="328" y="58" font-size="40" font-weight="800" fill="#f2d16b">0</text><text x="328" y="86" font-size="14" fill="#e8f3ed">US labels used in training</text><text x="328" y="108" font-size="13" fill="#a9c5b6">all 44 kept for the test</text><rect x="613" y="1" width="280" height="130" rx="14" fill="url(#card)" stroke="#2f6b4f"/><text x="634" y="58" font-size="40" font-weight="800" fill="#f2d16b">6</text><text x="634" y="86" font-size="14" fill="#e8f3ed">crop-timing features</text><text x="634" y="108" font-size="13" fill="#a9c5b6">one logistic regression</text><rect x="919" y="1" width="280" height="130" rx="14" fill="url(#card)" stroke="#2f6b4f"/><text x="940" y="58" font-size="40" font-weight="800" fill="#f2d16b">266</text><text x="940" y="86" font-size="14" fill="#e8f3ed">commits inside the 22.5-hour build</text><text x="940" y="108" font-size="13" fill="#a9c5b6">of my 271 on main</text>
+</svg>
